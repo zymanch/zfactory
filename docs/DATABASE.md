@@ -84,18 +84,20 @@ Stores actual terrain placement on the game map.
 ### entity_type (entity definitions)
 Defines types of entities that can be placed on the map.
 
-| Column         | Type                                                                              | Description                      |
-|----------------|-----------------------------------------------------------------------------------|----------------------------------|
-| entity_type_id | INT UNSIGNED                                                                      | Primary key                      |
-| type           | ENUM('building','transporter','manipulator','tree','relief','resource','eye','mining') | Category of entity          |
-| name           | VARCHAR(128)                                                                      | Display name                     |
-| image_url      | VARCHAR(256)                                                                      | Folder name for sprite states    |
-| extension      | VARCHAR(4) DEFAULT 'svg'                                                          | File extension (svg, jpg, png)   |
-| max_durability | INT UNSIGNED                                                                      | Maximum durability (health)      |
-| width          | TINYINT UNSIGNED DEFAULT 1                                                        | Entity width in tiles            |
-| height         | TINYINT UNSIGNED DEFAULT 1                                                        | Entity height in tiles           |
-| icon_url       | VARCHAR(256) NULL                                                                 | 32x24 icon for UI panels         |
-| power          | INT UNSIGNED DEFAULT 1                                                            | Visibility radius for eye type   |
+| Column               | Type                                                                              | Description                           |
+|----------------------|-----------------------------------------------------------------------------------|---------------------------------------|
+| entity_type_id       | INT UNSIGNED                                                                      | Primary key                           |
+| type                 | ENUM('building','transporter','manipulator','tree','relief','resource','eye','mining') | Category of entity               |
+| name                 | VARCHAR(128)                                                                      | Display name                          |
+| image_url            | VARCHAR(256)                                                                      | Folder name for sprite states         |
+| extension            | VARCHAR(4) DEFAULT 'svg'                                                          | File extension (svg, jpg, png)        |
+| max_durability       | INT UNSIGNED                                                                      | Maximum durability (health)           |
+| width                | TINYINT UNSIGNED DEFAULT 1                                                        | Entity width in tiles                 |
+| height               | TINYINT UNSIGNED DEFAULT 1                                                        | Entity height in tiles                |
+| icon_url             | VARCHAR(256) NULL                                                                 | 32x24 icon for UI panels              |
+| power                | INT UNSIGNED DEFAULT 1                                                            | Visibility radius for eye type        |
+| parent_entity_type_id| INT UNSIGNED NULL                                                                 | Parent entity for orientation variants|
+| orientation          | ENUM('none','up','right','down','left') DEFAULT 'none'                            | Entity orientation/direction          |
 
 **Entity Type Categories:**
 - `building` — производственные здания (furnace, assembler) - стандартные правила постройки
@@ -127,30 +129,45 @@ Defines types of entities that can be placed on the map.
 | eye      | Yes       | Yes           | Yes             | No              |
 
 **Entity Types:**
-| ID  | Name                  | Type        | Max Durability | Power |
-|-----|-----------------------|-------------|----------------|-------|
-| 1   | Pine Tree             | tree        | 50             | 1     |
-| 2   | Oak Tree              | tree        | 60             | 1     |
-| 3   | Dead Tree             | tree        | 20             | 1     |
-| 10  | Small Rock            | relief      | 100            | 1     |
-| 11  | Medium Rock           | relief      | 200            | 1     |
-| 12  | Large Rock            | relief      | 300            | 1     |
-| 100 | Conveyor Belt         | building    | 100            | 1     |
-| 101 | Small Furnace         | building    | 200            | 1     |
-| 102 | Mining Drill          | mining      | 300            | 1     |
-| 103 | Assembly Machine      | building    | 400            | 1     |
-| 104 | Storage Chest         | building    | 150            | 1     |
-| 105 | Power Pole            | building    | 100            | 1     |
-| 106 | Steam Engine          | building    | 350            | 1     |
-| 107 | Boiler                | building    | 250            | 1     |
-| 108 | Fast Mining Drill     | mining      | 250            | 1     |
-| 200 | Short Manipulator     | manipulator | 80             | 1     |
-| 201 | Long Manipulator      | manipulator | 80             | 1     |
-| 300 | Iron Ore              | resource    | 9999           | 1     |
-| 301 | Copper Ore            | resource    | 9999           | 1     |
-| 400 | Small Crystal Tower   | eye         | 100            | 7     |
-| 401 | Medium Crystal Tower  | eye         | 200            | 15    |
-| 402 | Large Crystal Tower   | eye         | 300            | 30    |
+| ID  | Name                  | Type        | Max Dur | Orientation | Parent |
+|-----|-----------------------|-------------|---------|-------------|--------|
+| 1   | Pine Tree             | tree        | 50      | none        | -      |
+| 2   | Oak Tree              | tree        | 60      | none        | -      |
+| 3   | Dead Tree             | tree        | 20      | none        | -      |
+| 10  | Small Rock            | relief      | 100     | none        | -      |
+| 11  | Medium Rock           | relief      | 200     | none        | -      |
+| 12  | Large Rock            | relief      | 300     | none        | -      |
+| 100 | Conveyor Belt         | transporter | 100     | right       | -      |
+| 120 | Conveyor Belt         | transporter | 100     | up          | 100    |
+| 121 | Conveyor Belt         | transporter | 100     | down        | 100    |
+| 122 | Conveyor Belt         | transporter | 100     | left        | 100    |
+| 101 | Small Furnace         | building    | 200     | none        | -      |
+| 102 | Mining Drill          | mining      | 300     | none        | -      |
+| 103 | Assembly Machine      | building    | 400     | none        | -      |
+| 104 | Storage Chest         | building    | 150     | none        | -      |
+| 105 | Power Pole            | building    | 100     | none        | -      |
+| 106 | Steam Engine          | building    | 350     | none        | -      |
+| 107 | Boiler                | building    | 250     | none        | -      |
+| 108 | Fast Mining Drill     | mining      | 250     | none        | -      |
+| 200 | Short Manipulator     | manipulator | 80      | right       | -      |
+| 210 | Short Manipulator     | manipulator | 80      | up          | 200    |
+| 211 | Short Manipulator     | manipulator | 80      | down        | 200    |
+| 212 | Short Manipulator     | manipulator | 80      | left        | 200    |
+| 201 | Long Manipulator      | manipulator | 80      | right       | -      |
+| 213 | Long Manipulator      | manipulator | 80      | up          | 201    |
+| 214 | Long Manipulator      | manipulator | 80      | down        | 201    |
+| 215 | Long Manipulator      | manipulator | 80      | left        | 201    |
+| 300 | Iron Ore              | resource    | 9999    | none        | -      |
+| 301 | Copper Ore            | resource    | 9999    | none        | -      |
+| 400 | Small Crystal Tower   | eye         | 100     | none        | -      |
+| 401 | Medium Crystal Tower  | eye         | 200     | none        | -      |
+| 402 | Large Crystal Tower   | eye         | 300     | none        | -      |
+
+**Orientation System:**
+- Сущности с `parent_entity_type_id` - это варианты ориентации базовой сущности
+- В окне построек показываются только базовые сущности (без parent)
+- При постройке можно вращать объект клавишей **R** (или **К** на русской раскладке)
+- Порядок вращения: right → down → left → up → right (по часовой стрелке)
 
 ### entity (entity instances)
 Stores actual entity placement on the game map.
@@ -275,18 +292,21 @@ Stores user accounts and their settings.
 
 ## Migrations
 
-| Migration                                       | Description                              |
-|-------------------------------------------------|------------------------------------------|
-| m251214_050249_init.php                         | Initial schema creation                  |
-| m251214_063543_add_entity_state_durability.php  | Add state/durability fields              |
-| m251216_120000_entity_type_extend.php           | Extend type enum + add extension column  |
-| m251219_120000_add_entity_type_dimensions.php   | Add width, height, icon_url to entity_type|
-| m251219_125900_create_resource_table.php        | Create resource table with initial data  |
-| m251219_125910_create_entity_resource_table.php | Create entity_resource linking table     |
-| m251219_130000_create_users_table.php           | Create user table with build_panel       |
-| m251219_140000_add_ore_resources.php            | Add resources to ore entities            |
-| m251220_000000_add_eye_type_and_power.php       | Add 'eye' type, power column, new entities|
-| m251220_100000_add_user_camera_position.php     | Add camera_x, camera_y, zoom to user     |
+| Migration                                       | Description                                    |
+|-------------------------------------------------|------------------------------------------------|
+| m251214_050249_init.php                         | Initial schema creation                        |
+| m251214_063543_add_entity_state_durability.php  | Add state/durability fields                    |
+| m251216_120000_entity_type_extend.php           | Extend type enum + add extension column        |
+| m251219_120000_add_entity_type_dimensions.php   | Add width, height, icon_url to entity_type     |
+| m251219_125900_create_resource_table.php        | Create resource table with initial data        |
+| m251219_125910_create_entity_resource_table.php | Create entity_resource linking table           |
+| m251219_130000_create_users_table.php           | Create user table with build_panel             |
+| m251219_140000_add_ore_resources.php            | Add resources to ore entities                  |
+| m251220_000000_add_eye_type_and_power.php       | Add 'eye' type, power column, new entities     |
+| m251220_100000_add_user_camera_position.php     | Add camera_x, camera_y, zoom to user           |
+| m251220_210000_convert_entity_coords_to_tiles.php | Convert entity x,y from pixels to tiles      |
+| m251220_220000_add_orientation_and_conveyor_variants.php | Add orientation system, conveyor variants |
+| m251220_230000_add_manipulator_orientations.php | Add manipulator orientation variants           |
 
 ## Future Considerations
 

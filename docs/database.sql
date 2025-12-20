@@ -51,39 +51,51 @@ CREATE TABLE IF NOT EXISTS `entity_type` (
   `width` tinyint(3) unsigned NOT NULL DEFAULT 1,
   `height` tinyint(3) unsigned NOT NULL DEFAULT 1,
   `icon_url` varchar(256) DEFAULT NULL,
-  `power` int(10) unsigned NOT NULL DEFAULT 1
+  `power` int(10) unsigned NOT NULL DEFAULT 1,
+  `parent_entity_type_id` int(10) unsigned DEFAULT NULL,
+  `orientation` enum('none','up','right','down','left') NOT NULL DEFAULT 'none'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`) VALUES
+INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`) VALUES
     -- Trees
-    (1, 'tree', 'Pine Tree', 'tree_pine', 'svg', 50, 1, 1, NULL, 1),
-    (2, 'tree', 'Oak Tree', 'tree_oak', 'svg', 60, 1, 1, NULL, 1),
-    (3, 'tree', 'Dead Tree', 'tree_dead', 'svg', 20, 1, 1, NULL, 1),
+    (1, 'tree', 'Pine Tree', 'tree_pine', 'svg', 50, 1, 1, NULL, 1, NULL, 'none'),
+    (2, 'tree', 'Oak Tree', 'tree_oak', 'svg', 60, 1, 1, NULL, 1, NULL, 'none'),
+    (3, 'tree', 'Dead Tree', 'tree_dead', 'svg', 20, 1, 1, NULL, 1, NULL, 'none'),
     -- Relief
-    (10, 'relief', 'Small Rock', 'rock_small', 'svg', 100, 1, 1, NULL, 1),
-    (11, 'relief', 'Medium Rock', 'rock_medium', 'svg', 200, 1, 1, NULL, 1),
-    (12, 'relief', 'Large Rock', 'rock_large', 'svg', 300, 1, 1, NULL, 1),
+    (10, 'relief', 'Small Rock', 'rock_small', 'svg', 100, 1, 1, NULL, 1, NULL, 'none'),
+    (11, 'relief', 'Medium Rock', 'rock_medium', 'svg', 200, 1, 1, NULL, 1, NULL, 'none'),
+    (12, 'relief', 'Large Rock', 'rock_large', 'svg', 300, 1, 1, NULL, 1, NULL, 'none'),
+    -- Transporters (with orientation variants)
+    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'svg', 100, 1, 1, 'conveyor/icon.svg', 1, NULL, 'right'),
+    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'svg', 100, 1, 1, 'conveyor_up/icon.svg', 1, 100, 'up'),
+    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'svg', 100, 1, 1, 'conveyor_down/icon.svg', 1, 100, 'down'),
+    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'svg', 100, 1, 1, 'conveyor_left/icon.svg', 1, 100, 'left'),
     -- Buildings
-    (100, 'building', 'Conveyor Belt', 'conveyor', 'svg', 100, 1, 1, 'conveyor/icon.svg', 1),
-    (101, 'building', 'Small Furnace', 'furnace', 'svg', 200, 2, 2, 'furnace/icon.svg', 1),
-    (103, 'building', 'Assembly Machine', 'assembler', 'svg', 400, 3, 3, 'assembler/icon.svg', 1),
-    (104, 'building', 'Storage Chest', 'chest', 'svg', 150, 1, 1, 'chest/icon.svg', 1),
-    (105, 'building', 'Power Pole', 'power_pole', 'svg', 100, 1, 1, 'power_pole/icon.svg', 1),
-    (106, 'building', 'Steam Engine', 'steam_engine', 'svg', 350, 2, 3, 'steam_engine/icon.svg', 1),
-    (107, 'building', 'Boiler', 'boiler', 'svg', 250, 2, 2, 'boiler/icon.svg', 1),
+    (101, 'building', 'Small Furnace', 'furnace', 'svg', 200, 2, 2, 'furnace/icon.svg', 1, NULL, 'none'),
+    (103, 'building', 'Assembly Machine', 'assembler', 'svg', 400, 3, 3, 'assembler/icon.svg', 1, NULL, 'none'),
+    (104, 'building', 'Storage Chest', 'chest', 'svg', 150, 1, 1, 'chest/icon.svg', 1, NULL, 'none'),
+    (105, 'building', 'Power Pole', 'power_pole', 'svg', 100, 1, 1, 'power_pole/icon.svg', 1, NULL, 'none'),
+    (106, 'building', 'Steam Engine', 'steam_engine', 'svg', 350, 2, 3, 'steam_engine/icon.svg', 1, NULL, 'none'),
+    (107, 'building', 'Boiler', 'boiler', 'svg', 250, 2, 2, 'boiler/icon.svg', 1, NULL, 'none'),
     -- Mining (requires resource entity to place on)
-    (102, 'mining', 'Mining Drill', 'drill', 'svg', 300, 1, 1, 'drill/icon.svg', 1),
-    (108, 'mining', 'Fast Mining Drill', 'drill_fast', 'svg', 250, 1, 1, 'drill_fast/icon.svg', 1),
-    -- Manipulators
-    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'svg', 80, 1, 1, 'manipulator_short/icon.svg', 1),
-    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'svg', 80, 1, 1, 'manipulator_long/icon.svg', 1),
+    (102, 'mining', 'Mining Drill', 'drill', 'svg', 300, 1, 1, 'drill/icon.svg', 1, NULL, 'none'),
+    (108, 'mining', 'Fast Mining Drill', 'drill_fast', 'svg', 250, 1, 1, 'drill_fast/icon.svg', 1, NULL, 'none'),
+    -- Manipulators (with orientation variants)
+    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'svg', 80, 1, 1, 'manipulator_short/icon.svg', 1, NULL, 'right'),
+    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'svg', 80, 1, 1, 'manipulator_short_up/icon.svg', 1, 200, 'up'),
+    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'svg', 80, 1, 1, 'manipulator_short_down/icon.svg', 1, 200, 'down'),
+    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'svg', 80, 1, 1, 'manipulator_short_left/icon.svg', 1, 200, 'left'),
+    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'svg', 80, 1, 1, 'manipulator_long/icon.svg', 1, NULL, 'right'),
+    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'svg', 80, 1, 1, 'manipulator_long_up/icon.svg', 1, 201, 'up'),
+    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'svg', 80, 1, 1, 'manipulator_long_down/icon.svg', 1, 201, 'down'),
+    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'svg', 80, 1, 1, 'manipulator_long_left/icon.svg', 1, 201, 'left'),
     -- Resources
-    (300, 'resource', 'Iron Ore', 'ore_iron', 'svg', 9999, 1, 1, 'ore_iron/icon.svg', 1),
-    (301, 'resource', 'Copper Ore', 'ore_copper', 'svg', 9999, 1, 1, 'ore_copper/icon.svg', 1),
+    (300, 'resource', 'Iron Ore', 'ore_iron', 'svg', 9999, 1, 1, 'ore_iron/icon.svg', 1, NULL, 'none'),
+    (301, 'resource', 'Copper Ore', 'ore_copper', 'svg', 9999, 1, 1, 'ore_copper/icon.svg', 1, NULL, 'none'),
     -- Crystal Towers (eye type - visibility radius = power)
-    (400, 'eye', 'Small Crystal Tower', 'tower_crystal_small', 'svg', 100, 1, 1, 'tower_crystal_small/icon.svg', 7),
-    (401, 'eye', 'Medium Crystal Tower', 'tower_crystal_medium', 'svg', 200, 1, 2, 'tower_crystal_medium/icon.svg', 15),
-    (402, 'eye', 'Large Crystal Tower', 'tower_crystal_large', 'svg', 300, 2, 3, 'tower_crystal_large/icon.svg', 30);
+    (400, 'eye', 'Small Crystal Tower', 'tower_crystal_small', 'svg', 100, 1, 1, 'tower_crystal_small/icon.svg', 7, NULL, 'none'),
+    (401, 'eye', 'Medium Crystal Tower', 'tower_crystal_medium', 'svg', 200, 1, 2, 'tower_crystal_medium/icon.svg', 15, NULL, 'none'),
+    (402, 'eye', 'Large Crystal Tower', 'tower_crystal_large', 'svg', 300, 2, 3, 'tower_crystal_large/icon.svg', 30, NULL, 'none');
 
 -- --------------------------------------------------------
 -- Table structure: entity (entity instances)

@@ -354,7 +354,12 @@ Centralized input handling:
 - Keyboard state tracking
 - Mouse position tracking
 - Screen-to-world/tile coordinate conversion
-- Key binding for B (buildings), 1-0 (slots), Esc (cancel), F (fog toggle)
+- Key bindings:
+  - **B** - open buildings window
+  - **1-0** - select build panel slot
+  - **R/К** - rotate building (in build mode)
+  - **Esc** - cancel build mode
+  - **F** - toggle fog of war (debug)
 
 ### BuildPanel (`buildPanel.js`)
 10-slot hotbar at bottom center:
@@ -367,7 +372,8 @@ Centralized input handling:
 ### BuildingWindow (`buildingWindow.js`)
 Modal window for building selection:
 - Opens with B key
-- Shows all building type entities
+- Shows entities grouped by type (tabs)
+- **Filters out orientation variants** (entities with `parent_entity_type_id`)
 - Drag items to BuildPanel
 - Click to add to first empty slot
 
@@ -378,6 +384,10 @@ Building placement on map:
 - Collision detection with existing entities
 - Multi-tile entity support (width/height)
 - AJAX POST to create entity
+- **Rotation support**: Press **R** (or **К** on Russian layout) to rotate
+  - Works for entities with orientation variants (conveyors, manipulators)
+  - Cycles through: right → down → left → up
+  - Groups variants by `parent_entity_type_id`
 
 ### FogOfWar (`fogOfWar.js`)
 Visibility system based on Crystal Towers (type='eye'):

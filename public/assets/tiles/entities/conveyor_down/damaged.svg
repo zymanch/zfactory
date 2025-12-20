@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="24" viewBox="0 0 32 24">
+  <!-- Conveyor belt - DOWN orientation - damaged -->
+  <!-- Frame -->
+  <rect x="0" y="0" width="32" height="24" fill="#37474f"/>
+  <rect x="2" y="0" width="28" height="24" fill="#455a64"/>
+  <!-- Belt surface -->
+  <rect x="4" y="2" width="24" height="20" fill="#607d8b"/>
+  <!-- Belt segments (horizontal) -->
+  <line x1="4" y1="6" x2="28" y2="6" stroke="#455a64" stroke-width="2"/>
+  <line x1="4" y1="12" x2="28" y2="12" stroke="#455a64" stroke-width="2"/>
+  <line x1="4" y1="18" x2="28" y2="18" stroke="#455a64" stroke-width="2"/>
+  <!-- Rollers (on sides) -->
+  <rect x="0" y="0" width="3" height="24" fill="#263238"/>
+  <rect x="29" y="0" width="3" height="24" fill="#263238"/>
+  <!-- Direction arrow (pointing down) -->
+  <polygon points="16,20 11,14 21,14" fill="#ffc107"/>
+  <!-- Damage overlay -->
+  <g class="damage-cracks" opacity="0.9">
+    <line x1="6" y1="4" x2="14" y2="12" stroke="#8B0000" stroke-width="2"/>
+    <line x1="18" y1="8" x2="26" y2="16" stroke="#8B0000" stroke-width="1.5"/>
+    <line x1="8" y1="18" x2="16" y2="10" stroke="#A52A2A" stroke-width="1.5"/>
+  </g>
+</svg>
