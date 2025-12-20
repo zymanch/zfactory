@@ -14,5 +14,7 @@ class BaseEntityTypePeer  {
     const HEIGHT = "height";
     const ICON_URL = "icon_url";
     const POWER = "power";
+    const PARENT_ENTITY_TYPE_ID = "parent_entity_type_id";
+    const ORIENTATION = "orientation";
 
 }

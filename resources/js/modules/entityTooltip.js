@@ -113,6 +113,12 @@ export class EntityTooltip {
             html += `</div>`;
         }
 
+        // Recipes (if any)
+        const recipesHtml = this.getRecipesHtml(entity.entity_type_id);
+        if (recipesHtml) {
+            html += recipesHtml;
+        }
+
         this.tooltipEl.innerHTML = html;
         this.tooltipEl.style.display = 'block';
         this.updatePosition(screenX, screenY);
@@ -182,6 +188,115 @@ export class EntityTooltip {
         }
 
         return [];
+    }
+
+    /**
+     * Get recipes HTML for entity type
+     */
+    getRecipesHtml(entityTypeId) {
+        const recipeIds = this.game.entityTypeRecipes?.[entityTypeId];
+        if (!recipeIds || recipeIds.length === 0) {
+            return null;
+        }
+
+        // Get entity type power for speed calculation
+        const entityType = this.game.entityTypes?.[entityTypeId];
+        const power = parseInt(entityType?.power) || 100;
+
+        let html = `<div style="border-top:1px solid #4a4a5a;padding-top:6px;margin-top:6px;">`;
+        html += `<div style="margin-bottom:4px;font-weight:bold;">Recipes:</div>`;
+
+        for (const recipeId of recipeIds) {
+            const recipe = this.game.recipes?.[recipeId];
+            if (!recipe) continue;
+
+            html += this.renderRecipe(recipe, power);
+        }
+
+        html += `</div>`;
+        return html;
+    }
+
+    /**
+     * Render single recipe as HTML
+     * @param {object} recipe - Recipe data
+     * @param {number} power - Entity type power (affects speed)
+     */
+    renderRecipe(recipe, power) {
+        const v = this.game.config.assetVersion || 1;
+
+        // Build inputs
+        const inputs = [];
+        if (recipe.input1_resource_id) {
+            inputs.push({ id: recipe.input1_resource_id, amount: recipe.input1_amount });
+        }
+        if (recipe.input2_resource_id) {
+            inputs.push({ id: recipe.input2_resource_id, amount: recipe.input2_amount });
+        }
+        if (recipe.input3_resource_id) {
+            inputs.push({ id: recipe.input3_resource_id, amount: recipe.input3_amount });
+        }
+
+        // Build output
+        const output = { id: recipe.output_resource_id, amount: recipe.output_amount };
+
+        // Render
+        let html = `<div style="display:flex;align-items:center;margin:4px 0;flex-wrap:wrap;">`;
+
+        // Inputs
+        for (let i = 0; i < inputs.length; i++) {
+            const input = inputs[i];
+            const res = this.game.resources?.[input.id];
+            if (!res) continue;
+
+            if (i > 0) {
+                html += `<span style="margin:0 2px;color:#888;">+</span>`;
+            }
+            html += this.renderResourceIcon(res, input.amount, v);
+        }
+
+        // Arrow
+        html += `<span style="margin:0 6px;color:#4a9;">→</span>`;
+
+        // Output
+        const outRes = this.game.resources?.[output.id];
+        if (outRes) {
+            html += this.renderResourceIcon(outRes, output.amount, v);
+        }
+
+        // Time: (ticks / 60) * (100 / power)
+        const timeSeconds = this.formatRecipeTime(recipe.ticks, power);
+        html += `<span style="margin-left:auto;color:#888;font-size:10px;">${timeSeconds}</span>`;
+
+        html += `</div>`;
+        return html;
+    }
+
+    /**
+     * Format recipe time based on ticks and entity power
+     * 60 ticks = 1 second at power=100
+     * Higher power = faster (power=200 is 2x faster)
+     * @param {number} ticks - Recipe ticks
+     * @param {number} power - Entity power (default 100)
+     * @returns {string} Formatted time
+     */
+    formatRecipeTime(ticks, power = 100) {
+        const time = (ticks / 60) * (100 / power);
+        // Remove decimal if whole number
+        return time % 1 === 0 ? time.toString() : time.toFixed(1);
+    }
+
+    /**
+     * Render resource icon with amount
+     */
+    renderResourceIcon(resource, amount, version) {
+        const iconUrl = `/assets/tiles/resources/${resource.icon_url}?v=${version}`;
+        return `
+            <div style="display:flex;align-items:center;margin:0 2px;" title="${resource.name}">
+                <img src="${iconUrl}" width="16" height="16" style="margin-right:2px;">
+                <span style="color:#aaa;font-size:11px;">${amount}</span>
+            </div>
+        `;
     }
 
     /**

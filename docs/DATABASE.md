@@ -201,33 +201,35 @@ Defines types of resources in the game (ores, ingots, crafted items).
 - `crafted` — обработанные ресурсы (слитки, пластины, компоненты)
 
 **Resources:**
-| ID  | Name          | Type    | Description          |
-|-----|---------------|---------|----------------------|
-| 1   | Wood          | raw     | Дерево               |
-| 2   | Iron Ore      | raw     | Железная руда        |
-| 3   | Copper Ore    | raw     | Медная руда          |
-| 4   | Coal          | raw     | Уголь                |
-| 5   | Stone         | raw     | Камень               |
-| 6   | Raw Crystal   | raw     | Необработанный кристалл |
-| 7   | Crude Oil     | raw     | Сырая нефть          |
-| 20  | Refined Fuel  | liquid  | Очищенное топливо    |
-| 21  | Lubricant     | liquid  | Смазка               |
-| 22  | Heavy Oil     | liquid  | Тяжёлое масло        |
-| 23  | Light Oil     | liquid  | Лёгкое масло         |
-| 100 | Iron Ingot    | crafted | Железный слиток      |
-| 101 | Copper Ingot  | crafted | Медный слиток        |
-| 102 | Iron Plate    | crafted | Железная пластина    |
-| 103 | Copper Plate  | crafted | Медная пластина      |
-| 104 | Copper Wire   | crafted | Медный провод        |
-| 105 | Screw         | crafted | Шуруп                |
-| 106 | Gear          | crafted | Шестерня             |
-| 107 | Rotor         | crafted | Ротор                |
-| 108 | Crystal       | crafted | Кристалл             |
-| 109 | Steel Plate   | crafted | Стальная пластина    |
-| 110 | Circuit       | crafted | Микросхема           |
-| 111 | Motor         | crafted | Мотор                |
-| 112 | Charcoal      | crafted | Древесный уголь      |
-| 113 | Fuel Cell     | crafted | Топливный элемент    |
+| ID  | Name          | Type    | Description              |
+|-----|---------------|---------|--------------------------|
+| 1   | Wood          | raw     | Дерево                   |
+| 2   | Iron Ore      | raw     | Железная руда            |
+| 3   | Copper Ore    | raw     | Медная руда              |
+| 4   | Coal          | raw     | Уголь                    |
+| 5   | Stone         | raw     | Камень                   |
+| 6   | Raw Crystal   | raw     | Необработанный кристалл  |
+| 7   | Crude Oil     | raw     | Сырая нефть              |
+| 8   | Iron Deposit  | raw     | Железная залежь (в руде) |
+| 9   | Copper Deposit| raw     | Медная залежь (в руде)   |
+| 20  | Refined Fuel  | liquid  | Очищенное топливо        |
+| 21  | Lubricant     | liquid  | Смазка                   |
+| 22  | Heavy Oil     | liquid  | Тяжёлое масло            |
+| 23  | Light Oil     | liquid  | Лёгкое масло             |
+| 100 | Iron Ingot    | crafted | Железный слиток          |
+| 101 | Copper Ingot  | crafted | Медный слиток            |
+| 102 | Iron Plate    | crafted | Железная пластина        |
+| 103 | Copper Plate  | crafted | Медная пластина          |
+| 104 | Copper Wire   | crafted | Медный провод            |
+| 105 | Screw         | crafted | Шуруп                    |
+| 106 | Gear          | crafted | Шестерня                 |
+| 107 | Rotor         | crafted | Ротор                    |
+| 108 | Crystal       | crafted | Кристалл                 |
+| 109 | Steel Plate   | crafted | Стальная пластина        |
+| 110 | Circuit       | crafted | Микросхема               |
+| 111 | Motor         | crafted | Мотор                    |
+| 112 | Charcoal      | crafted | Древесный уголь          |
+| 113 | Fuel Cell     | crafted | Топливный элемент        |
 
 ### entity_resource (entity-resource links)
 Links entities to their contained resources.
@@ -242,9 +244,78 @@ Links entities to their contained resources.
 **Unique constraint:** (entity_id, resource_id) — одна entity может иметь только одну запись для каждого ресурса.
 
 **Использование:**
-- Resource entities (Iron Ore, Copper Ore) содержат соответствующие ресурсы
-- При размещении Mining Drill на руде — ресурсы передаются буру
+- Resource entities (Iron Ore, Copper Ore) содержат Iron Deposit / Copper Deposit
+- Mining Drill добывает из залежей руду через рецепты
 - Здания могут хранить и обрабатывать ресурсы
+
+### recipe (crafting recipes)
+Defines crafting/processing recipes for buildings.
+
+| Column            | Type         | Description                          |
+|-------------------|--------------|--------------------------------------|
+| recipe_id         | INT UNSIGNED | Primary key                          |
+| output_resource_id| INT UNSIGNED | FK to resource (result)              |
+| output_amount     | INT UNSIGNED | Amount produced (default: 1)         |
+| input1_resource_id| INT UNSIGNED | FK to resource (first input)         |
+| input1_amount     | INT UNSIGNED | Amount of first input (default: 1)   |
+| input2_resource_id| INT UNSIGNED | FK to resource (second input, NULL)  |
+| input2_amount     | INT UNSIGNED | Amount of second input               |
+| input3_resource_id| INT UNSIGNED | FK to resource (third input, NULL)   |
+| input3_amount     | INT UNSIGNED | Amount of third input                |
+| ticks             | INT UNSIGNED | Processing time in game ticks        |
+
+**Time Calculation:**
+- 60 ticks = 1 second (базовая скорость)
+- Entity power влияет на скорость: `power=100` — обычная, `power=200` — в 2 раза быстрее
+
+**Формула отображения времени:**
+```
+time_seconds = (ticks / 60) * (100 / power)
+```
+
+**Примеры:**
+| Ticks | Power | Calculation          | Display |
+|-------|-------|----------------------|---------|
+| 60    | 100   | (60/60) * (100/100)  | 1       |
+| 30    | 100   | (30/60) * (100/100)  | 0.5     |
+| 120   | 100   | (120/60) * (100/100) | 2       |
+| 120   | 200   | (120/60) * (100/200) | 1       |
+| 120   | 400   | (120/60) * (100/400) | 0.5     |
+
+**Recipes by Building:**
+
+| Building         | Recipe                                      | Ticks |
+|------------------|---------------------------------------------|-------|
+| Mining Drill     | 1 Iron Deposit → 1 Iron Ore                 | 30    |
+| Mining Drill     | 1 Copper Deposit → 1 Copper Ore             | 30    |
+| Small Furnace    | 3 Iron Ore + 1 Coal → 1 Iron Ingot          | 60    |
+| Small Furnace    | 3 Copper Ore + 1 Coal → 1 Copper Ingot      | 60    |
+| Small Furnace    | 2 Iron Ingot + 1 Coal → 1 Steel Plate       | 90    |
+| Small Furnace    | 1 Wood → 1 Charcoal                         | 30    |
+| Assembly Machine | 1 Iron Ingot → 2 Iron Plate                 | 40    |
+| Assembly Machine | 1 Copper Ingot → 2 Copper Plate             | 40    |
+| Assembly Machine | 2 Copper Ingot → 4 Copper Wire              | 20    |
+| Assembly Machine | 2 Iron Plate → 4 Screw                      | 20    |
+| Assembly Machine | 2 Iron Plate → 1 Gear                       | 30    |
+| Assembly Machine | 2 Gear + 4 Screw → 1 Rotor                  | 60    |
+| Assembly Machine | 2 Copper Wire + 1 Iron Plate → 1 Circuit    | 50    |
+| Assembly Machine | 1 Rotor + 2 Circuit + 1 Copper Wire → 1 Motor | 80  |
+| Assembly Machine | 1 Raw Crystal → 1 Crystal                   | 45    |
+| Assembly Machine | 2 Refined Fuel + 1 Circuit → 1 Fuel Cell    | 100   |
+| Boiler           | 1 Crude Oil → 1 Heavy Oil                   | 60    |
+| Boiler           | 2 Heavy Oil → 1 Light Oil                   | 40    |
+| Boiler           | 2 Light Oil → 1 Refined Fuel                | 30    |
+| Boiler           | 3 Heavy Oil → 1 Lubricant                   | 50    |
+
+### entity_type_recipe (entity-recipe links)
+Links entity types to available recipes.
+
+| Column         | Type         | Description                       |
+|----------------|--------------|-----------------------------------|
+| entity_type_id | INT UNSIGNED | FK to entity_type (CASCADE)       |
+| recipe_id      | INT UNSIGNED | FK to recipe (CASCADE)            |
+
+**Primary key:** (entity_type_id, recipe_id)
 
 ## Coordinate System
 
@@ -307,6 +378,7 @@ Stores user accounts and their settings.
 | m251220_210000_convert_entity_coords_to_tiles.php | Convert entity x,y from pixels to tiles      |
 | m251220_220000_add_orientation_and_conveyor_variants.php | Add orientation system, conveyor variants |
 | m251220_230000_add_manipulator_orientations.php | Add manipulator orientation variants           |
+| m251220_240000_create_recipe_system.php         | Create recipe system with deposit resources    |
 
 ## Future Considerations
 

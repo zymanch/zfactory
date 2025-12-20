@@ -6,6 +6,9 @@ use actions\JsonAction;
 use models\Landing;
 use models\EntityType;
 use models\Entity;
+use models\Resource;
+use models\Recipe;
+use models\EntityTypeRecipe;
 use services\BuildingRules;
 use Yii;
 
@@ -48,6 +51,33 @@ class Config extends JsonAction
                 ->all();
         }
 
+        // Get resources
+        $resources = Resource::find()
+            ->indexBy('resource_id')
+            ->asArray()
+            ->all();
+
+        // Get recipes
+        $recipes = Recipe::find()
+            ->indexBy('recipe_id')
+            ->asArray()
+            ->all();
+
+        // Get entity type recipes (which recipes are available for which entity types)
+        $entityTypeRecipesRaw = EntityTypeRecipe::find()
+            ->asArray()
+            ->all();
+
+        // Group by entity_type_id for easy lookup
+        $entityTypeRecipes = [];
+        foreach ($entityTypeRecipesRaw as $etr) {
+            $typeId = (int) $etr['entity_type_id'];
+            if (!isset($entityTypeRecipes[$typeId])) {
+                $entityTypeRecipes[$typeId] = [];
+            }
+            $entityTypeRecipes[$typeId][] = (int) $etr['recipe_id'];
+        }
+
         // Get user's build panel and camera position
         $buildPanel = array_fill(0, 10, null);
         $cameraX = 0;
@@ -66,6 +96,9 @@ class Config extends JsonAction
             'landing' => $landingTypes,
             'entityTypes' => $entityTypes,
             'eyeEntities' => $eyeEntities,
+            'resources' => $resources,
+            'recipes' => $recipes,
+            'entityTypeRecipes' => $entityTypeRecipes,
             'buildPanel' => $buildPanel,
             'cameraPosition' => [
                 'x' => $cameraX,

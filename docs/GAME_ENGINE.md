@@ -340,6 +340,32 @@ public/js/game.js              # Compiled (webpack)
 public/js/*.js                 # Code-split chunks
 ```
 
+### EntityTooltip (`entityTooltip.js`)
+Displays entity information on hover:
+- Entity name and durability bar
+- Contained resources (fetched from server)
+- Available recipes for production buildings
+
+**Recipe Display:**
+- Shows inputs → output with resource icons
+- Time adjusted by entity power
+
+**Time Formula:**
+```javascript
+time_seconds = (ticks / 60) * (100 / power)
+```
+
+- 60 ticks = 1 second at power=100
+- power=200 executes 2x faster (halves time)
+- Whole numbers display without decimals (1, not 1.0)
+
+| Ticks | Power | Time Display |
+|-------|-------|--------------|
+| 60    | 100   | 1            |
+| 30    | 100   | 0.5          |
+| 120   | 200   | 1            |
+| 120   | 400   | 0.5          |
+
 ## Module Descriptions
 
 ### Camera (`camera.js`)

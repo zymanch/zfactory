@@ -17,6 +17,8 @@ namespace models\base;
  * @property integer $height
  * @property string $icon_url
  * @property integer $power
+ * @property integer $parent_entity_type_id
+ * @property string $orientation
  */
 class BaseEntityType extends \yii\db\ActiveRecord
 {
@@ -35,8 +37,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         return [
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::IMAGE_URL], 'required'],
-            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER], 'integer'],
-            [[BaseEntityTypePeer::TYPE], 'string'],
+            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID], 'integer'],
+            [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION], 'string'],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
             [[BaseEntityTypePeer::IMAGE_URL, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
             [[BaseEntityTypePeer::EXTENSION], 'string', 'max' => 4],
@@ -59,6 +61,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::HEIGHT => 'Height',
             BaseEntityTypePeer::ICON_URL => 'Icon Url',
             BaseEntityTypePeer::POWER => 'Power',
+            BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID => 'Parent Entity Type ID',
+            BaseEntityTypePeer::ORIENTATION => 'Orientation',
         ];
     }
 
@@ -89,6 +93,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'height' => BaseEntityTypePeer::HEIGHT,
             'icon_url' => BaseEntityTypePeer::ICON_URL,
             'power' => BaseEntityTypePeer::POWER,
+            'parent_entity_type_id' => BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID,
+            'orientation' => BaseEntityTypePeer::ORIENTATION,
         ];
     }
     

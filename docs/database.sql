@@ -144,6 +144,8 @@ INSERT INTO `resource` (`resource_id`, `name`, `icon_url`, `type`) VALUES
     (5, 'Stone', 'stone.svg', 'raw'),
     (6, 'Raw Crystal', 'raw_crystal.svg', 'raw'),
     (7, 'Crude Oil', 'crude_oil.svg', 'raw'),
+    (8, 'Iron Deposit', 'iron_deposit.svg', 'raw'),
+    (9, 'Copper Deposit', 'copper_deposit.svg', 'raw'),
     -- Liquid resources
     (20, 'Refined Fuel', 'refined_fuel.svg', 'liquid'),
     (21, 'Lubricant', 'lubricant.svg', 'liquid'),
@@ -181,6 +183,78 @@ CREATE TABLE IF NOT EXISTS `entity_resource` (
   CONSTRAINT `fk_entity_resource_entity` FOREIGN KEY (`entity_id`) REFERENCES `entity` (`entity_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_entity_resource_resource` FOREIGN KEY (`resource_id`) REFERENCES `resource` (`resource_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+-- --------------------------------------------------------
+-- Table structure: recipe (crafting recipes)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `recipe` (
+  `recipe_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `output_resource_id` int(10) unsigned NOT NULL,
+  `output_amount` int(10) unsigned NOT NULL DEFAULT 1,
+  `input1_resource_id` int(10) unsigned NOT NULL,
+  `input1_amount` int(10) unsigned NOT NULL DEFAULT 1,
+  `input2_resource_id` int(10) unsigned DEFAULT NULL,
+  `input2_amount` int(10) unsigned DEFAULT NULL,
+  `input3_resource_id` int(10) unsigned DEFAULT NULL,
+  `input3_amount` int(10) unsigned DEFAULT NULL,
+  `ticks` int(10) unsigned NOT NULL DEFAULT 60,
+  PRIMARY KEY (`recipe_id`),
+  CONSTRAINT `fk_recipe_output` FOREIGN KEY (`output_resource_id`) REFERENCES `resource` (`resource_id`),
+  CONSTRAINT `fk_recipe_input1` FOREIGN KEY (`input1_resource_id`) REFERENCES `resource` (`resource_id`),
+  CONSTRAINT `fk_recipe_input2` FOREIGN KEY (`input2_resource_id`) REFERENCES `resource` (`resource_id`),
+  CONSTRAINT `fk_recipe_input3` FOREIGN KEY (`input3_resource_id`) REFERENCES `resource` (`resource_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `recipe` (`recipe_id`, `output_resource_id`, `output_amount`, `input1_resource_id`, `input1_amount`, `input2_resource_id`, `input2_amount`, `input3_resource_id`, `input3_amount`, `ticks`) VALUES
+    -- Mining recipes
+    (1, 2, 1, 8, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Iron Deposit -> 1 Iron Ore
+    (2, 3, 1, 9, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Copper Deposit -> 1 Copper Ore
+    -- Furnace recipes
+    (3, 100, 1, 2, 3, 4, 1, NULL, NULL, 60),       -- 3 Iron Ore + 1 Coal -> 1 Iron Ingot
+    (4, 101, 1, 3, 3, 4, 1, NULL, NULL, 60),       -- 3 Copper Ore + 1 Coal -> 1 Copper Ingot
+    (5, 109, 1, 100, 2, 4, 1, NULL, NULL, 90),     -- 2 Iron Ingot + 1 Coal -> 1 Steel Plate
+    (6, 112, 1, 1, 1, NULL, NULL, NULL, NULL, 30), -- 1 Wood -> 1 Charcoal
+    -- Assembly recipes
+    (7, 102, 2, 100, 1, NULL, NULL, NULL, NULL, 40),   -- 1 Iron Ingot -> 2 Iron Plate
+    (8, 103, 2, 101, 1, NULL, NULL, NULL, NULL, 40),   -- 1 Copper Ingot -> 2 Copper Plate
+    (9, 104, 4, 101, 2, NULL, NULL, NULL, NULL, 20),   -- 2 Copper Ingot -> 4 Copper Wire
+    (10, 105, 4, 102, 2, NULL, NULL, NULL, NULL, 20),  -- 2 Iron Plate -> 4 Screw
+    (11, 106, 1, 102, 2, NULL, NULL, NULL, NULL, 30),  -- 2 Iron Plate -> 1 Gear
+    (12, 107, 1, 106, 2, 105, 4, NULL, NULL, 60),      -- 2 Gear + 4 Screw -> 1 Rotor
+    (13, 110, 1, 104, 2, 102, 1, NULL, NULL, 50),      -- 2 Copper Wire + 1 Iron Plate -> 1 Circuit
+    (14, 111, 1, 107, 1, 110, 2, 104, 1, 80),          -- 1 Rotor + 2 Circuit + 1 Copper Wire -> 1 Motor
+    (15, 108, 1, 6, 1, NULL, NULL, NULL, NULL, 45),    -- 1 Raw Crystal -> 1 Crystal
+    (16, 113, 1, 20, 2, 110, 1, NULL, NULL, 100),      -- 2 Refined Fuel + 1 Circuit -> 1 Fuel Cell
+    -- Boiler recipes
+    (17, 22, 1, 7, 1, NULL, NULL, NULL, NULL, 60),     -- 1 Crude Oil -> 1 Heavy Oil
+    (18, 23, 1, 22, 2, NULL, NULL, NULL, NULL, 40),    -- 2 Heavy Oil -> 1 Light Oil
+    (19, 20, 1, 23, 2, NULL, NULL, NULL, NULL, 30),    -- 2 Light Oil -> 1 Refined Fuel
+    (20, 21, 1, 22, 3, NULL, NULL, NULL, NULL, 50);    -- 3 Heavy Oil -> 1 Lubricant
+
+
+-- --------------------------------------------------------
+-- Table structure: entity_type_recipe (links entity types to recipes)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `entity_type_recipe` (
+  `entity_type_id` int(10) unsigned NOT NULL,
+  `recipe_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`entity_type_id`, `recipe_id`),
+  CONSTRAINT `fk_etr_entity_type` FOREIGN KEY (`entity_type_id`) REFERENCES `entity_type` (`entity_type_id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_etr_recipe` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`recipe_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `entity_type_recipe` (`entity_type_id`, `recipe_id`) VALUES
+    -- Mining Drill (102)
+    (102, 1), (102, 2),
+    -- Fast Mining Drill (108)
+    (108, 1), (108, 2),
+    -- Small Furnace (101)
+    (101, 3), (101, 4), (101, 5), (101, 6),
+    -- Assembly Machine (103)
+    (103, 7), (103, 8), (103, 9), (103, 10), (103, 11), (103, 12), (103, 13), (103, 14), (103, 15), (103, 16),
+    -- Boiler (107)
+    (107, 17), (107, 18), (107, 19), (107, 20);
 
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

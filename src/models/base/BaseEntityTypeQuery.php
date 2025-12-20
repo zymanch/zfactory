@@ -16,6 +16,8 @@ use models\EntityTypeQuery;
  * @method EntityTypeQuery filterByHeight($value, $criteria = null)
  * @method EntityTypeQuery filterByIconUrl($value, $criteria = null)
  * @method EntityTypeQuery filterByPower($value, $criteria = null)
+ * @method EntityTypeQuery filterByParentEntityTypeId($value, $criteria = null)
+ * @method EntityTypeQuery filterByOrientation($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByEntityTypeId($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByType($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByName($value, $criteria = null)
@@ -26,6 +28,8 @@ use models\EntityTypeQuery;
   * @method EntityTypeQuery andJoinOnConditionByHeight($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByIconUrl($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByPower($value, $criteria = null)
+  * @method EntityTypeQuery andJoinOnConditionByParentEntityTypeId($value, $criteria = null)
+  * @method EntityTypeQuery andJoinOnConditionByOrientation($value, $criteria = null)
   * @method EntityTypeQuery orderByEntityTypeId($order = Criteria::ASC)
   * @method EntityTypeQuery orderByType($order = Criteria::ASC)
   * @method EntityTypeQuery orderByName($order = Criteria::ASC)
@@ -36,6 +40,8 @@ use models\EntityTypeQuery;
   * @method EntityTypeQuery orderByHeight($order = Criteria::ASC)
   * @method EntityTypeQuery orderByIconUrl($order = Criteria::ASC)
   * @method EntityTypeQuery orderByPower($order = Criteria::ASC)
+  * @method EntityTypeQuery orderByParentEntityTypeId($order = Criteria::ASC)
+  * @method EntityTypeQuery orderByOrientation($order = Criteria::ASC)
  */
 class BaseEntityTypeQuery extends \yii\db\ActiveQuery
 {

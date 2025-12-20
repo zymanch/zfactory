@@ -23,6 +23,9 @@ class ZFactoryGame {
         this.textures = {};
         this.landingTypes = {};
         this.entityTypes = {};
+        this.resources = {};
+        this.recipes = {};
+        this.entityTypeRecipes = {};
 
         // Entity management
         this.loadedEntities = new Map();
@@ -170,6 +173,9 @@ class ZFactoryGame {
         this.config = data.config;
         this.landingTypes = data.landing;
         this.entityTypes = data.entityTypes;
+        this.resources = data.resources || {};
+        this.recipes = data.recipes || {};
+        this.entityTypeRecipes = data.entityTypeRecipes || {};
         this.initialBuildPanel = data.buildPanel || [];
         this.initialEyeEntities = data.eyeEntities || [];
         this.initialCameraPosition = data.cameraPosition || { x: 0, y: 0, zoom: 1 };
