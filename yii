@@ -1,0 +1,55 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Yii console bootstrap file.
+ *
+ * @link      http://www.yiiframework.com/
+ * @copyright Copyright (c) 2008 Yii Software LLC
+ * @license   http://www.yiiframework.com/license/
+ */
+
+// Load secure.config - access to environment resources (mysql, rabbitmq, memcache, ...)
+$secure = dirname(__FILE__) . '/config.secure.json';
+$secure = json_decode(file_get_contents($secure), 1);
+if (!$secure) {
+    print 'Secure config has wrong format';
+    die();
+}
+
+if (!file_exists(__DIR__ . '//config.local.php')) {
+    print 'Local config not exist';
+    die();
+}
+
+// Load app configs from config.local (depends from environment)
+include(__DIR__ . '/vendor/yiisoft/yii2/helpers/BaseArrayHelper.php');
+include(__DIR__ . '/vendor/yiisoft/yii2/helpers/ArrayHelper.php');
+$config = yii\helpers\ArrayHelper::merge(
+    require(__DIR__ . '/static_config.php'),
+    require(__DIR__ . '/config.local.php')
+);
+unset($config['components']['errorHandler']);
+unset($config['components']['user']);
+unset($config['components']['session']);
+unset($config['components']['request']);
+$config['controllerNamespace'] = 'commands';
+
+// Initialize application
+define('YII_DEBUG', true);
+defined('YII_ENV') or define('YII_ENV', $config['params']['env']);
+
+require(__DIR__ . '/vendor/autoload.php');
+require(__DIR__ . '/vendor/yiisoft/yii2/Yii.php');
+//unset debug module
+if (!empty($config['bootstrap'])) {
+    foreach ($config['bootstrap'] as $index => $bootstrapModule) {
+        if ($bootstrapModule == 'debug') {
+            unset($config['bootstrap'][$index]);
+        }
+    }
+}
+unset($config['modules']['debug']);
+
+$application = new yii\console\Application($config);
+$exitCode = $application->run();
+exit($exitCode);

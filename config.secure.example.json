@@ -1,0 +1,16 @@
+{
+  "config": {
+    "salt_for_intranet": "salt"
+  },
+  "mysql": {
+    "mysqlcluster": {
+        "hostname": "localhost",
+        "port": "3306",
+        "username": "root",
+        "password": ""
+    }
+  },
+    "replicate": {
+        "token": "test"
+    }
+}

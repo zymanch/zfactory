@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="24" viewBox="0 0 32 24">
+  <!-- Oak tree 1x1 tile -->
+  <rect x="13" y="16" width="6" height="8" fill="#5d4037"/>
+  <ellipse cx="16" cy="10" rx="12" ry="8" fill="#4caf50"/>
+  <ellipse cx="10" cy="8" rx="6" ry="5" fill="#66bb6a"/>
+  <ellipse cx="22" cy="9" rx="5" ry="4" fill="#81c784"/>
+  <!-- Selection highlight -->
+  <rect x="0" y="0" width="32" height="24" fill="none" stroke="#FFD700" stroke-width="2" rx="2">
+    <animate attributeName="stroke-opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite"/>
+  </rect>
+</svg>

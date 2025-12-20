@@ -1,0 +1,27 @@
+{
+  "name": "zfactory",
+  "version": "1.0.0",
+  "private": true,
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "assets": "npx mix --production",
+    "assets-watch": "npx mix watch"
+  },
+  "browserslist": [
+    "> 1%"
+  ],
+  "devDependencies": {
+    "bootstrap": "^5.2.3",
+    "bootstrap-icons": "1.13.1",
+    "jquery": "^3.7.1",
+    "laravel-mix": "6.0.49",
+    "sass": "1.96.0",
+    "sass-loader": "16.0.6",
+    "webpack": "5.103.0"
+  },
+  "dependencies": {
+    "pixi.js": "^8.6.6"
+  }
+}

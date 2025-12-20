@@ -1,0 +1,61 @@
+{
+    "name": "zymanch/zfactory",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": "~7.2",
+        "yiisoft/yii2": "2.0.42",
+        "yiisoft/yii2-bootstrap": "^2.0",
+        "yiisoft/yii2-swiftmailer": "^2.1",
+        "yiisoft/yii2-httpclient": "^2.0.7",
+        "yiisoft/yii2-bootstrap5": "^2.0.1",
+        "yiisoft/yii2-debug": "^2.1",
+        "yiisoft/yii2-gii": "^2.2",
+        "rmrevin/yii2-fontawesome": "^3.7.0",
+        "phpunit/phpunit": "^8.5",
+        "codeception/codeception": "4.1.24",
+        "gtflixtv/active-record": "dev-master",
+        "gtflixtv/active-generator": "dev-master",
+        "symfony/polyfill-php80": "^1.22",
+        "webmozart/assert": "^1.11",
+        "amorpro/fixturify": "dev-main",
+        "ext-curl": "*",
+        "ext-fileinfo": "*",
+        "ext-gd": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-0": {
+            "": "src/",
+            "unit": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "php ./vendor/phpunit/phpunit/phpunit --bootstrap ./tests/_bootstrap.php --colors --no-configuration ./tests/unit",
+        "test detailed": "php ./vendor/phpunit/phpunit/phpunit --bootstrap ./tests/_bootstrap.php --colors --testdox --verbose --no-configuration ./tests/unit",
+        "fixture": "php yii ar/fixture --tables=sheer:account;gtf:user,scene --dir=my_test",
+        "fixture update": "php yii ar/fixture-update --tables=sheer:account;gtf:user,scene --dir=my_test",
+        "ar": "php ./bin/ar",
+        "db migration new": "php ./bin/db create my_migration",
+        "db migration run": "php ./bin/db"
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        },
+        {
+            "type": "vcs",
+            "url": "ssh://git@devbase.gtflixtv.com/active-record.git"
+        },
+        {
+            "type": "git",
+            "url": "ssh://git@devbase.gtflixtv.com/active-generator.git"
+        }
+    ],
+    "config": {
+        "allow-plugins": {
+            "yiisoft/yii2-composer": true
+        }
+    }
+}

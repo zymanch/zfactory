@@ -1,0 +1,10 @@
+#! /usr/bin/php7.2
+<?php
+$_SERVER['argv'][0] = 'yii';
+if (count($_SERVER['argv'])>1) {
+    $_SERVER['argv'][1] = 'migrate/'.$_SERVER['argv'][1];
+} else {
+    $_SERVER['argv'][1] = 'migrate';
+}
+$_SERVER['argv'][] = '--interactive=0';
+include(dirname(__DIR__).'/yii');

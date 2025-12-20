@@ -1,0 +1,5 @@
+#!/usr/bin/env php
+<?php
+echo 'See the composer.json scripts about how to run the tests';
+
+

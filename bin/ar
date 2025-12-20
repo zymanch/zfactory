@@ -1,0 +1,6 @@
+#!/usr/bin/env php
+<?php
+$firstCommand = array_shift($_SERVER['argv']);
+array_unshift($_SERVER['argv'],'ar/index');
+array_unshift($_SERVER['argv'],$firstCommand);
+require_once dirname(__DIR__).'/yii';

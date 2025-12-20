@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="24" viewBox="0 0 32 24">
+  <!-- Small Crystal Tower 1x1 -->
+  <ellipse cx="16" cy="22" rx="8" ry="3" fill="#37474f"/>
+  <rect x="14" y="12" width="4" height="10" fill="#455a64"/>
+  <rect x="13" y="14" width="6" height="4" fill="#546e7a"/>
+  <!-- Crystal -->
+  <polygon points="16,2 20,8 16,10 12,8" fill="#00bcd4"/>
+  <polygon points="16,2 12,8 16,10" fill="#00acc1"/>
+  <polygon points="16,2 20,8 16,10" fill="#26c6da"/>
+  <ellipse cx="16" cy="6" rx="2" ry="1" fill="#80deea" opacity="0.6"/>
+  <rect x="1" y="1" width="30" height="22" fill="none" stroke="#FFD700" stroke-width="2">
+    <animate attributeName="stroke-opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite"/>
+  </rect>
+</svg>
