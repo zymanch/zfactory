@@ -5,6 +5,7 @@ import { EntityBehaviorFactory } from './entityBehaviors.js';
 
 /**
  * BuildMode - handles building placement on the map
+ * Supports rotation for entities with orientation variants (R or К key)
  */
 export class BuildMode {
     constructor(game) {
@@ -16,6 +17,11 @@ export class BuildMode {
         this.currentTile = { x: -1, y: -1 };
         this.targetEntity = null;
         this.placementError = null;
+
+        // Rotation support
+        this.baseEntityTypeId = null;  // The parent entity type (or self if no parent)
+        this.orientationVariants = []; // Array of entity type IDs for each orientation
+        this.currentOrientationIndex = 0;
     }
 
     /**
@@ -23,6 +29,88 @@ export class BuildMode {
      */
     init() {
         this.game.app.canvas.addEventListener('click', (e) => this.onClick(e));
+        document.addEventListener('keydown', (e) => this.onKeyDown(e));
+    }
+
+    /**
+     * Handle keyboard input for rotation
+     */
+    onKeyDown(e) {
+        if (!this.isActive) return;
+
+        // R or К (Russian) key for rotation
+        if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
+            e.preventDefault();
+            this.rotateBuilding();
+        }
+    }
+
+    /**
+     * Rotate building to next orientation
+     */
+    rotateBuilding() {
+        if (this.orientationVariants.length <= 1) return;
+
+        // Cycle to next orientation
+        this.currentOrientationIndex = (this.currentOrientationIndex + 1) % this.orientationVariants.length;
+        const newTypeId = this.orientationVariants[this.currentOrientationIndex];
+
+        // Update entity type and recreate preview
+        this.entityTypeId = newTypeId;
+        this.createPreviewSprite();
+
+        // Update preview position if we have a current tile
+        if (this.currentTile.x >= 0 && this.currentTile.y >= 0) {
+            const { tileWidth, tileHeight } = this.game.config;
+            const pos = tileToWorld(this.currentTile.x, this.currentTile.y, tileWidth, tileHeight);
+            this.previewSprite.x = pos.x;
+            this.previewSprite.y = pos.y;
+            this.previewSprite.zIndex = pos.y + PREVIEW_Z_OFFSET;
+            this.previewSprite.visible = true;
+            this.canPlace = this.checkPlacement(this.currentTile.x, this.currentTile.y);
+            this.updatePreviewVisual();
+        }
+    }
+
+    /**
+     * Get orientation variants for an entity type
+     * Returns array of entity type IDs that share the same base
+     */
+    getOrientationVariants(entityTypeId) {
+        const entityType = this.game.entityTypes[entityTypeId];
+        if (!entityType) return [entityTypeId];
+
+        // Get base entity type ID (parent or self)
+        const baseId = entityType.parent_entity_type_id
+            ? parseInt(entityType.parent_entity_type_id)
+            : parseInt(entityTypeId);
+
+        // Collect all variants with same base (including base itself)
+        const variants = [];
+        const orientationOrder = ['right', 'down', 'left', 'up']; // Clockwise order
+
+        for (const typeId in this.game.entityTypes) {
+            const et = this.game.entityTypes[typeId];
+            const etId = parseInt(typeId);
+            const etParentId = et.parent_entity_type_id ? parseInt(et.parent_entity_type_id) : null;
+
+            // Include if this is the base, or if parent matches base
+            if (etId === baseId || etParentId === baseId) {
+                variants.push({
+                    id: etId,
+                    orientation: et.orientation || 'none'
+                });
+            }
+        }
+
+        // Sort by orientation order
+        variants.sort((a, b) => {
+            const aIndex = orientationOrder.indexOf(a.orientation);
+            const bIndex = orientationOrder.indexOf(b.orientation);
+            return aIndex - bIndex;
+        });
+
+        return variants.map(v => v.id);
     }
 
     /**
@@ -31,6 +119,12 @@ export class BuildMode {
     activate(entityTypeId) {
         this.entityTypeId = entityTypeId;
         this.isActive = true;
+
+        // Initialize orientation variants
+        this.orientationVariants = this.getOrientationVariants(entityTypeId);
+        this.currentOrientationIndex = this.orientationVariants.indexOf(parseInt(entityTypeId));
+        if (this.currentOrientationIndex < 0) this.currentOrientationIndex = 0;
+
         this.createPreviewSprite();
         this.game.app.canvas.style.cursor = 'crosshair';
     }

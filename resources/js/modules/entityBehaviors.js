@@ -69,13 +69,13 @@ class EntityBehavior {
      */
     isLandingBuildable(tileX, tileY) {
         const key = tileKey(tileX, tileY);
-        const tileData = this.game.tileDataMap.get(key);
+        const landingId = this.game.tileDataMap.get(key);
 
-        if (!tileData) {
+        if (!landingId) {
             return false;
         }
 
-        const landing = this.game.landingTypes[tileData.landing_id];
+        const landing = this.game.landingTypes[landingId];
         if (!landing) {
             return false;
         }

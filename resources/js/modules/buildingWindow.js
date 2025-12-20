@@ -55,12 +55,19 @@ export class BuildingWindow {
 
     /**
      * Get entity types grouped by type
+     * Excludes orientation variants (entities with parent_entity_type_id)
      */
     getGroupedEntityTypes() {
         const groups = {};
 
         for (const typeId in this.game.entityTypes) {
             const entityType = this.game.entityTypes[typeId];
+
+            // Skip orientation variants - only show base entities
+            if (entityType.parent_entity_type_id) {
+                continue;
+            }
+
             const type = entityType.type;
 
             if (!groups[type]) {
