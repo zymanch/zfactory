@@ -87,7 +87,7 @@ Defines types of entities that can be placed on the map.
 | Column               | Type                                                                              | Description                           |
 |----------------------|-----------------------------------------------------------------------------------|---------------------------------------|
 | entity_type_id       | INT UNSIGNED                                                                      | Primary key                           |
-| type                 | ENUM('building','transporter','manipulator','tree','relief','resource','eye','mining') | Category of entity               |
+| type                 | ENUM('building','transporter','manipulator','tree','relief','resource','eye','mining','storage') | Category of entity          |
 | name                 | VARCHAR(128)                                                                      | Display name                          |
 | image_url            | VARCHAR(256)                                                                      | Folder name for sprite states         |
 | extension            | VARCHAR(4) DEFAULT 'svg'                                                          | File extension (svg, jpg, png)        |
@@ -108,6 +108,7 @@ Defines types of entities that can be placed on the map.
 - `relief` — камни и рельеф (неуничтожаемые)
 - `resource` — ресурсные залежи (неуничтожаемые)
 - `eye` — башни видимости (Crystal Towers) с радиусом обзора = power
+- `storage` — хранилища для ресурсов (сундуки, контейнеры)
 
 **Entity Behavior System:**
 Каждый тип сущности имеет свой класс поведения (EntityBehavior):
@@ -144,7 +145,7 @@ Defines types of entities that can be placed on the map.
 | 101 | Small Furnace         | building    | 200     | none        | -      |
 | 102 | Mining Drill          | mining      | 300     | none        | -      |
 | 103 | Assembly Machine      | building    | 400     | none        | -      |
-| 104 | Storage Chest         | building    | 150     | none        | -      |
+| 104 | Storage Chest         | storage     | 150     | none        | -      |
 | 105 | Power Pole            | building    | 100     | none        | -      |
 | 106 | Steam Engine          | building    | 350     | none        | -      |
 | 107 | Boiler                | building    | 250     | none        | -      |
@@ -190,15 +191,16 @@ Defines types of resources in the game (ores, ingots, crafted items).
 
 | Column      | Type                          | Description                          |
 |-------------|-------------------------------|--------------------------------------|
-| resource_id | INT UNSIGNED AUTO_INC         | Primary key                          |
-| name        | VARCHAR(128)                  | Display name                         |
-| icon_url    | VARCHAR(256)                  | Path to 16x16 icon (resources folder)|
-| type        | ENUM('raw','liquid','crafted')| Resource category                    |
+| resource_id | INT UNSIGNED AUTO_INC                  | Primary key                          |
+| name        | VARCHAR(128)                           | Display name                         |
+| icon_url    | VARCHAR(256)                           | Path to 16x16 icon (resources folder)|
+| type        | ENUM('raw','liquid','crafted','deposit')| Resource category                   |
 
 **Resource Types:**
 - `raw` — сырые ресурсы (руды, дерево, уголь)
 - `liquid` — жидкие ресурсы (топливо, масла)
 - `crafted` — обработанные ресурсы (слитки, пластины, компоненты)
+- `deposit` — абстрактные залежи внутри resource entities (не перемещаются)
 
 **Resources:**
 | ID  | Name          | Type    | Description              |
@@ -210,8 +212,8 @@ Defines types of resources in the game (ores, ingots, crafted items).
 | 5   | Stone         | raw     | Камень                   |
 | 6   | Raw Crystal   | raw     | Необработанный кристалл  |
 | 7   | Crude Oil     | raw     | Сырая нефть              |
-| 8   | Iron Deposit  | raw     | Железная залежь (в руде) |
-| 9   | Copper Deposit| raw     | Медная залежь (в руде)   |
+| 8   | Iron Deposit  | deposit | Железная залежь (в руде) |
+| 9   | Copper Deposit| deposit | Медная залежь (в руде)   |
 | 20  | Refined Fuel  | liquid  | Очищенное топливо        |
 | 21  | Lubricant     | liquid  | Смазка                   |
 | 22  | Heavy Oil     | liquid  | Тяжёлое масло            |
@@ -379,6 +381,8 @@ Stores user accounts and their settings.
 | m251220_220000_add_orientation_and_conveyor_variants.php | Add orientation system, conveyor variants |
 | m251220_230000_add_manipulator_orientations.php | Add manipulator orientation variants           |
 | m251220_240000_create_recipe_system.php         | Create recipe system with deposit resources    |
+| m251220_250000_add_deposit_resource_type.php    | Add 'deposit' type for abstract resources      |
+| m251220_260000_add_storage_entity_type.php      | Add 'storage' type for chests/containers       |
 
 ## Future Considerations
 

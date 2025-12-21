@@ -43,7 +43,7 @@ INSERT INTO `landing` (`landing_id`, `is_buildable`, `name`, `image_url`) VALUES
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `entity_type` (
   `entity_type_id` int(10) unsigned NOT NULL PRIMARY KEY,
-  `type` enum('building','transporter','manipulator','tree','relief','resource','eye','mining') NOT NULL,
+  `type` enum('building','transporter','manipulator','tree','relief','resource','eye','mining','storage') NOT NULL,
   `name` varchar(128) NOT NULL,
   `image_url` varchar(256) NOT NULL,
   `extension` varchar(4) NOT NULL DEFAULT 'svg',
@@ -73,7 +73,7 @@ INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `exten
     -- Buildings
     (101, 'building', 'Small Furnace', 'furnace', 'svg', 200, 2, 2, 'furnace/icon.svg', 1, NULL, 'none'),
     (103, 'building', 'Assembly Machine', 'assembler', 'svg', 400, 3, 3, 'assembler/icon.svg', 1, NULL, 'none'),
-    (104, 'building', 'Storage Chest', 'chest', 'svg', 150, 1, 1, 'chest/icon.svg', 1, NULL, 'none'),
+    (104, 'storage', 'Storage Chest', 'chest', 'svg', 150, 1, 1, 'chest/icon.svg', 1, NULL, 'none'),
     (105, 'building', 'Power Pole', 'power_pole', 'svg', 100, 1, 1, 'power_pole/icon.svg', 1, NULL, 'none'),
     (106, 'building', 'Steam Engine', 'steam_engine', 'svg', 350, 2, 3, 'steam_engine/icon.svg', 1, NULL, 'none'),
     (107, 'building', 'Boiler', 'boiler', 'svg', 250, 2, 2, 'boiler/icon.svg', 1, NULL, 'none'),
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS `resource` (
   `resource_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(128) NOT NULL,
   `icon_url` varchar(256) NOT NULL,
-  `type` enum('raw','liquid','crafted') NOT NULL DEFAULT 'raw',
+  `type` enum('raw','liquid','crafted','deposit') NOT NULL DEFAULT 'raw',
   PRIMARY KEY (`resource_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -144,8 +144,9 @@ INSERT INTO `resource` (`resource_id`, `name`, `icon_url`, `type`) VALUES
     (5, 'Stone', 'stone.svg', 'raw'),
     (6, 'Raw Crystal', 'raw_crystal.svg', 'raw'),
     (7, 'Crude Oil', 'crude_oil.svg', 'raw'),
-    (8, 'Iron Deposit', 'iron_deposit.svg', 'raw'),
-    (9, 'Copper Deposit', 'copper_deposit.svg', 'raw'),
+    -- Deposit resources (abstract, inside resource entities)
+    (8, 'Iron Deposit', 'iron_deposit.svg', 'deposit'),
+    (9, 'Copper Deposit', 'copper_deposit.svg', 'deposit'),
     -- Liquid resources
     (20, 'Refined Fuel', 'refined_fuel.svg', 'liquid'),
     (21, 'Lubricant', 'lubricant.svg', 'liquid'),
