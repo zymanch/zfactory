@@ -335,7 +335,10 @@ export class ResourceTransportManager {
             if (targetState) {
                 // Target is a transporter
                 const lateralOffset = this.calculateLateralOffset(t.fromOrientation, targetState.orientation);
-                targetState.setResource(t.resourceId, t.resourceAmount, 0, lateralOffset);
+                // If entering from side (perpendicular), start at center position (0.5)
+                // If entering from behind (same orientation), start at entry edge (0)
+                const startPosition = lateralOffset !== 0 ? 0.5 : 0;
+                targetState.setResource(t.resourceId, t.resourceAmount, startPosition, lateralOffset);
                 console.log(`[Transfer] Conveyor ${t.fromId} → Conveyor ${t.toId}: ${t.resourceAmount}x ${resourceName}`);
             } else {
                 // Target is a building
@@ -366,14 +369,27 @@ export class ResourceTransportManager {
 
     /**
      * Calculate lateral offset for resources entering from side
+     *
+     * Lateral offset is perpendicular to the conveyor's direction:
+     * - RIGHT/LEFT conveyors: lateral axis is Y (positive = below center, negative = above)
+     * - UP/DOWN conveyors: lateral axis is X (positive = right of center, negative = left)
+     *
+     * Source conveyor position relative to target:
+     * - UP source → below target (transfers upward)
+     * - DOWN source → above target (transfers downward)
+     * - LEFT source → right of target (transfers leftward)
+     * - RIGHT source → left of target (transfers rightward)
      */
     calculateLateralOffset(fromOrientation, toOrientation) {
         if (fromOrientation === toOrientation) return 0;
 
+        // Map: [toOrientation][fromOrientation] = lateralOffset
+        // For RIGHT/LEFT targets: up source = below = +0.5, down source = above = -0.5
+        // For UP/DOWN targets: left source = right = +0.5, right source = left = -0.5
         const lateralMap = {
-            'right': { 'up': -0.5, 'down': 0.5 },
+            'right': { 'up': 0.5, 'down': -0.5 },
             'left':  { 'up': 0.5, 'down': -0.5 },
-            'up':    { 'left': -0.5, 'right': 0.5 },
+            'up':    { 'left': 0.5, 'right': -0.5 },
             'down':  { 'left': 0.5, 'right': -0.5 }
         };
 
@@ -418,7 +434,9 @@ export class ResourceTransportManager {
      */
     doSingleTransfer(fromState, toState) {
         const lateralOffset = this.calculateLateralOffset(fromState.orientation, toState.orientation);
-        toState.setResource(fromState.resourceId, fromState.resourceAmount, 0, lateralOffset);
+        // If entering from side (perpendicular), start at center position (0.5)
+        const startPosition = lateralOffset !== 0 ? 0.5 : 0;
+        toState.setResource(fromState.resourceId, fromState.resourceAmount, startPosition, lateralOffset);
         fromState.clear();
     }
 

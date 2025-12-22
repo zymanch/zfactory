@@ -107,30 +107,33 @@ export class ResourceRenderer {
         const centerX = state.x * tileWidth + tileWidth / 2;
         const centerY = state.y * tileHeight + tileHeight / 2;
 
-        // Movement direction offset based on resourcePosition (0 to 1)
-        // At 0: entering edge, at 0.5: center, at 1: exiting edge
+        // Movement progress: 0 = entry edge, 0.5 = center, 1 = exit edge
         const progress = state.resourcePosition - 0.5;  // -0.5 to 0.5
-        const moveDistance = tileWidth * progress;
 
+        // lateralOffset: -0.5 to 0.5, represents perpendicular offset from belt center
         let offsetX = 0;
         let offsetY = 0;
 
         switch (state.orientation) {
             case 'right':
-                offsetX = moveDistance;
-                offsetY = state.lateralOffset * tileHeight * 0.5;
+                // Movement along X (use tileWidth), lateral offset along Y
+                offsetX = progress * tileWidth;
+                offsetY = state.lateralOffset * tileHeight;
                 break;
             case 'left':
-                offsetX = -moveDistance;
-                offsetY = -state.lateralOffset * tileHeight * 0.5;
+                // Movement along -X (use tileWidth), lateral offset along Y
+                offsetX = -progress * tileWidth;
+                offsetY = state.lateralOffset * tileHeight;
                 break;
             case 'up':
-                offsetY = -moveDistance;
-                offsetX = state.lateralOffset * tileWidth * 0.5;
+                // Movement along -Y (use tileHeight), lateral offset along X
+                offsetY = -progress * tileHeight;
+                offsetX = state.lateralOffset * tileWidth;
                 break;
             case 'down':
-                offsetY = moveDistance;
-                offsetX = -state.lateralOffset * tileWidth * 0.5;
+                // Movement along Y (use tileHeight), lateral offset along X
+                offsetY = progress * tileHeight;
+                offsetX = state.lateralOffset * tileWidth;
                 break;
         }
 
