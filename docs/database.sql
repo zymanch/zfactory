@@ -65,30 +65,30 @@ INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `exten
     (10, 'relief', 'Small Rock', 'rock_small', 'svg', 100, 1, 1, NULL, 1, NULL, 'none'),
     (11, 'relief', 'Medium Rock', 'rock_medium', 'svg', 200, 1, 1, NULL, 1, NULL, 'none'),
     (12, 'relief', 'Large Rock', 'rock_large', 'svg', 300, 1, 1, NULL, 1, NULL, 'none'),
-    -- Transporters (with orientation variants)
-    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'svg', 100, 1, 1, 'conveyor/icon.svg', 1, NULL, 'right'),
-    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'svg', 100, 1, 1, 'conveyor_up/icon.svg', 1, 100, 'up'),
-    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'svg', 100, 1, 1, 'conveyor_down/icon.svg', 1, 100, 'down'),
-    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'svg', 100, 1, 1, 'conveyor_left/icon.svg', 1, 100, 'left'),
-    -- Buildings
-    (101, 'building', 'Small Furnace', 'furnace', 'svg', 200, 2, 2, 'furnace/icon.svg', 1, NULL, 'none'),
-    (103, 'building', 'Assembly Machine', 'assembler', 'svg', 400, 3, 3, 'assembler/icon.svg', 1, NULL, 'none'),
+    -- Transporters (with orientation variants) - power=100 means 1 tile per 60 ticks (1 second)
+    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'svg', 100, 1, 1, 'conveyor/icon.svg', 100, NULL, 'right'),
+    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'svg', 100, 1, 1, 'conveyor_up/icon.svg', 100, 100, 'up'),
+    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'svg', 100, 1, 1, 'conveyor_down/icon.svg', 100, 100, 'down'),
+    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'svg', 100, 1, 1, 'conveyor_left/icon.svg', 100, 100, 'left'),
+    -- Buildings - power=100 means baseline crafting speed
+    (101, 'building', 'Small Furnace', 'furnace', 'svg', 200, 2, 2, 'furnace/icon.svg', 100, NULL, 'none'),
+    (103, 'building', 'Assembly Machine', 'assembler', 'svg', 400, 3, 3, 'assembler/icon.svg', 100, NULL, 'none'),
     (104, 'storage', 'Storage Chest', 'chest', 'svg', 150, 1, 1, 'chest/icon.svg', 1, NULL, 'none'),
     (105, 'building', 'Power Pole', 'power_pole', 'svg', 100, 1, 1, 'power_pole/icon.svg', 1, NULL, 'none'),
     (106, 'building', 'Steam Engine', 'steam_engine', 'svg', 350, 2, 3, 'steam_engine/icon.svg', 1, NULL, 'none'),
-    (107, 'building', 'Boiler', 'boiler', 'svg', 250, 2, 2, 'boiler/icon.svg', 1, NULL, 'none'),
-    -- Mining (requires resource entity to place on)
-    (102, 'mining', 'Mining Drill', 'drill', 'svg', 300, 1, 1, 'drill/icon.svg', 1, NULL, 'none'),
-    (108, 'mining', 'Fast Mining Drill', 'drill_fast', 'svg', 250, 1, 1, 'drill_fast/icon.svg', 1, NULL, 'none'),
-    -- Manipulators (with orientation variants)
-    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'svg', 80, 1, 1, 'manipulator_short/icon.svg', 1, NULL, 'right'),
-    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'svg', 80, 1, 1, 'manipulator_short_up/icon.svg', 1, 200, 'up'),
-    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'svg', 80, 1, 1, 'manipulator_short_down/icon.svg', 1, 200, 'down'),
-    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'svg', 80, 1, 1, 'manipulator_short_left/icon.svg', 1, 200, 'left'),
-    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'svg', 80, 1, 1, 'manipulator_long/icon.svg', 1, NULL, 'right'),
-    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'svg', 80, 1, 1, 'manipulator_long_up/icon.svg', 1, 201, 'up'),
-    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'svg', 80, 1, 1, 'manipulator_long_down/icon.svg', 1, 201, 'down'),
-    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'svg', 80, 1, 1, 'manipulator_long_left/icon.svg', 1, 201, 'left'),
+    (107, 'building', 'Boiler', 'boiler', 'svg', 250, 2, 2, 'boiler/icon.svg', 100, NULL, 'none'),
+    -- Mining (requires resource entity to place on) - power=100 means baseline mining speed
+    (102, 'mining', 'Mining Drill', 'drill', 'svg', 300, 1, 1, 'drill/icon.svg', 100, NULL, 'none'),
+    (108, 'mining', 'Fast Mining Drill', 'drill_fast', 'svg', 250, 1, 1, 'drill_fast/icon.svg', 150, NULL, 'none'),
+    -- Manipulators (with orientation variants) - power=100 means full swing in 30 ticks
+    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'svg', 80, 1, 1, 'manipulator_short/icon.svg', 100, NULL, 'right'),
+    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'svg', 80, 1, 1, 'manipulator_short_up/icon.svg', 100, 200, 'up'),
+    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'svg', 80, 1, 1, 'manipulator_short_down/icon.svg', 100, 200, 'down'),
+    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'svg', 80, 1, 1, 'manipulator_short_left/icon.svg', 100, 200, 'left'),
+    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'svg', 80, 1, 1, 'manipulator_long/icon.svg', 100, NULL, 'right'),
+    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'svg', 80, 1, 1, 'manipulator_long_up/icon.svg', 100, 201, 'up'),
+    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'svg', 80, 1, 1, 'manipulator_long_down/icon.svg', 100, 201, 'down'),
+    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'svg', 80, 1, 1, 'manipulator_long_left/icon.svg', 100, 201, 'left'),
     -- Resources
     (300, 'resource', 'Iron Ore', 'ore_iron', 'svg', 9999, 1, 1, 'ore_iron/icon.svg', 1, NULL, 'none'),
     (301, 'resource', 'Copper Ore', 'ore_copper', 'svg', 9999, 1, 1, 'ore_copper/icon.svg', 1, NULL, 'none'),
@@ -207,31 +207,32 @@ CREATE TABLE IF NOT EXISTS `recipe` (
   CONSTRAINT `fk_recipe_input3` FOREIGN KEY (`input3_resource_id`) REFERENCES `resource` (`resource_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+-- Note: All ticks are multiples of 30 for optimized logic tick (30 ticks = 1 logic update at 60fps)
 INSERT INTO `recipe` (`recipe_id`, `output_resource_id`, `output_amount`, `input1_resource_id`, `input1_amount`, `input2_resource_id`, `input2_amount`, `input3_resource_id`, `input3_amount`, `ticks`) VALUES
-    -- Mining recipes
+    -- Mining recipes (30 ticks = 0.5s)
     (1, 2, 1, 8, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Iron Deposit -> 1 Iron Ore
     (2, 3, 1, 9, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Copper Deposit -> 1 Copper Ore
     -- Furnace recipes
-    (3, 100, 1, 2, 3, 4, 1, NULL, NULL, 60),       -- 3 Iron Ore + 1 Coal -> 1 Iron Ingot
-    (4, 101, 1, 3, 3, 4, 1, NULL, NULL, 60),       -- 3 Copper Ore + 1 Coal -> 1 Copper Ingot
-    (5, 109, 1, 100, 2, 4, 1, NULL, NULL, 90),     -- 2 Iron Ingot + 1 Coal -> 1 Steel Plate
-    (6, 112, 1, 1, 1, NULL, NULL, NULL, NULL, 30), -- 1 Wood -> 1 Charcoal
+    (3, 100, 1, 2, 3, 4, 1, NULL, NULL, 60),       -- 3 Iron Ore + 1 Coal -> 1 Iron Ingot (1s)
+    (4, 101, 1, 3, 3, 4, 1, NULL, NULL, 60),       -- 3 Copper Ore + 1 Coal -> 1 Copper Ingot (1s)
+    (5, 109, 1, 100, 2, 4, 1, NULL, NULL, 90),     -- 2 Iron Ingot + 1 Coal -> 1 Steel Plate (1.5s)
+    (6, 112, 1, 1, 1, NULL, NULL, NULL, NULL, 30), -- 1 Wood -> 1 Charcoal (0.5s)
     -- Assembly recipes
-    (7, 102, 2, 100, 1, NULL, NULL, NULL, NULL, 40),   -- 1 Iron Ingot -> 2 Iron Plate
-    (8, 103, 2, 101, 1, NULL, NULL, NULL, NULL, 40),   -- 1 Copper Ingot -> 2 Copper Plate
-    (9, 104, 4, 101, 2, NULL, NULL, NULL, NULL, 20),   -- 2 Copper Ingot -> 4 Copper Wire
-    (10, 105, 4, 102, 2, NULL, NULL, NULL, NULL, 20),  -- 2 Iron Plate -> 4 Screw
-    (11, 106, 1, 102, 2, NULL, NULL, NULL, NULL, 30),  -- 2 Iron Plate -> 1 Gear
-    (12, 107, 1, 106, 2, 105, 4, NULL, NULL, 60),      -- 2 Gear + 4 Screw -> 1 Rotor
-    (13, 110, 1, 104, 2, 102, 1, NULL, NULL, 50),      -- 2 Copper Wire + 1 Iron Plate -> 1 Circuit
-    (14, 111, 1, 107, 1, 110, 2, 104, 1, 80),          -- 1 Rotor + 2 Circuit + 1 Copper Wire -> 1 Motor
-    (15, 108, 1, 6, 1, NULL, NULL, NULL, NULL, 45),    -- 1 Raw Crystal -> 1 Crystal
-    (16, 113, 1, 20, 2, 110, 1, NULL, NULL, 100),      -- 2 Refined Fuel + 1 Circuit -> 1 Fuel Cell
+    (7, 102, 2, 100, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Iron Ingot -> 2 Iron Plate (0.5s)
+    (8, 103, 2, 101, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Copper Ingot -> 2 Copper Plate (0.5s)
+    (9, 104, 4, 101, 2, NULL, NULL, NULL, NULL, 30),   -- 2 Copper Ingot -> 4 Copper Wire (0.5s)
+    (10, 105, 4, 102, 2, NULL, NULL, NULL, NULL, 30),  -- 2 Iron Plate -> 4 Screw (0.5s)
+    (11, 106, 1, 102, 2, NULL, NULL, NULL, NULL, 30),  -- 2 Iron Plate -> 1 Gear (0.5s)
+    (12, 107, 1, 106, 2, 105, 4, NULL, NULL, 60),      -- 2 Gear + 4 Screw -> 1 Rotor (1s)
+    (13, 110, 1, 104, 2, 102, 1, NULL, NULL, 60),      -- 2 Copper Wire + 1 Iron Plate -> 1 Circuit (1s)
+    (14, 111, 1, 107, 1, 110, 2, 104, 1, 90),          -- 1 Rotor + 2 Circuit + 1 Copper Wire -> 1 Motor (1.5s)
+    (15, 108, 1, 6, 1, NULL, NULL, NULL, NULL, 60),    -- 1 Raw Crystal -> 1 Crystal (1s)
+    (16, 113, 1, 20, 2, 110, 1, NULL, NULL, 120),      -- 2 Refined Fuel + 1 Circuit -> 1 Fuel Cell (2s)
     -- Boiler recipes
-    (17, 22, 1, 7, 1, NULL, NULL, NULL, NULL, 60),     -- 1 Crude Oil -> 1 Heavy Oil
-    (18, 23, 1, 22, 2, NULL, NULL, NULL, NULL, 40),    -- 2 Heavy Oil -> 1 Light Oil
-    (19, 20, 1, 23, 2, NULL, NULL, NULL, NULL, 30),    -- 2 Light Oil -> 1 Refined Fuel
-    (20, 21, 1, 22, 3, NULL, NULL, NULL, NULL, 50);    -- 3 Heavy Oil -> 1 Lubricant
+    (17, 22, 1, 7, 1, NULL, NULL, NULL, NULL, 60),     -- 1 Crude Oil -> 1 Heavy Oil (1s)
+    (18, 23, 1, 22, 2, NULL, NULL, NULL, NULL, 30),    -- 2 Heavy Oil -> 1 Light Oil (0.5s)
+    (19, 20, 1, 23, 2, NULL, NULL, NULL, NULL, 30),    -- 2 Light Oil -> 1 Refined Fuel (0.5s)
+    (20, 21, 1, 22, 3, NULL, NULL, NULL, NULL, 60);    -- 3 Heavy Oil -> 1 Lubricant (1s)
 
 
 -- --------------------------------------------------------

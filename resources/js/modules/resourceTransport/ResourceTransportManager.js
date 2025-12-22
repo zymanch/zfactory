@@ -25,6 +25,10 @@ export class ResourceTransportManager {
         this.lastSaveTime = 0;
         this.pendingSync = false;
 
+        // Logic tick optimization: heavy logic runs every N ticks
+        this.logicTickCounter = 0;
+        this.LOGIC_TICK_INTERVAL = 30;  // Heavy logic runs every 30 ticks (~2x per second at 60fps)
+
         // Initialized flag
         this.initialized = false;
     }
@@ -166,25 +170,42 @@ export class ResourceTransportManager {
     }
 
     /**
-     * Main tick function - called every game tick
+     * Main tick function - called every game tick (60fps)
+     * Animation runs every tick, heavy logic runs every LOGIC_TICK_INTERVAL ticks
      */
     tick() {
         if (!this.initialized) return;
 
-        // Step 1: Update crafting processes
+        // Animation tick (every frame) - smooth visual movement
+        this.updateTransporterAnimation();
+        this.updateManipulatorAnimation();
+
+        // Logic tick (every N frames) - state changes, transfers, crafting
+        this.logicTickCounter++;
+        if (this.logicTickCounter >= this.LOGIC_TICK_INTERVAL) {
+            this.logicTickCounter = 0;
+            this.logicTick();
+        }
+
+        // Auto-save check (time-based, ok to run every frame)
+        this.checkAutoSave();
+    }
+
+    /**
+     * Logic tick - heavy operations that run every LOGIC_TICK_INTERVAL ticks
+     */
+    logicTick() {
+        // Update crafting progress and completion
         this.updateCrafting();
 
-        // Step 2: Move resources along conveyors
-        this.updateTransporters();
+        // Check conveyor status transitions
+        this.updateTransporterStatus();
 
-        // Step 3: Process transfers between conveyors
+        // Process transfers between conveyors
         this.processTransporterTransfers();
 
-        // Step 4: Update manipulators
-        this.updateManipulators();
-
-        // Step 5: Check auto-save
-        this.checkAutoSave();
+        // Process manipulator state transitions (pickup/place actions)
+        this.processManipulatorActions();
     }
 
     /**
@@ -219,15 +240,16 @@ export class ResourceTransportManager {
     }
 
     /**
-     * Move resources along conveyor belts
+     * Animation: Move resources along conveyor belts (runs every tick)
+     * Only updates positions, status changes happen in logic tick
      */
-    updateTransporters() {
+    updateTransporterAnimation() {
         for (const [entityId, state] of this.transporters) {
             if (state.isEmpty()) continue;
 
             const speed = state.getSpeed();
 
-            // First, move towards center if entered from side
+            // Move towards center if entered from side
             if (state.lateralOffset !== 0) {
                 if (state.lateralOffset > 0) {
                     state.lateralOffset = Math.max(0, state.lateralOffset - speed);
@@ -236,12 +258,21 @@ export class ResourceTransportManager {
                 }
             }
 
-            // Then move along the belt
+            // Move along the belt (stops at 1.0)
             if (state.lateralOffset === 0 && state.resourcePosition < 1.0) {
                 state.resourcePosition = Math.min(1.0, state.resourcePosition + speed);
             }
+        }
+    }
 
-            // Check if reached end
+    /**
+     * Logic: Check conveyor status transitions (runs every logic tick)
+     */
+    updateTransporterStatus() {
+        for (const [entityId, state] of this.transporters) {
+            if (state.isEmpty()) continue;
+
+            // Check if reached end and should wait for transfer
             if (state.resourcePosition >= 1.0 && state.status === 'carrying') {
                 state.status = 'waiting_transfer';
             }
@@ -392,19 +423,40 @@ export class ResourceTransportManager {
     }
 
     /**
-     * Update manipulator states
+     * Animation: Move manipulator arms (runs every tick)
+     * Only updates arm positions, state transitions happen in logic tick
      */
-    updateManipulators() {
+    updateManipulatorAnimation() {
         for (const [entityId, state] of this.manipulators) {
             const speed = state.getSpeed();
 
+            switch (state.status) {
+                case 'picking':
+                    // Move arm towards source
+                    state.armPosition = Math.max(0, state.armPosition - speed);
+                    break;
+
+                case 'carrying':
+                    // Move arm towards target
+                    state.armPosition = Math.min(1.0, state.armPosition + speed);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Logic: Process manipulator state transitions (runs every logic tick)
+     * Handles actual resource pickup/place operations
+     */
+    processManipulatorActions() {
+        for (const [entityId, state] of this.manipulators) {
             switch (state.status) {
                 case 'idle':
                     this.tryPickupResource(state);
                     break;
 
                 case 'picking':
-                    state.armPosition = Math.max(0, state.armPosition - speed);
+                    // Check if arm reached source position
                     if (state.armPosition <= 0) {
                         const pickedResource = this.takeResourceFrom(state.sourceEntityId, 'manipulator');
                         if (pickedResource) {
@@ -420,7 +472,7 @@ export class ResourceTransportManager {
                     break;
 
                 case 'carrying':
-                    state.armPosition = Math.min(1.0, state.armPosition + speed);
+                    // Check if arm reached target position
                     if (state.armPosition >= 1.0) {
                         state.status = 'placing';
                     }

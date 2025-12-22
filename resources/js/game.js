@@ -9,6 +9,7 @@ import { TileLayerManager } from './modules/tileLayerManager.js';
 import { EntityTooltip } from './modules/entityTooltip.js';
 import { BuildingRules } from './modules/buildingRules.js';
 import { ResourceTransportManager } from './modules/resourceTransport/ResourceTransportManager.js';
+import { ResourceRenderer } from './modules/resourceTransport/ResourceRenderer.js';
 import { SPRITE_STATES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 
 /**
@@ -54,6 +55,7 @@ class ZFactoryGame {
         this.entityTooltip = null;
         this.buildingRules = null;
         this.resourceTransport = null;
+        this.resourceRenderer = null;
     }
 
     /**
@@ -85,6 +87,7 @@ class ZFactoryGame {
         this.entityTooltip = new EntityTooltip(this);
         this.buildingRules = new BuildingRules(this);
         this.resourceTransport = new ResourceTransportManager(this);
+        this.resourceRenderer = new ResourceRenderer(this);
     }
 
     /**
@@ -284,6 +287,9 @@ class ZFactoryGame {
 
             // Initialize resource transport after entities are loaded
             this.resourceTransport.init();
+
+            // Initialize resource renderer (visual layer for resources on conveyors/manipulators)
+            await this.resourceRenderer.init();
         }
 
         const viewport = this.calculateViewport();
@@ -463,6 +469,9 @@ class ZFactoryGame {
 
         // Tick resource transport system
         this.resourceTransport.tick();
+
+        // Render resource sprites on conveyors/manipulators
+        this.resourceRenderer.render();
 
         this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);
         this.updateFPS(now);
