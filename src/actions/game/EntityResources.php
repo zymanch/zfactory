@@ -20,13 +20,16 @@ class EntityResources extends JsonAction
             return $this->error('Entity ID required');
         }
 
-        $resources = EntityResource::find()
-            ->alias('er')
-            ->select(['er.resource_id', 'r.name', 'r.icon_url', 'r.type', 'er.amount'])
-            ->innerJoin(['r' => Resource::tableName()], 'r.resource_id = er.resource_id')
-            ->where(['er.entity_id' => $entityId])
-            ->asArray()
-            ->all();
+        $resources = $this->castNumericFieldsArray(
+            EntityResource::find()
+                ->alias('er')
+                ->select(['er.resource_id', 'r.name', 'r.icon_url', 'r.type', 'er.amount'])
+                ->innerJoin(['r' => Resource::tableName()], 'r.resource_id = er.resource_id')
+                ->where(['er.entity_id' => $entityId])
+                ->asArray()
+                ->all(),
+            ['resource_id', 'amount']
+        );
 
         return $this->success(['resources' => $resources]);
     }

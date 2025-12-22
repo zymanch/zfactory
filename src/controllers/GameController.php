@@ -15,6 +15,7 @@ class GameController extends Controller
             'entities' => \actions\game\Entities::class,
             'config' => \actions\game\Config::class,
             'entity-resources' => \actions\game\EntityResources::class,
+            'save-state' => \actions\game\SaveState::class,
         ];
     }
 }

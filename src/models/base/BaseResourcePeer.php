@@ -8,5 +8,6 @@ class BaseResourcePeer  {
     const NAME = "name";
     const ICON_URL = "icon_url";
     const TYPE = "type";
+    const MAX_STACK = "max_stack";
 
 }

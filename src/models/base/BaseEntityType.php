@@ -19,6 +19,9 @@ namespace models\base;
  * @property integer $power
  * @property integer $parent_entity_type_id
  * @property string $orientation
+ *
+ * @property \models\EntityTypeRecipe[] $entityTypeRecipes
+ * @property \models\BaseRecipe[] $recipes
  */
 class BaseEntityType extends \yii\db\ActiveRecord
 {
@@ -65,7 +68,19 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::ORIENTATION => 'Orientation',
         ];
     }
-
+    /**
+     * @return \models\EntityTypeRecipeQuery
+     */
+    public function getEntityTypeRecipes() {
+        return $this->hasMany(\models\EntityTypeRecipe::className(), [BaseEntityTypeRecipePeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID])->inverseOf('entityType');
+    }
+        /**
+     * @return \models\BaseRecipeQuery
+     */
+    public function getRecipes() {
+        return $this->hasMany(BaseRecipe::className(), [BaseRecipePeer::RECIPE_ID => BaseEntityTypeRecipePeer::RECIPE_ID])->viaTable('entity_type_recipe', [BaseEntityTypeRecipePeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID]);
+    }
+    
     /**
      * @inheritdoc
      * @return \models\EntityTypeQuery the active query used by this AR class.
@@ -106,7 +121,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         /*
         return [
-            ,
+            'entityTypeRecipes' => 'entityTypeRecipes',
+            'recipes' => 'recipes',
         ];
         */
     }

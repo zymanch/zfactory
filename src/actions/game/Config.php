@@ -9,6 +9,9 @@ use models\Entity;
 use models\Resource;
 use models\Recipe;
 use models\EntityTypeRecipe;
+use models\EntityResource;
+use models\EntityCrafting;
+use models\EntityTransport;
 use services\BuildingRules;
 use Yii;
 
@@ -21,16 +24,16 @@ class Config extends JsonAction
     public function run()
     {
         // Get landing types
-        $landingTypes = Landing::find()
-            ->indexBy('landing_id')
-            ->asArray()
-            ->all();
+        $landingTypes = $this->castNumericFieldsIndexed(
+            Landing::find()->indexBy('landing_id')->asArray()->all(),
+            ['landing_id']
+        );
 
         // Get entity types
-        $entityTypes = EntityType::find()
-            ->indexBy('entity_type_id')
-            ->asArray()
-            ->all();
+        $entityTypes = $this->castNumericFieldsIndexed(
+            EntityType::find()->indexBy('entity_type_id')->asArray()->all(),
+            ['entity_type_id', 'power', 'max_durability', 'width', 'height']
+        );
 
         // Get all eye entity type IDs
         $eyeTypeIds = [];
@@ -43,25 +46,28 @@ class Config extends JsonAction
         // Get ALL eye entities (for fog of war) - not cached, need fresh data
         $eyeEntities = [];
         if (!empty($eyeTypeIds)) {
-            $eyeEntities = Entity::find()
-                ->select(['entity_id', 'entity_type_id', 'state', 'x', 'y'])
-                ->where(['entity_type_id' => $eyeTypeIds])
-                ->andWhere(['state' => 'built'])
-                ->asArray()
-                ->all();
+            $eyeEntities = $this->castNumericFieldsArray(
+                Entity::find()
+                    ->select(['entity_id', 'entity_type_id', 'state', 'x', 'y'])
+                    ->where(['entity_type_id' => $eyeTypeIds])
+                    ->andWhere(['state' => 'built'])
+                    ->asArray()
+                    ->all(),
+                ['entity_id', 'entity_type_id', 'x', 'y']
+            );
         }
 
         // Get resources
-        $resources = Resource::find()
-            ->indexBy('resource_id')
-            ->asArray()
-            ->all();
+        $resources = $this->castNumericFieldsIndexed(
+            Resource::find()->indexBy('resource_id')->asArray()->all(),
+            ['resource_id', 'max_stack']
+        );
 
         // Get recipes
-        $recipes = Recipe::find()
-            ->indexBy('recipe_id')
-            ->asArray()
-            ->all();
+        $recipes = $this->castNumericFieldsIndexed(
+            Recipe::find()->indexBy('recipe_id')->asArray()->all(),
+            ['recipe_id', 'ticks', 'input1_resource_id', 'input1_amount', 'input2_resource_id', 'input2_amount', 'input3_resource_id', 'input3_amount', 'output_resource_id', 'output_amount']
+        );
 
         // Get entity type recipes (which recipes are available for which entity types)
         $entityTypeRecipesRaw = EntityTypeRecipe::find()
@@ -77,6 +83,25 @@ class Config extends JsonAction
             }
             $entityTypeRecipes[$typeId][] = (int) $etr['recipe_id'];
         }
+
+        // Get all entity resources (for buildings, mining, storage)
+        $entityResources = $this->castNumericFieldsArray(
+            EntityResource::find()->asArray()->all(),
+            ['entity_id', 'resource_id', 'amount']
+        );
+
+        // Get all crafting states
+        $craftingStates = $this->castNumericFieldsArray(
+            EntityCrafting::find()->asArray()->all(),
+            ['entity_id', 'recipe_id', 'ticks_remaining']
+        );
+
+        // Get all transport states (conveyors, manipulators)
+        $transportStates = $this->castNumericFieldsArray(
+            EntityTransport::find()->asArray()->all(),
+            ['entity_id', 'resource_id', 'amount'],
+            ['position', 'lateral_offset', 'arm_position']  // floats
+        );
 
         // Get user's build panel and camera position
         $buildPanel = array_fill(0, 10, null);
@@ -99,6 +124,9 @@ class Config extends JsonAction
             'resources' => $resources,
             'recipes' => $recipes,
             'entityTypeRecipes' => $entityTypeRecipes,
+            'entityResources' => $entityResources,
+            'craftingStates' => $craftingStates,
+            'transportStates' => $transportStates,
             'buildPanel' => $buildPanel,
             'cameraPosition' => [
                 'x' => $cameraX,
@@ -109,13 +137,14 @@ class Config extends JsonAction
                 'mapUrl' => \yii\helpers\Url::to(['map/tiles'], true),
                 'entitiesUrl' => \yii\helpers\Url::to(['game/entities'], true),
                 'createEntityUrl' => \yii\helpers\Url::to(['map/create-entity'], true),
-                'entityResourcesUrl' => \yii\helpers\Url::to(['game/entity-resources'], true),
                 'saveBuildPanelUrl' => \yii\helpers\Url::to(['user/save-build-panel'], true),
                 'savePositionUrl' => \yii\helpers\Url::to(['user/save-position'], true),
+                'saveStateUrl' => \yii\helpers\Url::to(['game/save-state'], true),
                 'tilesPath' => '/assets/tiles/',
                 'tileWidth' => Yii::$app->params['tile_width'],
                 'tileHeight' => Yii::$app->params['tile_height'],
                 'assetVersion' => Yii::$app->params['asset_version'],
+                'autoSaveInterval' => Yii::$app->params['auto_save_interval'] ?? 60,
                 'cameraSpeed' => 8,
             ],
             'buildingRules' => BuildingRules::getClientRules(),

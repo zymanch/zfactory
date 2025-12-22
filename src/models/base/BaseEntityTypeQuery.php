@@ -42,6 +42,10 @@ use models\EntityTypeQuery;
   * @method EntityTypeQuery orderByPower($order = Criteria::ASC)
   * @method EntityTypeQuery orderByParentEntityTypeId($order = Criteria::ASC)
   * @method EntityTypeQuery orderByOrientation($order = Criteria::ASC)
+  * @method EntityTypeQuery withEntityTypeRecipes($params = [])
+  * @method EntityTypeQuery joinWithEntityTypeRecipes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method EntityTypeQuery withRecipes($params = [])
+  * @method EntityTypeQuery joinWithRecipes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseEntityTypeQuery extends \yii\db\ActiveQuery
 {

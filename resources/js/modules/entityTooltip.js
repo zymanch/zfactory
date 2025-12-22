@@ -1,4 +1,3 @@
-import { getCSRFToken } from './utils.js';
 import { EntityBehaviorFactory } from './entityBehaviors.js';
 
 /**
@@ -10,7 +9,6 @@ export class EntityTooltip {
         this.game = game;
         this.tooltipEl = null;
         this.currentEntityKey = null;
-        this.resourceCache = new Map();
         this.hideTimeout = null;
     }
 
@@ -113,6 +111,12 @@ export class EntityTooltip {
             html += `</div>`;
         }
 
+        // Active crafting (if any)
+        const craftingHtml = this.getCraftingProgressHtml(entity.entity_id);
+        if (craftingHtml) {
+            html += craftingHtml;
+        }
+
         // Recipes (if any)
         const recipesHtml = this.getRecipesHtml(entity.entity_type_id);
         if (recipesHtml) {
@@ -161,33 +165,105 @@ export class EntityTooltip {
     }
 
     /**
-     * Get entity resources from server or cache
+     * Get entity resources from ResourceTransportManager (no server call needed)
      */
-    async getEntityResources(entityId) {
-        const cacheKey = `entity_${entityId}`;
+    getEntityResources(entityId) {
+        const rt = this.game.resourceTransport;
+        if (!rt) return [];
 
-        // Check cache
-        if (this.resourceCache.has(cacheKey)) {
-            return this.resourceCache.get(cacheKey);
+        // Check building
+        const buildingState = rt.buildings.get(entityId);
+        if (buildingState) {
+            const resources = [];
+            for (const [resourceId, amount] of buildingState.resources) {
+                if (amount > 0) {
+                    const resourceInfo = this.game.resources[String(resourceId)];
+                    if (resourceInfo) {
+                        resources.push({
+                            resource_id: resourceId,
+                            name: resourceInfo.name,
+                            icon_url: resourceInfo.icon_url,
+                            amount: amount
+                        });
+                    }
+                }
+            }
+            return resources;
         }
 
-        try {
-            const response = await fetch(`${this.game.config.entityResourcesUrl}?entity_id=${entityId}`, {
-                headers: {
-                    'X-CSRF-Token': getCSRFToken()
-                }
-            });
-            const data = await response.json();
-
-            if (data.result === 'ok') {
-                this.resourceCache.set(cacheKey, data.resources);
-                return data.resources;
+        // Check transporter (conveyor)
+        const transporterState = rt.transporters.get(entityId);
+        if (transporterState && transporterState.resourceId) {
+            const resourceInfo = this.game.resources[String(transporterState.resourceId)];
+            if (resourceInfo) {
+                return [{
+                    resource_id: transporterState.resourceId,
+                    name: resourceInfo.name,
+                    icon_url: resourceInfo.icon_url,
+                    amount: transporterState.resourceAmount || 1
+                }];
             }
-        } catch (e) {
-            console.error('Error fetching entity resources:', e);
+        }
+
+        // Check manipulator
+        const manipulatorState = rt.manipulators.get(entityId);
+        if (manipulatorState && manipulatorState.resourceId) {
+            const resourceInfo = this.game.resources[String(manipulatorState.resourceId)];
+            if (resourceInfo) {
+                return [{
+                    resource_id: manipulatorState.resourceId,
+                    name: resourceInfo.name,
+                    icon_url: resourceInfo.icon_url,
+                    amount: manipulatorState.resourceAmount || 1
+                }];
+            }
         }
 
         return [];
+    }
+
+    /**
+     * Get crafting progress HTML for entity
+     */
+    getCraftingProgressHtml(entityId) {
+        const buildingState = this.game.resourceTransport?.buildings.get(entityId);
+        if (!buildingState || !buildingState.isCrafting()) {
+            return null;
+        }
+
+        const recipeId = buildingState.craftingRecipeId;
+        const recipe = this.game.recipes?.[String(recipeId)];
+        if (!recipe) return null;
+
+        // Calculate progress
+        const totalTicks = buildingState.calculateCraftTime(parseInt(recipe.ticks));
+        const elapsed = totalTicks - buildingState.craftingTicksRemaining;
+        const progress = Math.min(100, Math.round((elapsed / totalTicks) * 100));
+
+        // Get output resource info
+        const outputResource = this.game.resources?.[String(recipe.output_resource_id)];
+        const outputName = outputResource?.name || 'Unknown';
+        const outputIcon = outputResource?.icon_url || '';
+
+        // Time remaining
+        const ticksPerSecond = 60;
+        const secondsRemaining = Math.ceil(buildingState.craftingTicksRemaining / ticksPerSecond);
+
+        let html = `<div style="border-top:1px solid #4a4a5a;padding-top:6px;margin-top:6px;">`;
+        html += `<div style="margin-bottom:4px;font-weight:bold;color:#4a9;">Crafting:</div>`;
+        html += `<div style="display:flex;align-items:center;margin-bottom:4px;">`;
+        if (outputIcon) {
+            html += `<img src="/assets/tiles/resources/${outputIcon}" width="16" height="16" style="margin-right:6px;">`;
+        }
+        html += `<span>${outputName}</span>`;
+        html += `<span style="margin-left:auto;color:#aaa;">${secondsRemaining}s</span>`;
+        html += `</div>`;
+        html += `<div style="background:#333;height:8px;border-radius:4px;overflow:hidden;">`;
+        html += `<div style="width:${progress}%;height:100%;background:linear-gradient(90deg,#4a9,#6c6);transition:width 0.1s;"></div>`;
+        html += `</div>`;
+        html += `</div>`;
+
+        return html;
     }
 
     /**
@@ -313,17 +389,17 @@ export class EntityTooltip {
     }
 
     /**
-     * Invalidate cache for entity
+     * Invalidate cache for entity (no-op, data is now live from ResourceTransportManager)
      */
     invalidateCache(entityId) {
-        this.resourceCache.delete(`entity_${entityId}`);
+        // No longer needed - resources are read directly from ResourceTransportManager
     }
 
     /**
-     * Clear all cache
+     * Clear all cache (no-op, data is now live from ResourceTransportManager)
      */
     clearCache() {
-        this.resourceCache.clear();
+        // No longer needed - resources are read directly from ResourceTransportManager
     }
 }
 

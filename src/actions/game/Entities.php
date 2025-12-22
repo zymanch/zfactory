@@ -12,10 +12,13 @@ class Entities extends JsonAction
 {
     public function run()
     {
-        $entities = Entity::find()
-            ->select(['entity_id', 'entity_type_id', 'state', 'durability', 'x', 'y'])
-            ->asArray()
-            ->all();
+        $entities = $this->castNumericFieldsArray(
+            Entity::find()
+                ->select(['entity_id', 'entity_type_id', 'state', 'durability', 'x', 'y'])
+                ->asArray()
+                ->all(),
+            ['entity_id', 'entity_type_id', 'durability', 'x', 'y']
+        );
 
         return $this->success(['entities' => $entities]);
     }

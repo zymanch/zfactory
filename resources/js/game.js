@@ -8,6 +8,7 @@ import { FogOfWar } from './modules/fogOfWar.js';
 import { TileLayerManager } from './modules/tileLayerManager.js';
 import { EntityTooltip } from './modules/entityTooltip.js';
 import { BuildingRules } from './modules/buildingRules.js';
+import { ResourceTransportManager } from './modules/resourceTransport/ResourceTransportManager.js';
 import { SPRITE_STATES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 
 /**
@@ -52,6 +53,7 @@ class ZFactoryGame {
         this.tileManager = null;
         this.entityTooltip = null;
         this.buildingRules = null;
+        this.resourceTransport = null;
     }
 
     /**
@@ -82,6 +84,7 @@ class ZFactoryGame {
         this.tileManager = new TileLayerManager(this);
         this.entityTooltip = new EntityTooltip(this);
         this.buildingRules = new BuildingRules(this);
+        this.resourceTransport = new ResourceTransportManager(this);
     }
 
     /**
@@ -150,6 +153,7 @@ class ZFactoryGame {
         this.fogOfWar.init();
         this.entityTooltip.init();
         this.buildPanel.refresh();
+        // Note: resourceTransport.init() is called after entities are loaded in loadViewport()
     }
 
     /**
@@ -179,6 +183,9 @@ class ZFactoryGame {
         this.initialBuildPanel = data.buildPanel || [];
         this.initialEyeEntities = data.eyeEntities || [];
         this.initialCameraPosition = data.cameraPosition || { x: 0, y: 0, zoom: 1 };
+        this.initialEntityResources = data.entityResources || [];
+        this.initialCraftingStates = data.craftingStates || [];
+        this.initialTransportStates = data.transportStates || [];
 
         // Initialize building rules from server config
         if (this.buildingRules && data.buildingRules) {
@@ -274,6 +281,9 @@ class ZFactoryGame {
         if (!this.entitiesLoaded) {
             await this.loadAllEntities();
             this.entitiesLoaded = true;
+
+            // Initialize resource transport after entities are loaded
+            this.resourceTransport.init();
         }
 
         const viewport = this.calculateViewport();
@@ -450,6 +460,9 @@ class ZFactoryGame {
             this.needsReload = false;
             this.lastReloadTime = now;
         }
+
+        // Tick resource transport system
+        this.resourceTransport.tick();
 
         this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);
         this.updateFPS(now);

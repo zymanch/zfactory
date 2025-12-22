@@ -14,8 +14,10 @@ namespace models\base;
  * @property integer $x
  * @property integer $y
  *
+ * @property \models\EntityCrafting $entityCrafting
  * @property \models\EntityResource[] $entityResources
  * @property \models\BaseResource[] $resources
+ * @property \models\EntityTransport $entityTransport
  */
 class BaseEntity extends \yii\db\ActiveRecord
 {
@@ -54,6 +56,12 @@ class BaseEntity extends \yii\db\ActiveRecord
         ];
     }
     /**
+     * @return \models\EntityCraftingQuery
+     */
+    public function getEntityCrafting() {
+        return $this->hasOne(\models\EntityCrafting::className(), [BaseEntityCraftingPeer::ENTITY_ID => BaseEntityPeer::ENTITY_ID])->inverseOf('entity');
+    }
+        /**
      * @return \models\EntityResourceQuery
      */
     public function getEntityResources() {
@@ -64,6 +72,12 @@ class BaseEntity extends \yii\db\ActiveRecord
      */
     public function getResources() {
         return $this->hasMany(BaseResource::className(), [BaseResourcePeer::RESOURCE_ID => BaseEntityResourcePeer::RESOURCE_ID])->viaTable('entity_resource', [BaseEntityResourcePeer::ENTITY_ID => BaseEntityPeer::ENTITY_ID]);
+    }
+        /**
+     * @return \models\EntityTransportQuery
+     */
+    public function getEntityTransport() {
+        return $this->hasOne(\models\EntityTransport::className(), [BaseEntityTransportPeer::ENTITY_ID => BaseEntityPeer::ENTITY_ID])->inverseOf('entity');
     }
     
     /**
@@ -100,8 +114,10 @@ class BaseEntity extends \yii\db\ActiveRecord
     {
         /*
         return [
+            'entityCrafting' => 'entityCrafting',
             'entityResources' => 'entityResources',
             'resources' => 'resources',
+            'entityTransport' => 'entityTransport',
         ];
         */
     }
