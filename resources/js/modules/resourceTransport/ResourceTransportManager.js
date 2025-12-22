@@ -339,14 +339,12 @@ export class ResourceTransportManager {
                 // If entering from behind (same orientation), start at entry edge (0)
                 const startPosition = lateralOffset !== 0 ? 0.5 : 0;
                 targetState.setResource(t.resourceId, t.resourceAmount, startPosition, lateralOffset);
-                console.log(`[Transfer] Conveyor ${t.fromId} → Conveyor ${t.toId}: ${t.resourceAmount}x ${resourceName}`);
             } else {
                 // Target is a building
                 const buildingState = this.buildings.get(t.toId);
                 if (buildingState) {
                     buildingState.addResource(t.resourceId, t.resourceAmount);
                     buildingsReceived.push(t.toId);
-                    console.log(`[Transfer] Conveyor ${t.fromId} → Building ${t.toId}: ${t.resourceAmount}x ${resourceName}`);
                 }
             }
         }
@@ -526,10 +524,6 @@ export class ResourceTransportManager {
         const canAccept = this.canEntityAccept(state.targetEntityId, state.resourceId, state.resourceAmount);
 
         if (canAccept === 'yes') {
-            const resource = this.game.resources[state.resourceId];
-            const resourceName = resource?.name || state.resourceId;
-            console.log(`[Transfer] Manipulator ${state.entityId} → Entity ${state.targetEntityId}: ${state.resourceAmount}x ${resourceName}`);
-
             this.placeResourceTo(state.targetEntityId, state.resourceId, state.resourceAmount);
             state.clear();
             this.pendingSync = true;

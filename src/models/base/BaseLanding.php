@@ -8,6 +8,7 @@ namespace models\base;
  * This is the model class for table "zfactory.landing".
  *
  * @property integer $landing_id
+ * @property string $name
  * @property string $is_buildable
  * @property string $image_url
  *
@@ -32,8 +33,9 @@ class BaseLanding extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [[BaseLandingPeer::NAME, BaseLandingPeer::IMAGE_URL], 'required'],
             [[BaseLandingPeer::IS_BUILDABLE], 'string'],
-            [[BaseLandingPeer::IMAGE_URL], 'required'],
+            [[BaseLandingPeer::NAME], 'string', 'max' => 64],
             [[BaseLandingPeer::IMAGE_URL], 'string', 'max' => 256],
         ];
     }
@@ -45,6 +47,7 @@ class BaseLanding extends \yii\db\ActiveRecord
     {
         return [
             BaseLandingPeer::LANDING_ID => 'Landing ID',
+            BaseLandingPeer::NAME => 'Name',
             BaseLandingPeer::IS_BUILDABLE => 'Is Buildable',
             BaseLandingPeer::IMAGE_URL => 'Image Url',
         ];
@@ -92,6 +95,7 @@ class BaseLanding extends \yii\db\ActiveRecord
     {
         return [
             'landing_id' => BaseLandingPeer::LANDING_ID,
+            'name' => BaseLandingPeer::NAME,
             'is_buildable' => BaseLandingPeer::IS_BUILDABLE,
             'image_url' => BaseLandingPeer::IMAGE_URL,
         ];

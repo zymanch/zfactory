@@ -20,12 +20,38 @@ export class TileLayerManager {
 
     /**
      * Store tile data from server
+     * Auto-insert island_edge tiles under landings with no tile below
      * @param {Array} tiles - Array of tile objects
      */
     storeTileData(tiles) {
+        // First pass: store all tiles
         for (const tile of tiles) {
             const key = tileKey(tile.x, tile.y);
             this.tileDataMap.set(key, tile.landing_id);
+        }
+
+        // Second pass: auto-insert island_edge under landings with empty space below
+        const islandEdgesToInsert = [];
+        for (const tile of tiles) {
+            // Skip sky and island_edge themselves
+            if (tile.landing_id === LANDING_SKY_ID || tile.landing_id === LANDING_ISLAND_EDGE_ID) {
+                continue;
+            }
+
+            // Check if there's no tile below this one
+            const belowKey = tileKey(tile.x, tile.y + 1);
+            const belowLandingId = this.tileDataMap.get(belowKey);
+
+            // If below is empty or sky, insert island_edge
+            if (belowLandingId === undefined || belowLandingId === LANDING_SKY_ID) {
+                islandEdgesToInsert.push({ x: tile.x, y: tile.y + 1 });
+            }
+        }
+
+        // Insert island_edge tiles
+        for (const pos of islandEdgesToInsert) {
+            const key = tileKey(pos.x, pos.y);
+            this.tileDataMap.set(key, LANDING_ISLAND_EDGE_ID);
         }
     }
 
@@ -59,21 +85,19 @@ export class TileLayerManager {
     }
 
     /**
-     * Render all real terrain tiles (called once on init)
+     * Render all terrain tiles including auto-generated island_edge (called once on init)
      * @param {Array} tiles - Array of tile objects
      */
     renderTiles(tiles) {
         const { tileWidth, tileHeight } = this.game.config;
 
-        for (const tile of tiles) {
-            const key = tileKey(tile.x, tile.y);
-
+        // Render all tiles from tileDataMap (includes auto-inserted island_edge)
+        for (const [key, landingId] of this.tileDataMap) {
             if (!this.loadedTiles.has(key)) {
-                const sprite = this.createTileWithTransitions(
-                    tile.landing_id,
-                    tile.x,
-                    tile.y
-                );
+                // Parse x, y from key "x_y"
+                const [x, y] = key.split('_').map(Number);
+
+                const sprite = this.createTileWithTransitions(landingId, x, y);
                 if (sprite) {
                     this.game.landingLayer.addChild(sprite);
                     this.loadedTiles.set(key, sprite);
@@ -101,7 +125,7 @@ export class TileLayerManager {
         const topLandingId = this.getLandingAt(tileX, tileY - 1);
         const rightLandingId = this.getLandingAt(tileX + 1, tileY);
 
-        // Check if transitions are needed
+        // Check if transitions are needed with other terrain types
         const needsTopTransition = topLandingId !== undefined
             && topLandingId !== landingId
             && !NON_TRANSITION_LANDINGS.has(topLandingId)
@@ -112,17 +136,28 @@ export class TileLayerManager {
             && !NON_TRANSITION_LANDINGS.has(rightLandingId)
             && this.game.hasLandingAdjacency(landingId, rightLandingId);
 
+        // Check if edges border sky (undefined = empty = sky)
+        const needsSkyTopTransition = topLandingId === undefined || topLandingId === LANDING_SKY_ID;
+        const needsSkyRightTransition = rightLandingId === undefined || rightLandingId === LANDING_SKY_ID;
+
         // Determine texture key
         let textureKey;
         if (needsTopTransition && needsRightTransition) {
-            // Corner transition (both top and right different)
-            // For corner case, we use the same adjacent ID for simplicity
-            // More complex: could support different top and right adjacents
+            // Corner transition (both top and right are different terrain)
             textureKey = `transition_${landingId}_${topLandingId}_rt`;
         } else if (needsTopTransition) {
             textureKey = `transition_${landingId}_${topLandingId}_t`;
         } else if (needsRightTransition) {
             textureKey = `transition_${landingId}_${rightLandingId}_r`;
+        } else if (needsSkyTopTransition && needsSkyRightTransition) {
+            // Both top and right border sky - try to use corner transition texture
+            textureKey = `transition_${landingId}_${LANDING_SKY_ID}_rt`;
+        } else if (needsSkyTopTransition) {
+            // Top edge borders sky
+            textureKey = `transition_${landingId}_${LANDING_SKY_ID}_t`;
+        } else if (needsSkyRightTransition) {
+            // Right edge borders sky
+            textureKey = `transition_${landingId}_${LANDING_SKY_ID}_r`;
         } else {
             textureKey = `landing_${landingId}`;
         }
@@ -148,15 +183,17 @@ export class TileLayerManager {
 
     /**
      * Render sky tiles for viewport (fills empty spaces)
+     * Uses transition textures when there's a real landing to the right
      * @param {number} startX - Start tile X
      * @param {number} startY - Start tile Y
      * @param {number} width - Viewport width in tiles
      * @param {number} height - Viewport height in tiles
      */
     renderSkyTiles(startX, startY, width, height) {
-        const texture = this.game.textures['landing_' + LANDING_SKY_ID];
-        if (!texture) return;
+        const baseTexture = this.game.textures['landing_' + LANDING_SKY_ID];
+        if (!baseTexture) return;
 
+        const { tileWidth, tileHeight } = this.game.config;
         const newKeys = new Set();
 
         for (let x = startX; x < startX + width; x++) {
@@ -169,58 +206,35 @@ export class TileLayerManager {
                 // Skip if already rendered
                 if (this.skyTiles.has(key)) continue;
 
-                const sprite = this.createTileSprite(LANDING_SKY_ID, x, y, Z_INDEX.SKY);
-                if (sprite) {
-                    this.game.landingLayer.addChild(sprite);
-                    this.skyTiles.set(key, sprite);
+                // Check if there's a real landing to the right
+                const rightLandingId = this.tileDataMap.get(tileKey(x + 1, y));
+                let texture = baseTexture;
+
+                if (rightLandingId !== undefined &&
+                    rightLandingId !== LANDING_SKY_ID &&
+                    rightLandingId !== LANDING_ISLAND_EDGE_ID) {
+                    // Use transition texture: sky with landing on right
+                    const transitionKey = `transition_${LANDING_SKY_ID}_${rightLandingId}_r`;
+                    if (this.game.textures[transitionKey]) {
+                        texture = this.game.textures[transitionKey];
+                    }
                 }
+
+                const sprite = new PIXI.Sprite(texture);
+                sprite.x = x * tileWidth;
+                sprite.y = y * tileHeight;
+                sprite.width = tileWidth;
+                sprite.height = tileHeight;
+                sprite.zIndex = Z_INDEX.SKY;
+
+                this.game.landingLayer.addChild(sprite);
+                this.skyTiles.set(key, sprite);
             }
         }
 
         this.cleanupSprites(this.skyTiles, newKeys);
     }
 
-    /**
-     * Render island edge tiles under terrain with empty space below
-     * @param {number} startX - Start tile X
-     * @param {number} startY - Start tile Y
-     * @param {number} width - Viewport width in tiles
-     * @param {number} height - Viewport height in tiles
-     */
-    renderIslandEdgeTiles(startX, startY, width, height) {
-        const texture = this.game.textures['landing_' + LANDING_ISLAND_EDGE_ID];
-        if (!texture) return;
-
-        const newKeys = new Set();
-
-        for (let x = startX; x < startX + width; x++) {
-            for (let y = startY; y < startY + height; y++) {
-                const aboveKey = tileKey(x, y - 1);
-                const currentKey = tileKey(x, y);
-
-                const aboveLandingId = this.tileDataMap.get(aboveKey);
-                const currentLandingId = this.tileDataMap.get(currentKey);
-
-                // Render if: tile above exists (not sky) AND current is empty/sky
-                const hasRealTileAbove = aboveLandingId !== undefined && aboveLandingId !== LANDING_SKY_ID;
-                const currentIsEmpty = currentLandingId === undefined || currentLandingId === LANDING_SKY_ID;
-
-                if (hasRealTileAbove && currentIsEmpty) {
-                    newKeys.add(currentKey);
-
-                    if (!this.islandEdgeTiles.has(currentKey)) {
-                        const sprite = this.createTileSprite(LANDING_ISLAND_EDGE_ID, x, y, Z_INDEX.ISLAND_EDGE);
-                        if (sprite) {
-                            this.game.landingLayer.addChild(sprite);
-                            this.islandEdgeTiles.set(currentKey, sprite);
-                        }
-                    }
-                }
-            }
-        }
-
-        this.cleanupSprites(this.islandEdgeTiles, newKeys);
-    }
 
     /**
      * Create a tile sprite

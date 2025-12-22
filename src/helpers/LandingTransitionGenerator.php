@@ -17,10 +17,10 @@ class LandingTransitionGenerator
     private $tileHeight = 24;
 
     /** @var float Amplitude of the wavy line */
-    private $waveAmplitude = 3.0;
+    private $waveAmplitude = 1.5;
 
     /** @var float Frequency of the wavy line (waves per tile) */
-    private $waveFrequency = 2.5;
+    private $waveFrequency = 2.0;
 
     /** @var int Outline width in pixels */
     private $outlineWidth = 1;
@@ -57,8 +57,8 @@ class LandingTransitionGenerator
         $generated = [];
 
         // Load source images
-        $baseImage = $this->loadImage("{$baseName}.jpg");
-        $adjacentImage = $this->loadImage("{$adjacentName}.jpg");
+        $baseImage = $this->loadImage($baseName);
+        $adjacentImage = $this->loadImage($adjacentName);
 
         if (!$baseImage || !$adjacentImage) {
             return $generated;
@@ -68,7 +68,7 @@ class LandingTransitionGenerator
         $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
 
         // Generate RIGHT transition (wavy line on right edge)
-        $rightPath = "{$baseName}_{$adjacentName}_r.jpg";
+        $rightPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_r.jpg";
         $rightImage = $this->generateRightTransition($baseImage, $adjacentImage, $outlineColor);
         if ($rightImage && $this->saveImage($rightImage, $rightPath)) {
             $generated[] = $rightPath;
@@ -76,7 +76,7 @@ class LandingTransitionGenerator
         }
 
         // Generate TOP transition (wavy line on top edge)
-        $topPath = "{$baseName}_{$adjacentName}_t.jpg";
+        $topPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_t.jpg";
         $topImage = $this->generateTopTransition($baseImage, $adjacentImage, $outlineColor);
         if ($topImage && $this->saveImage($topImage, $topPath)) {
             $generated[] = $topPath;
@@ -84,11 +84,79 @@ class LandingTransitionGenerator
         }
 
         // Generate CORNER transition (both right and top different)
-        $cornerPath = "{$baseName}_{$adjacentName}_rt.jpg";
+        $cornerPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_rt.jpg";
         $cornerImage = $this->generateCornerTransition($baseImage, $adjacentImage, $adjacentImage, $outlineColor);
         if ($cornerImage && $this->saveImage($cornerImage, $cornerPath)) {
             $generated[] = $cornerPath;
             imagedestroy($cornerImage);
+        }
+
+        imagedestroy($baseImage);
+        imagedestroy($adjacentImage);
+
+        return $generated;
+    }
+
+    /**
+     * Generate only TOP transition for a pair
+     * Used for island_edge which only needs top transitions
+     *
+     * @param string $baseName - Base landing name (e.g., 'island_edge')
+     * @param string $adjacentName - Adjacent landing name (e.g., 'grass')
+     * @return array - List of generated file paths
+     */
+    public function generateTopOnly($baseName, $adjacentName)
+    {
+        $generated = [];
+
+        $baseImage = $this->loadImage($baseName);
+        $adjacentImage = $this->loadImage($adjacentName);
+
+        if (!$baseImage || !$adjacentImage) {
+            return $generated;
+        }
+
+        $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
+
+        $topPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_t.jpg";
+        $topImage = $this->generateTopTransition($baseImage, $adjacentImage, $outlineColor);
+        if ($topImage && $this->saveImage($topImage, $topPath)) {
+            $generated[] = $topPath;
+            imagedestroy($topImage);
+        }
+
+        imagedestroy($baseImage);
+        imagedestroy($adjacentImage);
+
+        return $generated;
+    }
+
+    /**
+     * Generate only RIGHT transition for a pair
+     * Used for sky which only needs right transitions
+     *
+     * @param string $baseName - Base landing name (e.g., 'sky')
+     * @param string $adjacentName - Adjacent landing name (e.g., 'grass')
+     * @return array - List of generated file paths
+     */
+    public function generateRightOnly($baseName, $adjacentName)
+    {
+        $generated = [];
+
+        $baseImage = $this->loadImage($baseName);
+        $adjacentImage = $this->loadImage($adjacentName);
+
+        if (!$baseImage || !$adjacentImage) {
+            return $generated;
+        }
+
+        $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
+
+        $rightPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_r.jpg";
+        $rightImage = $this->generateRightTransition($baseImage, $adjacentImage, $outlineColor);
+        if ($rightImage && $this->saveImage($rightImage, $rightPath)) {
+            $generated[] = $rightPath;
+            imagedestroy($rightImage);
         }
 
         imagedestroy($baseImage);
@@ -177,9 +245,9 @@ class LandingTransitionGenerator
 
         for ($i = 0; $i <= $steps; $i++) {
             $t = $i / $steps;
-            // Base diagonal: start at (width, height) end at (0, 0)
-            $baseX = $this->tileWidth * (1 - $t);
-            $baseY = $this->tileHeight * (1 - $t);
+            // Base diagonal: start at bottom-right corner (width-1, height-1) end at top-left (0, 0)
+            $baseX = ($this->tileWidth - 1) * (1 - $t);
+            $baseY = ($this->tileHeight - 1) * (1 - $t);
 
             // Add wave perpendicular to diagonal
             $wave = sin($t * 2 * M_PI * $this->waveFrequency * 1.5) * $this->waveAmplitude;

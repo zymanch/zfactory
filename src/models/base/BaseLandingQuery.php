@@ -7,12 +7,15 @@ use models\LandingQuery;
 /**
  * This is the ActiveQuery class for [[models\Landing]].
  * @method LandingQuery filterByLandingId($value, $criteria = null)
+ * @method LandingQuery filterByName($value, $criteria = null)
  * @method LandingQuery filterByIsBuildable($value, $criteria = null)
  * @method LandingQuery filterByImageUrl($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByLandingId($value, $criteria = null)
+  * @method LandingQuery andJoinOnConditionByName($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByIsBuildable($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByImageUrl($value, $criteria = null)
   * @method LandingQuery orderByLandingId($order = Criteria::ASC)
+  * @method LandingQuery orderByName($order = Criteria::ASC)
   * @method LandingQuery orderByIsBuildable($order = Criteria::ASC)
   * @method LandingQuery orderByImageUrl($order = Criteria::ASC)
   * @method LandingQuery withLandingAdjacencies($params = [])
