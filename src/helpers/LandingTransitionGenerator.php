@@ -232,91 +232,106 @@ class LandingTransitionGenerator
 
     /**
      * Generate CORNER transition (both right and top different)
-     * Wavy line from bottom-right to top-left, hugging top-right corner
+     * L-shaped wavy line: top edge (left to right) + right edge (top to bottom)
      */
     private function generateCornerTransition($baseImage, $topImage, $rightImage, $outlineColor)
     {
         $result = $this->cloneImage($baseImage);
 
-        // Generate wavy diagonal from bottom-right to top-left
-        // The line curves around the top-right corner
+        // Generate L-shaped wavy line:
+        // Part 1: Top edge from (0, 0) to (width-1, 0) - horizontal
+        // Part 2: Right edge from (width-1, 0) to (width-1, height-1) - vertical
         $wavyPoints = [];
-        $steps = $this->tileWidth + $this->tileHeight;
 
-        for ($i = 0; $i <= $steps; $i++) {
-            $t = $i / $steps;
-            // Base diagonal: start at bottom-right corner (width-1, height-1) end at top-left (0, 0)
-            $baseX = ($this->tileWidth - 1) * (1 - $t);
-            $baseY = ($this->tileHeight - 1) * (1 - $t);
-
-            // Add wave perpendicular to diagonal
-            $wave = sin($t * 2 * M_PI * $this->waveFrequency * 1.5) * $this->waveAmplitude;
-            // Perpendicular direction is (1,1) normalized = (0.707, 0.707)
-            $perpX = $wave * 0.707;
-            $perpY = $wave * 0.707;
-
+        // Part 1: Top edge (horizontal)
+        for ($x = 0; $x < $this->tileWidth; $x++) {
+            $t = $x / ($this->tileWidth - 1);
+            $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
             $wavyPoints[] = [
-                'x' => (int)round($baseX + $perpX),
-                'y' => (int)round($baseY + $perpY)
+                'x' => $x,
+                'y' => (int)round(4 - $wave),
+                'type' => 'top'
             ];
+        }
+
+        // Part 2: Right edge (vertical)
+        for ($y = 0; $y < $this->tileHeight; $y++) {
+            $t = $y / ($this->tileHeight - 1);
+            $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
+            $wavyPoints[] = [
+                'x' => (int)round($this->tileWidth - 4 + $wave),
+                'y' => $y,
+                'type' => 'right'
+            ];
+        }
+
+        // Build lookup arrays for quick access
+        $topWavyY = [];
+        $rightWavyX = [];
+
+        foreach ($wavyPoints as $point) {
+            if ($point['type'] === 'top') {
+                $topWavyY[$point['x']] = $point['y'];
+            } else {
+                $rightWavyX[$point['y']] = $point['x'];
+            }
         }
 
         // For each pixel, determine which region it's in
         for ($x = 0; $x < $this->tileWidth; $x++) {
             for ($y = 0; $y < $this->tileHeight; $y++) {
-                // Check if pixel is above the wavy diagonal
-                $isAboveDiagonal = $this->isPointAboveWavyDiagonal($x, $y, $wavyPoints);
+                $isAboveTopLine = isset($topWavyY[$x]) && $y < $topWavyY[$x];
+                $isRightOfRightLine = isset($rightWavyX[$y]) && $x >= $rightWavyX[$y];
 
-                if ($isAboveDiagonal) {
-                    // Check if above or below 45 degree line from top-right corner
-                    // 45 degree line: y = x - width + height
-                    $diag45Y = $x - $this->tileWidth + $this->tileHeight;
-
-                    if ($y < $diag45Y) {
-                        // Above 45 line -> use top image
-                        $color = imagecolorat($topImage, $x, $y);
-                    } else {
-                        // Below 45 line -> use right image
-                        $color = imagecolorat($rightImage, $x, $y);
-                    }
+                if ($isAboveTopLine) {
+                    // Above top wavy line -> use top image
+                    $color = imagecolorat($topImage, $x, $y);
+                    imagesetpixel($result, $x, $y, $color);
+                } elseif ($isRightOfRightLine) {
+                    // Right of right wavy line -> use right image
+                    $color = imagecolorat($rightImage, $x, $y);
                     imagesetpixel($result, $x, $y, $color);
                 }
+                // else: keep base image
             }
         }
 
-        // Draw outline along the wavy diagonal
-        $this->drawDiagonalOutline($result, $wavyPoints, $outlineColor);
+        // Draw outline along the L-shaped wavy line
+        $this->drawLShapedOutline($result, $topWavyY, $rightWavyX, $outlineColor);
 
         return $result;
     }
 
     /**
-     * Check if a point is above the wavy diagonal line
+     * Draw outline along L-shaped wavy line
      */
-    private function isPointAboveWavyDiagonal($x, $y, $wavyPoints)
+    private function drawLShapedOutline($image, $topWavyY, $rightWavyX, $color)
     {
-        // Find the closest point on the wavy line and check if we're above it
-        $minDist = PHP_FLOAT_MAX;
-        $closestY = 0;
-
-        foreach ($wavyPoints as $point) {
-            if ($point['x'] === $x) {
-                return $y < $point['y'];
-            }
-            $dist = abs($point['x'] - $x);
-            if ($dist < $minDist) {
-                $minDist = $dist;
-                $closestY = $point['y'];
+        // Draw top edge outline
+        for ($x = 0; $x < $this->tileWidth; $x++) {
+            if (isset($topWavyY[$x])) {
+                $y = $topWavyY[$x];
+                for ($w = 0; $w < $this->outlineWidth; $w++) {
+                    $drawY = $y + $w;
+                    if ($drawY >= 0 && $drawY < $this->tileHeight) {
+                        imagesetpixel($image, $x, $drawY, $color);
+                    }
+                }
             }
         }
 
-        // Interpolate between points for more accurate check
-        // For simplicity, use the basic diagonal check with wavy offset
-        $baseY = $this->tileHeight - ($x / $this->tileWidth) * $this->tileHeight;
-        $t = $x / $this->tileWidth;
-        $wave = sin($t * 2 * M_PI * $this->waveFrequency * 1.5) * $this->waveAmplitude * 0.707;
-
-        return $y < ($baseY + $wave);
+        // Draw right edge outline
+        for ($y = 0; $y < $this->tileHeight; $y++) {
+            if (isset($rightWavyX[$y])) {
+                $x = $rightWavyX[$y];
+                for ($w = 0; $w < $this->outlineWidth; $w++) {
+                    $drawX = $x - $w;
+                    if ($drawX >= 0 && $drawX < $this->tileWidth) {
+                        imagesetpixel($image, $drawX, $y, $color);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -349,20 +364,6 @@ class LandingTransitionGenerator
         }
     }
 
-    /**
-     * Draw outline along diagonal wavy line
-     */
-    private function drawDiagonalOutline($image, $wavyPoints, $color)
-    {
-        foreach ($wavyPoints as $point) {
-            $x = $point['x'];
-            $y = $point['y'];
-
-            if ($x >= 0 && $x < $this->tileWidth && $y >= 0 && $y < $this->tileHeight) {
-                imagesetpixel($image, $x, $y, $color);
-            }
-        }
-    }
 
     /**
      * Load JPG image from source directory

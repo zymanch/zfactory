@@ -1,0 +1,36 @@
+# Yii2 runtime files
+src/runtime/
+
+# Composer
+vendor/
+composer.lock
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Build artifacts
+public/js/
+public/css/
+mix-manifest.json
+
+# Local config
+config.local.php
+config.secure.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+nul
