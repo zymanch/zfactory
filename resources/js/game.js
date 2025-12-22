@@ -10,6 +10,8 @@ import { EntityTooltip } from './modules/entityTooltip.js';
 import { BuildingRules } from './modules/buildingRules.js';
 import { ResourceTransportManager } from './modules/resourceTransport/ResourceTransportManager.js';
 import { ResourceRenderer } from './modules/resourceTransport/ResourceRenderer.js';
+import { LandingWindow } from './modules/landingWindow.js';
+import { LandingEditMode } from './modules/landingEditMode.js';
 import { SPRITE_STATES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 
 /**
@@ -57,6 +59,8 @@ class ZFactoryGame {
         this.buildingRules = null;
         this.resourceTransport = null;
         this.resourceRenderer = null;
+        this.landingWindow = null;
+        this.landingEditMode = null;
     }
 
     /**
@@ -89,6 +93,8 @@ class ZFactoryGame {
         this.buildingRules = new BuildingRules(this);
         this.resourceTransport = new ResourceTransportManager(this);
         this.resourceRenderer = new ResourceRenderer(this);
+        this.landingWindow = new LandingWindow(this);
+        this.landingEditMode = new LandingEditMode(this);
     }
 
     /**
@@ -156,6 +162,8 @@ class ZFactoryGame {
         this.buildMode.init();
         this.fogOfWar.init();
         this.entityTooltip.init();
+        this.landingWindow.init();
+        this.landingEditMode.init();
         this.buildPanel.refresh();
         // Note: resourceTransport.init() is called after entities are loaded in loadViewport()
     }

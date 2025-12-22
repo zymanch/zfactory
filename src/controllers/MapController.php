@@ -11,7 +11,7 @@ class MapController extends Controller
      */
     public function beforeAction($action)
     {
-        if (in_array($action->id, ['tiles', 'create-entity'])) {
+        if (in_array($action->id, ['tiles', 'create-entity', 'update-landing'])) {
             $this->enableCsrfValidation = false;
         }
         return parent::beforeAction($action);
@@ -22,6 +22,7 @@ class MapController extends Controller
         return [
             'tiles' => \actions\map\Tiles::class,
             'create-entity' => \actions\map\CreateEntity::class,
+            'update-landing' => \actions\map\UpdateLanding::class,
         ];
     }
 }

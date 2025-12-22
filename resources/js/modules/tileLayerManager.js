@@ -267,6 +267,96 @@ export class TileLayerManager {
     get tilesCount() {
         return this.loadedTiles.size;
     }
+
+    /**
+     * Update a single tile (for landing editor)
+     * @param {number} x - Tile X
+     * @param {number} y - Tile Y
+     * @param {number} landingId - New landing ID
+     */
+    updateTile(x, y, landingId) {
+        const key = tileKey(x, y);
+
+        // Update data map
+        this.tileDataMap.set(key, landingId);
+
+        // Remove old sprite if exists
+        const oldSprite = this.loadedTiles.get(key);
+        if (oldSprite) {
+            this.game.landingLayer.removeChild(oldSprite);
+            oldSprite.destroy();
+            this.loadedTiles.delete(key);
+        }
+
+        // Create new sprite with transitions
+        const sprite = this.createTileWithTransitions(landingId, x, y);
+        if (sprite) {
+            this.game.landingLayer.addChild(sprite);
+            this.loadedTiles.set(key, sprite);
+        }
+
+        // Also update adjacent tiles (they might need new transition sprites)
+        this.refreshAdjacentTiles(x, y);
+
+        this.game.updateDebug('tiles', this.loadedTiles.size);
+    }
+
+    /**
+     * Remove a tile (for landing editor - set to sky)
+     * @param {number} x - Tile X
+     * @param {number} y - Tile Y
+     */
+    removeTile(x, y) {
+        const key = tileKey(x, y);
+
+        // Remove from data map
+        this.tileDataMap.delete(key);
+
+        // Remove sprite
+        const sprite = this.loadedTiles.get(key);
+        if (sprite) {
+            this.game.landingLayer.removeChild(sprite);
+            sprite.destroy();
+            this.loadedTiles.delete(key);
+        }
+
+        // Refresh adjacent tiles
+        this.refreshAdjacentTiles(x, y);
+
+        this.game.updateDebug('tiles', this.loadedTiles.size);
+    }
+
+    /**
+     * Refresh adjacent tiles to update their transitions
+     * @param {number} x - Center tile X
+     * @param {number} y - Center tile Y
+     */
+    refreshAdjacentTiles(x, y) {
+        const adjacent = [
+            [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]
+        ];
+
+        for (const [ax, ay] of adjacent) {
+            const key = tileKey(ax, ay);
+            const landingId = this.tileDataMap.get(key);
+
+            if (landingId !== undefined) {
+                // Re-render this tile to update transitions
+                const oldSprite = this.loadedTiles.get(key);
+                if (oldSprite) {
+                    this.game.landingLayer.removeChild(oldSprite);
+                    oldSprite.destroy();
+                    this.loadedTiles.delete(key);
+                }
+
+                const sprite = this.createTileWithTransitions(landingId, ax, ay);
+                if (sprite) {
+                    this.game.landingLayer.addChild(sprite);
+                    this.loadedTiles.set(key, sprite);
+                }
+            }
+        }
+    }
 }
 
 export default TileLayerManager;

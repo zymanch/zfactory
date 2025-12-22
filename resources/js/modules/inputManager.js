@@ -62,9 +62,18 @@ export class InputManager {
             this.game.buildingWindow?.toggle();
         }
 
-        // Escape - close windows / cancel build mode
+        // L key - toggle landing window (EN/RU)
+        if (key === 'l' || key === 'д') {
+            this.game.landingWindow?.toggle();
+        }
+
+        // Escape - close windows / cancel modes
         if (key === 'escape') {
-            if (this.game.buildingWindow?.isOpen) {
+            if (this.game.landingWindow?.isOpen) {
+                this.game.landingWindow.close();
+            } else if (this.game.landingEditMode?.isActive) {
+                this.game.landingEditMode.deactivate();
+            } else if (this.game.buildingWindow?.isOpen) {
                 this.game.buildingWindow.close();
             } else if (this.game.buildMode?.isActive) {
                 this.game.buildMode.deactivate();
