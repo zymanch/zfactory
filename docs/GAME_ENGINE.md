@@ -64,6 +64,73 @@ public/assets/tiles/landing/island_edge.svg
 └────────────────────────────┘
 ```
 
+## Landing Transition System
+
+Smooth wavy borders between adjacent terrain types create natural-looking terrain transitions.
+
+### Adjacency Table
+The `landing_adjacency` table defines which terrain types can have smooth transitions:
+
+| Landing | Can Border With |
+|---------|-----------------|
+| Grass (1) | Dirt, Sand, Snow, Swamp |
+| Dirt (2) | Grass, Sand, Stone |
+| Sand (3) | Grass, Dirt, Water |
+| Water (4) | Sand, Lava, Swamp |
+| Stone (5) | Dirt, Lava, Snow |
+| Lava (6) | Water, Stone |
+| Snow (7) | Grass, Stone |
+| Swamp (8) | Grass, Water |
+
+**Excluded**: Sky (9), Island Edge (10)
+
+### Transition Variants
+For each adjacency pair, 3 transition sprites are generated:
+- `{base}_{adjacent}_r.jpg` - Right edge transition (wavy line on right)
+- `{base}_{adjacent}_t.jpg` - Top edge transition (wavy line on top)
+- `{base}_{adjacent}_rt.jpg` - Corner transition (diagonal wavy line)
+
+### Rendering Logic
+```javascript
+// In TileLayerManager.js
+createTileWithTransitions(landingId, tileX, tileY) {
+    const topLandingId = this.getLandingAt(tileX, tileY - 1);
+    const rightLandingId = this.getLandingAt(tileX + 1, tileY);
+
+    const needsTop = topLandingId !== landingId && hasAdjacency(landingId, topLandingId);
+    const needsRight = rightLandingId !== landingId && hasAdjacency(landingId, rightLandingId);
+
+    if (needsTop && needsRight) {
+        textureKey = `transition_${landingId}_${topLandingId}_rt`;
+    } else if (needsTop) {
+        textureKey = `transition_${landingId}_${topLandingId}_t`;
+    } else if (needsRight) {
+        textureKey = `transition_${landingId}_${rightLandingId}_r`;
+    } else {
+        textureKey = `landing_${landingId}`;
+    }
+}
+```
+
+### Generation Command
+```bash
+# Generate all transition sprites (66 files)
+php yii landing/generate-transitions
+
+# List defined adjacencies
+php yii landing/list-adjacencies
+```
+
+### Transition Sprite Location
+```
+public/assets/tiles/landing/transitions/
+├── grass_dirt_r.jpg      # Grass base, dirt on right
+├── grass_dirt_t.jpg      # Grass base, dirt on top
+├── grass_dirt_rt.jpg     # Grass base, dirt on both
+├── dirt_grass_r.jpg      # Dirt base, grass on right
+├── ...
+```
+
 ### Map Structure
 - **Shape**: Irregular floating island with wavy edges
 - **Holes**: Several gaps inside the island

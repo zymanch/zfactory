@@ -33,6 +33,18 @@ ZFactory is a browser-based automation game inspired by Factorio. The game featu
 - **Actual tiles**: ~6251 (floating island shape)
 - **Style**: Irregular edges, internal holes, sky background
 
+### Landing Transitions
+Smooth wavy borders between adjacent terrain types:
+- **Adjacency table**: `landing_adjacency` defines which terrains can border each other
+- **Transition sprites**: Auto-generated with wavy lines (r=right, t=top, rt=corner)
+- **Location**: `public/assets/tiles/landing/transitions/`
+- **Naming**: `{base}_{adjacent}_{variant}.jpg` (e.g., `grass_dirt_r.jpg`)
+
+Generate transitions:
+```bash
+php yii landing/generate-transitions
+```
+
 ## Project Structure
 ```
 zfactory.local/
@@ -173,6 +185,12 @@ public/assets/tiles/entities/{entity_name}/
 - `is_buildable` - enum('yes','no') - can buildings be placed here?
 - `image_url` - path to tile image
 
+### LandingAdjacency (terrain transitions)
+- `adjacency_id` - primary key
+- `landing_id_1` - first terrain type
+- `landing_id_2` - second terrain type
+- Defines which terrains can have smooth transitions
+
 ### Map (terrain instances)
 - `map_id` - primary key
 - `landing_id` - foreign key to landing
@@ -267,6 +285,12 @@ php yii migrate
 
 # Generate AR models
 composer run ar
+
+# Generate landing transition sprites
+php yii landing/generate-transitions
+
+# List landing adjacencies
+php yii landing/list-adjacencies
 ```
 
 ## Database Setup
