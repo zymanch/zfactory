@@ -2,6 +2,9 @@ import * as PIXI from 'pixi.js';
 import { tileKey } from './utils.js';
 import { Z_INDEX, LANDING_SKY_ID, LANDING_ISLAND_EDGE_ID } from './constants.js';
 
+// Landing IDs that should not participate in transitions
+const NON_TRANSITION_LANDINGS = new Set([LANDING_SKY_ID, LANDING_ISLAND_EDGE_ID]);
+
 /**
  * TileLayerManager - manages terrain tile rendering
  * Handles sky tiles, island edge tiles, and real terrain tiles
@@ -66,11 +69,10 @@ export class TileLayerManager {
             const key = tileKey(tile.x, tile.y);
 
             if (!this.loadedTiles.has(key)) {
-                const sprite = this.createTileSprite(
+                const sprite = this.createTileWithTransitions(
                     tile.landing_id,
                     tile.x,
-                    tile.y,
-                    Z_INDEX.TERRAIN
+                    tile.y
                 );
                 if (sprite) {
                     this.game.landingLayer.addChild(sprite);
@@ -80,6 +82,68 @@ export class TileLayerManager {
         }
 
         this.game.updateDebug('tiles', this.loadedTiles.size);
+    }
+
+    /**
+     * Create a tile sprite with transition support
+     * @param {number} landingId - Current tile landing ID
+     * @param {number} tileX - Tile X position
+     * @param {number} tileY - Tile Y position
+     * @returns {PIXI.Sprite|null}
+     */
+    createTileWithTransitions(landingId, tileX, tileY) {
+        // Skip transitions for sky and island_edge
+        if (NON_TRANSITION_LANDINGS.has(landingId)) {
+            return this.createTileSprite(landingId, tileX, tileY, Z_INDEX.TERRAIN);
+        }
+
+        // Get adjacent tile landing IDs
+        const topLandingId = this.getLandingAt(tileX, tileY - 1);
+        const rightLandingId = this.getLandingAt(tileX + 1, tileY);
+
+        // Check if transitions are needed
+        const needsTopTransition = topLandingId !== undefined
+            && topLandingId !== landingId
+            && !NON_TRANSITION_LANDINGS.has(topLandingId)
+            && this.game.hasLandingAdjacency(landingId, topLandingId);
+
+        const needsRightTransition = rightLandingId !== undefined
+            && rightLandingId !== landingId
+            && !NON_TRANSITION_LANDINGS.has(rightLandingId)
+            && this.game.hasLandingAdjacency(landingId, rightLandingId);
+
+        // Determine texture key
+        let textureKey;
+        if (needsTopTransition && needsRightTransition) {
+            // Corner transition (both top and right different)
+            // For corner case, we use the same adjacent ID for simplicity
+            // More complex: could support different top and right adjacents
+            textureKey = `transition_${landingId}_${topLandingId}_rt`;
+        } else if (needsTopTransition) {
+            textureKey = `transition_${landingId}_${topLandingId}_t`;
+        } else if (needsRightTransition) {
+            textureKey = `transition_${landingId}_${rightLandingId}_r`;
+        } else {
+            textureKey = `landing_${landingId}`;
+        }
+
+        // Try to get transition texture, fallback to base texture
+        let texture = this.game.textures[textureKey];
+        if (!texture) {
+            texture = this.game.textures[`landing_${landingId}`];
+        }
+
+        if (!texture) return null;
+
+        const { tileWidth, tileHeight } = this.game.config;
+        const sprite = new PIXI.Sprite(texture);
+        sprite.x = tileX * tileWidth;
+        sprite.y = tileY * tileHeight;
+        sprite.width = tileWidth;
+        sprite.height = tileHeight;
+        sprite.zIndex = Z_INDEX.TERRAIN;
+
+        return sprite;
     }
 
     /**

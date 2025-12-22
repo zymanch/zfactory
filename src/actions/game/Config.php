@@ -4,6 +4,7 @@ namespace actions\game;
 
 use actions\JsonAction;
 use models\Landing;
+use models\LandingAdjacency;
 use models\EntityType;
 use models\Entity;
 use models\Resource;
@@ -27,6 +28,12 @@ class Config extends JsonAction
         $landingTypes = $this->castNumericFieldsIndexed(
             Landing::find()->indexBy('landing_id')->asArray()->all(),
             ['landing_id']
+        );
+
+        // Get landing adjacencies (for terrain transitions)
+        $landingAdjacencies = $this->castNumericFieldsArray(
+            LandingAdjacency::find()->asArray()->all(),
+            ['landing_id_1', 'landing_id_2']
         );
 
         // Get entity types
@@ -119,6 +126,7 @@ class Config extends JsonAction
 
         return $this->success([
             'landing' => $landingTypes,
+            'landingAdjacencies' => $landingAdjacencies,
             'entityTypes' => $entityTypes,
             'eyeEntities' => $eyeEntities,
             'resources' => $resources,

@@ -15,6 +15,14 @@ use models\LandingQuery;
   * @method LandingQuery orderByLandingId($order = Criteria::ASC)
   * @method LandingQuery orderByIsBuildable($order = Criteria::ASC)
   * @method LandingQuery orderByImageUrl($order = Criteria::ASC)
+  * @method LandingQuery withLandingAdjacencies($params = [])
+  * @method LandingQuery joinWithLandingAdjacencies($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method LandingQuery withLandingAdjacencies0($params = [])
+  * @method LandingQuery joinWithLandingAdjacencies0($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method LandingQuery withLandingId2s($params = [])
+  * @method LandingQuery joinWithLandingId2s($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method LandingQuery withLandingId1s($params = [])
+  * @method LandingQuery joinWithLandingId1s($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseLandingQuery extends \yii\db\ActiveQuery
 {

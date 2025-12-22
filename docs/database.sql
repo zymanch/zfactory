@@ -38,6 +38,35 @@ INSERT INTO `landing` (`landing_id`, `is_buildable`, `name`, `image_url`) VALUES
     (9, 'no', 'Sky', 'sky.jpg'),
     (10, 'no', 'Island Edge', 'island_edge.jpg');
 
+
+-- --------------------------------------------------------
+-- Table structure: landing_adjacency (natural terrain transitions)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `landing_adjacency` (
+  `adjacency_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `landing_id_1` int(10) unsigned NOT NULL,
+  `landing_id_2` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`adjacency_id`),
+  UNIQUE KEY `idx_unique_pair` (`landing_id_1`, `landing_id_2`),
+  CONSTRAINT `fk_landing_adjacency_1` FOREIGN KEY (`landing_id_1`) REFERENCES `landing` (`landing_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_landing_adjacency_2` FOREIGN KEY (`landing_id_2`) REFERENCES `landing` (`landing_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Natural transitions (max 3 per type, excluding sky and island_edge)
+INSERT INTO `landing_adjacency` (`landing_id_1`, `landing_id_2`) VALUES
+    (1, 2),   -- grass-dirt
+    (1, 3),   -- grass-sand
+    (1, 7),   -- grass-snow
+    (1, 8),   -- grass-swamp
+    (2, 3),   -- dirt-sand
+    (2, 5),   -- dirt-stone
+    (3, 4),   -- sand-water
+    (4, 6),   -- water-lava
+    (4, 8),   -- water-swamp
+    (5, 6),   -- stone-lava
+    (5, 7);   -- stone-snow
+
+
 -- --------------------------------------------------------
 -- Table structure: entity_type (entity definitions)
 -- --------------------------------------------------------

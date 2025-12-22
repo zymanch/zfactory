@@ -32,6 +32,7 @@ class ArController extends \yii\console\Controller
                 'entity_type',
                 'entity_type_recipe',
                 'landing',
+                'landing_adjacency',
                 'map',
                 'recipe',
                 'resource',
