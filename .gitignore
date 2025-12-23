@@ -9,6 +9,8 @@ composer.lock
 node_modules/
 package-lock.json
 
+ai/stable-diffusion-webui
+
 # Build artifacts
 public/js/
 public/css/

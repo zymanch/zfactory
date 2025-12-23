@@ -1,0 +1,10 @@
+# Stable Diffusion WebUI
+stable-diffusion-webui/
+
+# Models (large files)
+model/*.safetensors
+model/*.ckpt
+model/*.pt
+
+# Keep the model directory structure
+!model/.gitkeep
