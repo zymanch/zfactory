@@ -138,6 +138,18 @@ class LandingTransitionGenerator
 
                 $rightImage = $landingImages[$rightId];
 
+                // Special rules for Island Edge (ID=10) transitions:
+
+                // 1. For Sky: if top is Island Edge, treat as Sky
+                if ($landingId == 9 && $topId == 10) {
+                    $topImage = $landingImages[9];
+                }
+
+                // 2. For Island Edge: if right is Sky, treat as Island Edge
+                if ($landingId == 10 && $rightId == 9) {
+                    $rightImage = $landingImages[10];
+                }
+
                 // Генерируем переход: сверху topImage, справа rightImage
                 $transition = $this->createTransition($baseImage, $topImage, $rightImage);
 
@@ -446,15 +458,13 @@ class LandingTransitionGenerator
     }
 
     /**
-     * Загружает изображение
+     * Загружает изображение (первую вариацию из папки)
      */
     private function loadImage($filename)
     {
-        $path = $this->sourceDir . '/' . $filename;
-        $image = imagecreatefrompng($path);
-        imagealphablending($image, false);
-        imagesavealpha($image, true);
-        return $image;
+        // Файлы теперь находятся в папках вариаций
+        $landingName = str_replace('.png', '', $filename);
+        return $this->loadVariationImage($landingName, 0);
     }
 
     /**

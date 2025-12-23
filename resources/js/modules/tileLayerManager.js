@@ -55,6 +55,30 @@ export class TileLayerManager {
             const key = tileKey(pos.x, pos.y);
             this.tileDataMap.set(key, LANDING_ISLAND_EDGE_ID);
         }
+
+        // Third pass: auto-insert sky to the left of landings with empty space on the left
+        const skyTilesToInsert = [];
+        for (const tile of tiles) {
+            // Skip sky itself
+            if (tile.landing_id === LANDING_SKY_ID) {
+                continue;
+            }
+
+            // Check if there's no tile to the left of this one
+            const leftKey = tileKey(tile.x - 1, tile.y);
+            const leftLandingId = this.tileDataMap.get(leftKey);
+
+            // If left is empty, insert sky
+            if (leftLandingId === undefined) {
+                skyTilesToInsert.push({ x: tile.x - 1, y: tile.y });
+            }
+        }
+
+        // Insert sky tiles
+        for (const pos of skyTilesToInsert) {
+            const key = tileKey(pos.x, pos.y);
+            this.tileDataMap.set(key, LANDING_SKY_ID);
+        }
     }
 
     /**
