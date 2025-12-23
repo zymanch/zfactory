@@ -21,7 +21,7 @@ class LandingTransitionGenerator
     private $padding = 0;
 
     /** @var float Amplitude of the wavy line */
-    private $waveAmplitude = 1.5;
+    private $waveAmplitude = 1;
 
     /** @var float Frequency of the wavy line (waves per tile) */
     private $waveFrequency = 2.0;
@@ -238,8 +238,8 @@ class LandingTransitionGenerator
         $wavyX = [];
         for ($y = 0; $y < $this->tileHeight; $y++) {
             $t = $y / ($this->tileHeight - 1);
-            $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
-            $wavyX[$y] = (int)round($this->tileWidth - 4 + $wave);
+            $wave = cos($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
+            $wavyX[$y] = (int)round($this->tileWidth - 1 - $this->waveAmplitude + $wave);
         }
 
         // Copy pixels from right image for positions right of wavy line
@@ -268,8 +268,8 @@ class LandingTransitionGenerator
         $wavyY = [];
         for ($x = 0; $x < $this->tileWidth; $x++) {
             $t = $x / ($this->tileWidth - 1);
-            $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
-            $wavyY[$x] = (int)round(4 - $wave);
+            $wave = cos($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
+            $wavyY[$x] = (int)round($this->waveAmplitude - $wave);
         }
 
         // Copy pixels from top image for positions above wavy line
@@ -298,16 +298,16 @@ class LandingTransitionGenerator
         $topWavyY = [];
         for ($x = 0; $x < $this->tileWidth; $x++) {
             $t = $x / ($this->tileWidth - 1);
-            $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
-            $topWavyY[$x] = (int)round(4 - $wave);
+            $wave = cos($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
+            $topWavyY[$x] = (int)round($this->waveAmplitude - $wave);
         }
 
         // Right edge wavy X positions
         $rightWavyX = [];
         for ($y = 0; $y < $this->tileHeight; $y++) {
             $t = $y / ($this->tileHeight - 1);
-            $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
-            $rightWavyX[$y] = (int)round($this->tileWidth - 4 + $wave);
+            $wave = cos($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
+            $rightWavyX[$y] = (int)round($this->tileWidth - 1 - $this->waveAmplitude + $wave);
         }
 
         // Apply regions based on L-shaped boundary
