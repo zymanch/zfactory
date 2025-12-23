@@ -39,19 +39,50 @@ zIndex: 1   - Real terrain tiles (from database)
 ```
 
 ### Island Edge Auto-Generation
-The `island_edge` landing type (ID=10) is **never stored in the database**. Instead, it's automatically rendered by the game engine:
+The `island_edge` landing type (ID=10) is **never stored in the database**. Instead, it's automatically added by the game engine in `storeTileData()`:
 
 ```javascript
-// For each tile position (x, y):
-if (hasTileAbove(x, y-1) && !hasTile(x, y)) {
-    renderIslandEdge(x, y);
+// Auto-insert island_edge under landings with empty space below
+for (const tile of tiles) {
+    if (tile.landing_id === LANDING_SKY_ID || tile.landing_id === LANDING_ISLAND_EDGE_ID) {
+        continue;
+    }
+
+    const belowLandingId = this.tileDataMap.get(tileKey(tile.x, tile.y + 1));
+
+    if (belowLandingId === undefined || belowLandingId === LANDING_SKY_ID) {
+        this.tileDataMap.set(tileKey(tile.x, tile.y + 1), LANDING_ISLAND_EDGE_ID);
+    }
 }
 ```
 
 **Logic:**
-- If tile at (x, y-1) exists and is NOT sky
-- AND tile at (x, y) is empty or sky
-- THEN render `island_edge` at (x, y)
+- For each non-sky, non-island_edge tile
+- Check if there's empty space or sky below
+- Auto-insert `island_edge` at (x, y+1)
+
+### Sky Auto-Generation
+The `sky` landing type (ID=9) is automatically added to the left of all non-sky tiles:
+
+```javascript
+// Auto-insert sky to the left of landings with empty space on the left
+for (const tile of tiles) {
+    if (tile.landing_id === LANDING_SKY_ID) {
+        continue;
+    }
+
+    const leftLandingId = this.tileDataMap.get(tileKey(tile.x - 1, tile.y));
+
+    if (leftLandingId === undefined) {
+        this.tileDataMap.set(tileKey(tile.x - 1, tile.y), LANDING_SKY_ID);
+    }
+}
+```
+
+**Logic:**
+- For each non-sky tile
+- Check if there's empty space to the left
+- Auto-insert `sky` at (x-1, y)
 
 ### Island Edge Sprite
 ```
@@ -572,26 +603,51 @@ Column 10: Island edge справа (landing_id 10)
 **Simple system using `landing_id` directly:**
 
 ```javascript
-// Row calculation
-if (top === null) {
-    row = LANDING_SKY_ID + 1;  // 10 (sky is landing_id=9)
-} else if (top === landingId) {
-    row = 1;  // Self-reference
-} else {
-    row = top + 1;  // Other landing type (+1 for variations row)
+// Special case: Both neighbors match current landing - use variations
+if (top === landingId && right === landingId) {
+    return {
+        row: 0,
+        col: Math.floor(Math.random() * variationsCount)  // 0-4
+    };
 }
 
-// Column calculation
+// Row calculation (neighbor above)
+if (top === null) {
+    row = LANDING_SKY_ID + 1;  // 10 (sky is landing_id=9)
+} else {
+    row = top + 1;  // Neighbor landing_id + 1 (row 0 is variations)
+}
+
+// Column calculation (neighbor to the right)
 if (right === null) {
     col = LANDING_SKY_ID;  // 9
-} else if (right === landingId) {
-    col = 0;  // Self-reference (or random 0-4 for variations)
 } else {
-    col = right;  // Other landing type
+    col = right;  // Neighbor landing_id
 }
 ```
 
 **No database lookup needed** - coordinates computed directly from neighbor `landing_id`.
+
+### Special Transition Rules for Island Edge
+
+Island Edge has special rendering rules applied during atlas generation (in `LandingTransitionGenerator.php`):
+
+```php
+// 1. For Sky atlas: if top is Island Edge, treat as Sky
+if ($landingId == 9 && $topId == 10) {
+    $topImage = $landingImages[9];
+}
+
+// 2. For Island Edge atlas: if right is Sky, treat as Island Edge
+if ($landingId == 10 && $rightId == 9) {
+    $rightImage = $landingImages[10];
+}
+```
+
+**Purpose:**
+- Creates seamless transitions between Island Edge and Sky
+- Prevents visual discontinuities at floating island boundaries
+- Applied during atlas generation, not during runtime rendering
 
 ### PIXI.Rectangle for Sub-textures
 
@@ -618,16 +674,64 @@ const texture = new PIXI.Texture({
 - **Memory Efficient**: Single 352×288px texture per landing type
 - **Simple Coordinates**: Direct `landing_id` mapping without database lookups
 
-### Procedural Variations
+### Wavy Transition Algorithm
 
-Each landing type has 5 procedurally generated variations created by `VariationGenerator`:
+Transitions between different terrain types use cosine-based wavy lines for natural-looking borders:
+
+**Parameters:**
+- `waveAmplitude = 1` - Wave displacement in pixels
+- `waveFrequency = 2.0` - Number of waves across the tile
+- `outlineWidth = 1` - Width of darkened border line
+
+**Formula (right edge example):**
+```php
+for ($y = 0; $y < $tileHeight; $y++) {
+    $t = $y / ($tileHeight - 1);  // Normalize to 0-1
+    $wave = cos($t * 2 * M_PI * $waveFrequency) * $waveAmplitude;
+    $wavyX[$y] = (int)round($tileWidth - 1 - $waveAmplitude + $wave);
+}
+```
+
+**Transition Types:**
+- `generateRightTransition()` - Vertical wavy line on right edge
+- `generateTopTransition()` - Horizontal wavy line on top edge
+- `generateCornerTransition()` - L-shaped wavy line for both edges
+
+### Landing Variations
+
+Each landing type has 5 pre-generated variations stored in folders:
+
+**File Structure:**
+```
+public/assets/tiles/landing/
+├── grass/
+│   ├── grass_0.png  (32x24 px)
+│   ├── grass_1.png
+│   ├── grass_2.png
+│   ├── grass_3.png
+│   └── grass_4.png
+├── dirt/
+│   ├── dirt_0.png
+│   └── ...
+```
+
+**Initial Generation:**
+Variations were created once using `VariationGenerator.php` with:
 - **Color shifts**: ±10 hue, ±5 saturation, ±5 brightness
 - **Noise**: 5% of pixels get ±3 RGB variation
-- **Purpose**: Visual diversity without manual sprite creation
+
+**Replacement:**
+You can replace these PNG files with custom high-quality textures. After replacement, regenerate atlases:
+
+```bash
+php yii landing/generate
+npm run assets
+```
 
 ### Generation Command
 
 ```bash
+# Generate all texture atlases (reads from variation folders)
 php yii landing/generate
 ```
 
