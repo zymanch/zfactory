@@ -83,22 +83,22 @@ Stores actual terrain placement on the game map.
 - **Style**: Wavy edges, internal holes for floating island effect
 
 ### landing_adjacency (terrain transitions)
-Defines which landing types can be adjacent to each other, with atlas coordinates for texture atlas system.
+Defines which landing types can be adjacent to each other (currently not used for atlas generation).
 
 | Column              | Type         | Description                              |
 |---------------------|--------------|------------------------------------------|
 | adjacency_id        | INT UNSIGNED | Primary key                              |
 | landing_id_1        | INT UNSIGNED | FK to landing.landing_id (base terrain)  |
 | landing_id_2        | INT UNSIGNED | FK to landing.landing_id (adjacent)      |
-| atlas_z             | INT DEFAULT 0| Z-index in texture atlas (0=self-ref)    |
 
-**Adjacency System:**
-- Bidirectional entries for all terrain pairs (except special rules)
-- `atlas_z` is unique per `landing_id_1` group (1, 2, 3...)
-- z=0 reserved for self-reference in atlas coordinate formula
-- **Special rules:**
-  - sky (id=9) NOT adjacent to sky
-  - sky (id=9) NOT adjacent to island_edge (id=10)
+**Note:** Atlas generation now creates ALL possible transitions between ALL landing types, so this table is optional. The texture atlas system uses `landing_id` directly for coordinates:
+- Row = top_landing_id + 1
+- Column = right_landing_id
+
+**Historical adjacency rules (no longer enforced):**
+- Bidirectional entries for all terrain pairs
+- sky (id=9) NOT adjacent to sky
+- sky (id=9) NOT adjacent to island_edge (id=10)
 - Total records: 88 bidirectional adjacencies
 
 ### entity_type (entity definitions)

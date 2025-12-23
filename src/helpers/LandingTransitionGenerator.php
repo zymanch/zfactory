@@ -69,17 +69,23 @@ class LandingTransitionGenerator
         // Загружаем готовые вариации из папки
         $variations = $this->loadVariations($imageName, $variationsCount);
 
-        // Получаем смежности с atlas_z
-        $adjacencies = $this->getAdjacencies($landingId);
+        // Получаем все типы лендингов для генерации всех комбинаций
+        $allLandings = $this->getLandings();
+        $maxLandingId = 0;
+        foreach ($allLandings as $l) {
+            if ($l['landing_id'] > $maxLandingId) {
+                $maxLandingId = $l['landing_id'];
+            }
+        }
 
-        // Размеры атласа с учетом padding
+        // Размеры атласа
         $tileWithPadding = $this->tileWidth + $this->padding;
         $tileHeightWithPadding = $this->tileHeight + $this->padding;
 
-        // Колонки: z=0 (самоссылка) + N вариаций
-        $atlasWidth = ($variationsCount + 1) * $tileWithPadding;
-        // Строки: строка 0 (вариации) + строка 1 (самоссылка сверху) + N adjacency
-        $atlasHeight = (count($adjacencies) + 2) * $tileHeightWithPadding;
+        // Колонки: от 0 до maxLandingId (0 = самоссылка, 1-10 = другие лендинги)
+        $atlasWidth = ($maxLandingId + 1) * $tileWithPadding;
+        // Строки: строка 0 (вариации) + строки 1-11 (переходы для каждого лендинга сверху)
+        $atlasHeight = ($maxLandingId + 2) * $tileHeightWithPadding;
 
         // Создаем пустой атлас
         $atlas = imagecreatetruecolor($atlasWidth, $atlasHeight);
@@ -91,6 +97,7 @@ class LandingTransitionGenerator
         imagefill($atlas, 0, 0, $transparent);
 
         // Строка 0: Вариации базового тайла (для рандомизации)
+        // Заполняем только первые N колонок вариациями
         foreach ($variations as $colIdx => $variation) {
             imagecopy(
                 $atlas,
@@ -103,44 +110,41 @@ class LandingTransitionGenerator
             );
         }
 
-        // Строка 1: Самоссылки (top=self, right=variations)
-        // Row = 0 + 1 = 1, это когда сверху тот же лендинг
-        foreach ($variations as $colIdx => $variation) {
-            imagecopy(
-                $atlas,
-                $variation,
-                $colIdx * $tileWithPadding,
-                1 * $tileHeightWithPadding,
-                0, 0,
-                $this->tileWidth,
-                $this->tileHeight
-            );
+        // Загружаем изображения всех лендингов (для генерации всех комбинаций)
+        $landingImages = [];
+        $landingImages[0] = $baseImage; // 0 = самоссылка
+
+        foreach ($allLandings as $l) {
+            $lId = $l['landing_id'];
+            $lImageName = str_replace('.png', '', $l['image_url']);
+
+            // Загружаем первую вариацию каждого лендинга
+            $landingImages[$lId] = $this->loadVariationImage($lImageName, 0);
         }
 
-        // Строки 2+: Переходы с разными верхними соседями
-        foreach ($adjacencies as $adj) {
-            $topZ = $adj['atlas_z'];
-            $topLanding = $this->getLandingById($adj['landing_id_2']);
-            $topImageName = str_replace('.png', '', $topLanding['image_url']);
+        // Генерируем ВСЕ комбинации: каждый лендинг сверху × каждый лендинг справа
+        for ($topId = 0; $topId <= $maxLandingId; $topId++) {
+            if (!isset($landingImages[$topId])) {
+                continue; // Пропускаем несуществующие ID
+            }
 
-            // Загружаем первую вариацию соседа сверху
-            $topImage = $this->loadVariationImage($topImageName, 0);
+            $topImage = $landingImages[$topId];
+            $row = $topId + 1;  // +1 потому что строка 0 занята вариациями
 
-            // Row = topZ + 1
-            $row = $topZ + 1;
+            for ($rightId = 0; $rightId <= $maxLandingId; $rightId++) {
+                if (!isset($landingImages[$rightId])) {
+                    continue; // Пропускаем несуществующие ID
+                }
 
-            // Для каждой вариации справа (включая самоссылку в колонке 0)
-            // Колонка 0 = сам лендинг справа
-            $rightVariations = array_merge([$baseImage], $variations);
+                $rightImage = $landingImages[$rightId];
 
-            foreach ($rightVariations as $colIdx => $rightImage) {
                 // Генерируем переход: сверху topImage, справа rightImage
                 $transition = $this->createTransition($baseImage, $topImage, $rightImage);
 
                 imagecopy(
                     $atlas,
                     $transition,
-                    $colIdx * $tileWithPadding,
+                    $rightId * $tileWithPadding,
                     $row * $tileHeightWithPadding,
                     0, 0,
                     $this->tileWidth,
@@ -149,8 +153,13 @@ class LandingTransitionGenerator
 
                 imagedestroy($transition);
             }
+        }
 
-            imagedestroy($topImage);
+        // Освобождаем память
+        foreach ($landingImages as $lId => $img) {
+            if ($lId !== 0 && $img !== $baseImage) {
+                imagedestroy($img);
+            }
         }
 
         // Сохраняем атлас

@@ -211,8 +211,7 @@ class ZFactoryGame {
         // Setup gameData structure for new atlas system
         this.gameData = {
             landings: this.landingTypes,
-            entityTypes: this.entityTypes,
-            landingAdjacencies: this.indexByLandingId(this.landingAdjacencies)
+            entityTypes: this.entityTypes
         };
 
         // Initialize building rules from server config
@@ -572,21 +571,6 @@ class ZFactoryGame {
         return this.tileManager?.tileDataMap || new Map();
     }
 
-    /**
-     * Index adjacency array by landing_id_1
-     * @param {Array} items - Array of adjacency objects
-     * @returns {Object} - Indexed by landing_id_1
-     */
-    indexByLandingId(items) {
-        const indexed = {};
-        items.forEach(item => {
-            if (!indexed[item.landing_id_1]) {
-                indexed[item.landing_id_1] = [];
-            }
-            indexed[item.landing_id_1].push(item);
-        });
-        return indexed;
-    }
 }
 
 // Initialize game when DOM ready

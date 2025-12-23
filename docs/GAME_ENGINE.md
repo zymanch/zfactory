@@ -550,33 +550,58 @@ The terrain transition system uses texture atlases for optimal rendering perform
 Each landing type has its own atlas: `{name}_atlas.png`
 
 **Dimensions:**
-- Width: `(variations_count + 1) × 32px` (typically 192px for 5 variations)
-- Height: `(adjacency_count + 2) × 24px` (varies by landing type)
+- Width: `11 × 32px = 352px` (all possible landing types 0-10)
+- Height: `12 × 24px = 288px` (row 0 for variations + rows 1-11 for transitions)
 
-**Row Structure:**
-- **Row 0**: 5 procedural variations of base tile (for randomization)
-- **Row 1**: Self-reference transitions (top = self)
-- **Row 2+**: Transitions with different adjacent terrains
+**Structure:**
+```
+Row 0: Вариации базового тайла (первые 5 колонок заполнены)
+Row 1: Переходы когда сверху тот же лендинг (самоссылка)
+Row 2-9: Переходы с разными лендингами сверху (landing_id 1-8)
+Row 10: Переходы со sky сверху (landing_id 9)
+Row 11: Переходы с island_edge сверху (landing_id 10)
+
+Column 0: Самоссылка справа (right = self)
+Column 1-8: Разные лендинги справа (landing_id 1-8)
+Column 9: Sky справа (landing_id 9)
+Column 10: Island edge справа (landing_id 10)
+```
 
 ### Atlas Coordinate Formula
 
+**Simple system using `landing_id` directly:**
+
 ```javascript
-row = top_z + 1
-col = right_z
+// Row calculation
+if (top === null) {
+    row = LANDING_SKY_ID + 1;  // 10 (sky is landing_id=9)
+} else if (top === landingId) {
+    row = 1;  // Self-reference
+} else {
+    row = top + 1;  // Other landing type (+1 for variations row)
+}
+
+// Column calculation
+if (right === null) {
+    col = LANDING_SKY_ID;  // 9
+} else if (right === landingId) {
+    col = 0;  // Self-reference (or random 0-4 for variations)
+} else {
+    col = right;  // Other landing type
+}
 ```
 
-Where `top_z` and `right_z` are values from `landing_adjacency.atlas_z`:
-- `z = 0`: Self-reference (same terrain type)
-- `z = 1, 2, 3...`: Different adjacent terrains (from database)
+**No database lookup needed** - coordinates computed directly from neighbor `landing_id`.
 
 ### PIXI.Rectangle for Sub-textures
 
 ```javascript
+const inset = 0.5;  // Prevent texture bleeding
 const rect = new PIXI.Rectangle(
-    col * 32,  // X position in atlas
-    row * 24,  // Y position in atlas
-    32,        // Tile width
-    24         // Tile height
+    col * 32 + inset,
+    row * 24 + inset,
+    32 - inset * 2,
+    24 - inset * 2
 );
 
 const texture = new PIXI.Texture({
@@ -588,8 +613,10 @@ const texture = new PIXI.Texture({
 ### Performance Benefits
 
 - **Sprite Batching**: All tiles of same type batched into single draw call
-- **Fewer Texture Switches**: Reduced from ~170 to ~10 texture atlases
+- **Fewer Texture Switches**: Reduced from ~170 to 10 texture atlases
 - **Performance Gain**: 2-3x FPS improvement through reduced WebGL state changes
+- **Memory Efficient**: Single 352×288px texture per landing type
+- **Simple Coordinates**: Direct `landing_id` mapping without database lookups
 
 ### Procedural Variations
 

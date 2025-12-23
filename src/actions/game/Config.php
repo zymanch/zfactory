@@ -30,11 +30,7 @@ class Config extends JsonAction
             ['landing_id']
         );
 
-        // Get landing adjacencies (for terrain transitions)
-        $landingAdjacencies = $this->castNumericFieldsArray(
-            LandingAdjacency::find()->asArray()->all(),
-            ['landing_id_1', 'landing_id_2', 'atlas_z']
-        );
+        // Landing adjacencies not needed - using landing_id directly in atlas coordinates
 
         // Get entity types
         $entityTypes = $this->castNumericFieldsIndexed(
@@ -126,7 +122,6 @@ class Config extends JsonAction
 
         return $this->success([
             'landing' => $landingTypes,
-            'landingAdjacencies' => $landingAdjacencies,
             'entityTypes' => $entityTypes,
             'eyeEntities' => $eyeEntities,
             'resources' => $resources,

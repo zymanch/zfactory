@@ -360,7 +360,8 @@ export class TileLayerManager {
     }
 
     /**
-     * Вычисляет координаты в атласе на основе смежностей
+     * Вычисляет координаты в атласе на основе соседей
+     * Использует landing_id напрямую вместо atlas_z
      *
      * @param {number} landingId ID текущего лендинга
      * @param {object} adjacencyInfo { top: landingId|null, right: landingId|null }
@@ -369,52 +370,36 @@ export class TileLayerManager {
     getAtlasCoordinates(landingId, adjacencyInfo) {
         const { top, right } = adjacencyInfo;
         const landing = this.game.gameData.landings[landingId];
-        if (!landing) return { row: 0, col: 0 };
+        const variationsCount = landing?.variations_count || 5;
 
-        const variationsCount = landing.variations_count || 5;
-
-        // Если нет смежностей (центр тайла) - берем случайную вариацию из строки 0
-        if (top === null && right === null) {
+        // Если оба соседа совпадают с текущим лендингом - используем вариации из row 0
+        if (top === landingId && right === landingId) {
             return {
                 row: 0,
                 col: Math.floor(Math.random() * variationsCount)
             };
         }
 
-        // Определяем top_z (строка)
-        let topZ = 0; // По умолчанию самоссылка
-        if (top !== null && top !== landingId) {
-            // Ищем atlas_z для этой смежности
-            topZ = this.getAtlasZ(landingId, top);
+        // Иначе используем переходы
+        let row, col;
+
+        // Определяем строку по соседу сверху
+        // Формула: row = top_landing_id + 1
+        if (top === null) {
+            row = LANDING_SKY_ID + 1;  // 10
+        } else {
+            row = top + 1;  // Для lava (id=5) сверху: row = 6
         }
 
-        // Определяем right_z (колонка)
-        let rightZ = 0; // По умолчанию самоссылка
-        if (right !== null && right !== landingId) {
-            rightZ = this.getAtlasZ(landingId, right);
+        // Определяем колонку по соседу справа
+        // Формула: col = right_landing_id
+        if (right === null) {
+            col = LANDING_SKY_ID;  // 9
+        } else {
+            col = right;  // Для lava (id=5) справа: col = 5
         }
 
-        // Если оба соседа совпадают с текущим лендингом - рандомизируем вариацию
-        if ((top === null || top === landingId) && (right === null || right === landingId)) {
-            rightZ = Math.floor(Math.random() * variationsCount);
-        }
-
-        // Формула: Row = top_z + 1, Column = right_z
-        return {
-            row: topZ + 1,
-            col: rightZ
-        };
-    }
-
-    /**
-     * Получает atlas_z для смежности
-     */
-    getAtlasZ(landingId, adjacentId) {
-        const adjacencies = this.game.gameData.landingAdjacencies[landingId];
-        if (!adjacencies) return 0;
-
-        const adj = adjacencies.find(a => parseInt(a.landing_id_2) === parseInt(adjacentId));
-        return adj ? parseInt(adj.atlas_z) : 0;
+        return { row, col };
     }
 }
 
