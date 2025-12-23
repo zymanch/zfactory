@@ -65,40 +65,54 @@ class LandingController extends \yii\console\Controller
 
             $this->stdout("Processing {$landingName}...\n");
 
-            // Load original image
-            $originalImage = $this->loadImageAny($originalFile);
-            if (!$originalImage) {
-                $this->stdout("  Error: Could not load {$originalFile}\n");
-                continue;
-            }
-
-            // Scale to 32x24 using nearest neighbor
-            $scaledImage = imagecreatetruecolor($tileWidth, $tileHeight);
-            imagealphablending($scaledImage, false);
-            imagesavealpha($scaledImage, true);
-
-            // Disable interpolation for pixel-perfect scaling
-            imagesetinterpolation($scaledImage, IMG_NEAREST_NEIGHBOUR);
-
-            imagecopyresampled(
-                $scaledImage,
-                $originalImage,
-                0, 0, 0, 0,
-                $tileWidth, $tileHeight,
-                imagesx($originalImage), imagesy($originalImage)
-            );
-
-            // Save scaled image as all variations
+            // Process each variation separately
+            $scaledCount = 0;
             for ($i = 0; $i < $variationsCount; $i++) {
+                $varOriginalFile = $landingPath . '/' . $landingName . '_' . $i . '_original.png';
+
+                // If specific variation file doesn't exist, try base original
+                if (!file_exists($varOriginalFile)) {
+                    $varOriginalFile = $originalFile;
+                }
+
+                if (!file_exists($varOriginalFile)) {
+                    continue;
+                }
+
+                // Load variation image
+                $originalImage = $this->loadImageAny($varOriginalFile);
+                if (!$originalImage) {
+                    $this->stdout("  Warning: Could not load variation {$i}\n");
+                    continue;
+                }
+
+                // Scale to 32x24 using nearest neighbor
+                $scaledImage = imagecreatetruecolor($tileWidth, $tileHeight);
+                imagealphablending($scaledImage, false);
+                imagesavealpha($scaledImage, true);
+                imagesetinterpolation($scaledImage, IMG_NEAREST_NEIGHBOUR);
+
+                imagecopyresampled(
+                    $scaledImage,
+                    $originalImage,
+                    0, 0, 0, 0,
+                    $tileWidth, $tileHeight,
+                    imagesx($originalImage), imagesy($originalImage)
+                );
+
+                // Save scaled variation
                 $variationPath = $landingPath . '/' . $landingName . '_' . $i . '.png';
                 imagepng($scaledImage, $variationPath, 9);
+
+                imagedestroy($originalImage);
+                imagedestroy($scaledImage);
+                $scaledCount++;
             }
 
-            imagedestroy($originalImage);
-            imagedestroy($scaledImage);
-
-            $this->stdout("  Saved {$variationsCount} variations from original\n");
-            $processedCount++;
+            if ($scaledCount > 0) {
+                $this->stdout("  Scaled {$scaledCount} variations\n");
+                $processedCount++;
+            }
         }
 
         if ($processedCount === 0) {
@@ -161,8 +175,75 @@ class LandingController extends \yii\console\Controller
                 'negative' => 'borders, seams, blurry, low quality, text, watermark, clear water, isometric'
             ],
             'island_edge' => [
-                'positive' => 'seamless tileable island edge texture, cross-section side view, brown earth at top half, blue sky at bottom half, floating island cliff, natural transition, photorealistic, high detail',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, isometric, top-down view'
+                'positive' => 'seamless tileable hanging stalactites, rocky earth surface at top, stone stalactites hanging downward, cave ceiling texture, side view, photorealistic, high detail, transparent background at bottom',
+                'negative' => 'borders, seams, blurry, low quality, text, watermark, isometric, top-down view, sky, clouds, ground at bottom'
+            ]
+        ];
+
+        // Variation prompts for img2img (modifiers to base prompt)
+        $variationPrompts = [
+            'grass' => [
+                'original' => '',  // Base version
+                'with red flowers scattered',
+                'with blue flowers scattered',
+                'sparse thin grass patches',
+                'dense thick lush grass'
+            ],
+            'dirt' => [
+                'original' => '',
+                'with small pebbles',
+                'cracked dry earth',
+                'with moss patches',
+                'with small rocks'
+            ],
+            'sand' => [
+                'original' => '',
+                'with shell fragments',
+                'fine smooth sand',
+                'coarse rough sand texture',
+                'with small dunes pattern'
+            ],
+            'water' => [
+                'original' => '',
+                'with lily pads',
+                'dark deep water',
+                'light shallow water',
+                'with gentle waves'
+            ],
+            'stone' => [
+                'original' => '',
+                'with moss covering',
+                'weathered cracked stones',
+                'smooth polished surface',
+                'rough jagged texture'
+            ],
+            'lava' => [
+                'original' => '',
+                'bright glowing cracks',
+                'dark cooling surface',
+                'intense bright magma',
+                'bubbling lava surface'
+            ],
+            'snow' => [
+                'original' => '',
+                'fresh powdery snow',
+                'icy frozen surface',
+                'with sparkles',
+                'deep thick snow'
+            ],
+            'swamp' => [
+                'original' => '',
+                'with algae patches',
+                'dark murky water',
+                'with reeds scattered',
+                'thick mud surface'
+            ],
+            'island_edge' => [
+                'original' => '',
+                'long sharp stalactites',
+                'short thick stalactites',
+                'weathered eroded edge',
+                'dramatic cliff face'
             ]
         ];
 
@@ -194,32 +275,80 @@ class LandingController extends \yii\console\Controller
         foreach ($landingsToProcess as $name => $landing) {
             $this->stdout("Generating {$name}...\n");
 
-            $landingPath = realpath($landingDir . '/' . $name);
+            $landingPath = $landingDir . '/' . $name;
             if (!is_dir($landingPath)) {
                 mkdir($landingPath, 0755, true);
             }
 
-            // Generate image via API
-            $imageBase64 = $this->generateViaSdApi(
+            $variationsCount = $landing['variations_count'] ?? 5;
+            $variations = $variationPrompts[$name] ?? array_fill(0, $variationsCount, '');
+
+            // Generate base image (variation 0)
+            $this->stdout("  Generating base image (0/{$variationsCount})...\n");
+            $baseImageData = $this->generateViaSdApi(
                 $apiUrl,
                 $prompts[$name]['positive'],
                 $prompts[$name]['negative'],
-                512,  // width
-                384   // height (aspect ratio 4:3 similar to 32:24)
+                512,
+                384
             );
 
-            if (!$imageBase64) {
-                $this->stdout("  Error: Failed to generate image\n");
+            if (!$baseImageData) {
+                $this->stdout("  Error: Failed to generate base image\n");
                 continue;
             }
 
-            // Save as original
-            $originalPath = $landingPath . '/' . $name . '_0_original.png';
-            file_put_contents($originalPath, base64_decode($imageBase64));
-            $this->stdout("  Saved original ({$originalPath})\n");
+            $baseImageBase64 = $baseImageData['image'];
+            $baseSeed = $baseImageData['seed'];
 
-            // Scale to 32x24 and create variations
-            $this->scaleAndCreateVariations($name, $landingPath, $landing['variations_count'] ?? 5);
+            // Save variation 0
+            $originalPath = $landingPath . '/' . $name . '_0_original.png';
+            file_put_contents($originalPath, base64_decode($baseImageBase64));
+            $this->stdout("  Saved variation 0 (seed: {$baseSeed})\n");
+
+            // Save seed to database
+            Landing::updateAll(['ai_seed' => $baseSeed], ['image_url' => $name . '.png']);
+
+            // Generate other variations using img2img
+            for ($i = 1; $i < $variationsCount; $i++) {
+                $this->stdout("  Generating variation {$i}/{$variationsCount}...\n");
+
+                $modifier = $variations[$i] ?? '';
+                $varPrompt = $prompts[$name]['positive'] . ($modifier ? ', ' . $modifier : '');
+
+                $varImageData = $this->generateImg2ImgViaSdApi(
+                    $apiUrl,
+                    $baseImageBase64,
+                    $varPrompt,
+                    $prompts[$name]['negative'],
+                    512,
+                    384,
+                    0.4  // Denoising strength (subtle changes)
+                );
+
+                if (!$varImageData) {
+                    $this->stdout("    Warning: Failed to generate variation {$i}, using base instead\n");
+                    $varImageBase64 = $baseImageBase64;
+                } else {
+                    $varImageBase64 = $varImageData['image'];
+                }
+
+                $varPath = $landingPath . '/' . $name . '_' . $i . '_original.png';
+                file_put_contents($varPath, base64_decode($varImageBase64));
+                $this->stdout("  Saved variation {$i}\n");
+
+                // Apply transparency for island_edge
+                if ($name === 'island_edge') {
+                    $this->makeBottomTransparent($varPath, 0.5);
+                    $this->stdout("  Applied transparency to variation {$i}\n");
+                }
+            }
+
+            // Apply transparency to base image if island_edge
+            if ($name === 'island_edge') {
+                $this->makeBottomTransparent($originalPath, 0.5);
+                $this->stdout("  Applied transparency to base image\n");
+            }
         }
 
         $this->stdout("\nDone! Now run:\n");
@@ -232,6 +361,7 @@ class LandingController extends \yii\console\Controller
 
     /**
      * Generate image using Stable Diffusion API
+     * Returns array ['image' => base64, 'seed' => int, 'info' => array] or null
      */
     private function generateViaSdApi($apiUrl, $positivePrompt, $negativePrompt, $width, $height)
     {
@@ -241,8 +371,8 @@ class LandingController extends \yii\console\Controller
             'width' => $width,
             'height' => $height,
             'steps' => 25,
-            'cfg_scale' => 7,
-            'sampler_name' => 'DPM++ 2M Karras',
+            'cfg_scale' => 5,  // Lower = softer, less sharp (was 7)
+            'sampler_name' => 'Euler a',  // Softer sampler (was DPM++ 2M Karras)
             'seed' => -1,  // Random seed
             'batch_size' => 1,
             'n_iter' => 1,
@@ -266,7 +396,113 @@ class LandingController extends \yii\console\Controller
         }
 
         $data = json_decode($response, true);
-        return $data['images'][0] ?? null;
+        if (!isset($data['images'][0])) {
+            return null;
+        }
+
+        // Extract seed from info
+        $info = json_decode($data['info'] ?? '{}', true);
+        $seed = $info['seed'] ?? null;
+
+        return [
+            'image' => $data['images'][0],
+            'seed' => $seed,
+            'info' => $info
+        ];
+    }
+
+    /**
+     * Generate image variation using Stable Diffusion img2img API
+     * Returns array ['image' => base64, 'seed' => int, 'info' => array] or null
+     */
+    private function generateImg2ImgViaSdApi($apiUrl, $baseImageBase64, $positivePrompt, $negativePrompt, $width, $height, $denoisingStrength = 0.4)
+    {
+        $payload = [
+            'init_images' => [$baseImageBase64],
+            'prompt' => $positivePrompt,
+            'negative_prompt' => $negativePrompt,
+            'width' => $width,
+            'height' => $height,
+            'steps' => 20,  // Fewer steps for img2img
+            'cfg_scale' => 5,
+            'sampler_name' => 'Euler a',
+            'denoising_strength' => $denoisingStrength,  // 0.3-0.5 = subtle changes, keep structure
+            'seed' => -1,
+            'batch_size' => 1,
+            'n_iter' => 1,
+            'tiling' => true,
+        ];
+
+        $ch = curl_init($apiUrl . '/sdapi/v1/img2img');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            $this->stdout("  API Error: HTTP {$httpCode}\n");
+            return null;
+        }
+
+        $data = json_decode($response, true);
+        if (!isset($data['images'][0])) {
+            return null;
+        }
+
+        // Extract seed from info
+        $info = json_decode($data['info'] ?? '{}', true);
+        $seed = $info['seed'] ?? null;
+
+        return [
+            'image' => $data['images'][0],
+            'seed' => $seed,
+            'info' => $info
+        ];
+    }
+
+    /**
+     * Make bottom portion of image transparent (for island_edge stalactites)
+     */
+    private function makeBottomTransparent($imagePath, $transparentHeight = 0.4)
+    {
+        $image = $this->loadImageAny($imagePath);
+        if (!$image) {
+            return false;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $startY = (int)($height * (1 - $transparentHeight)); // Start transparency from 60% down
+
+        // Make bottom portion transparent
+        for ($y = $startY; $y < $height; $y++) {
+            for ($x = 0; $x < $width; $x++) {
+                $color = imagecolorat($image, $x, $y);
+                $alpha = ($color >> 24) & 0xFF;
+
+                // Gradually increase transparency towards bottom
+                $progress = ($y - $startY) / ($height - $startY);
+                $newAlpha = (int)($progress * 127);
+
+                $r = ($color >> 16) & 0xFF;
+                $g = ($color >> 8) & 0xFF;
+                $b = $color & 0xFF;
+
+                $transparentColor = imagecolorallocatealpha($image, $r, $g, $b, $newAlpha);
+                imagesetpixel($image, $x, $y, $transparentColor);
+            }
+        }
+
+        // Save modified image
+        imagepng($image, $imagePath, 9);
+        imagedestroy($image);
+
+        return true;
     }
 
     /**
