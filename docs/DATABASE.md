@@ -52,6 +52,7 @@ Defines types of terrain tiles for the background layer.
 | is_buildable      | ENUM('yes','no')      | Can buildings be placed here?        |
 | image_url         | VARCHAR(256)          | Path to 32x24 tile image             |
 | variations_count  | INT DEFAULT 5         | Procedurally generated variations    |
+| ai_seed           | BIGINT NULL           | Stable Diffusion seed for base image |
 
 **Landing Types:**
 | ID | Name        | Buildable | Description                      |

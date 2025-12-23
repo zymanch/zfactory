@@ -33,16 +33,37 @@ ZFactory is a browser-based automation game inspired by Factorio. The game featu
 - **Actual tiles**: ~6251 (floating island shape)
 - **Style**: Irregular edges, internal holes, sky background
 
-### Landing Transitions
-Smooth wavy borders between adjacent terrain types:
-- **Adjacency table**: `landing_adjacency` defines which terrains can border each other
-- **Transition sprites**: Auto-generated with wavy lines (r=right, t=top, rt=corner)
-- **Location**: `public/assets/tiles/landing/transitions/`
-- **Naming**: `{base}_{adjacent}_{variant}.jpg` (e.g., `grass_dirt_r.jpg`)
+### Landing Variations & Texture Atlases
+Terrain uses texture atlases with 5 procedural variations per landing type:
+- **Texture Atlases**: 352×288px (11 columns × 12 rows) containing all transition combinations
+- **Variations**: Each landing type has 5 variations generated via AI (img2img)
+- **Location**: `public/assets/tiles/landing/atlases/`
+- **Naming**: `{name}_atlas.png` (e.g., `grass_atlas.png`)
 
-Generate transitions:
+### AI Sprite Generation
+Sprites can be generated using local Stable Diffusion WebUI:
+- **Setup**: See `ai/README.md` for installation instructions
+- **Model**: Realistic Vision v6.0 (4.59 GB) recommended
+- **Features**: Seamless tiling, img2img variations, automatic transparency for island edges
+
+Workflow:
 ```bash
-php yii landing/generate-transitions
+# 1. Start WebUI (separate terminal)
+cd ai
+start.bat
+
+# 2. Generate AI sprites with variations
+php yii landing/generate-ai all        # All landings
+php yii landing/generate-ai grass      # Single landing
+
+# 3. Scale to 32×24 and create variations
+php yii landing/scale-original
+
+# 4. Generate texture atlases
+php yii landing/generate
+
+# 5. Compile assets
+npm run assets
 ```
 
 ## Project Structure
@@ -73,12 +94,17 @@ zfactory.local/
 │           └── buildMode.js
 ├── src/                    # PHP source code
 │   ├── actions/           # Standalone action classes
-│   │   ├── Base.php              # Base action class
+│   │   ├── Base.php              # Base action class (web)
 │   │   ├── JsonAction.php        # Base for JSON API actions
+│   │   ├── ConsoleAction.php     # Base for console actions
 │   │   ├── game/                 # GameController actions
 │   │   │   ├── Index.php
 │   │   │   ├── Entities.php
 │   │   │   └── Config.php
+│   │   ├── landing/              # LandingController actions
+│   │   │   ├── Generate.php      # Generate texture atlases
+│   │   │   ├── GenerateAi.php    # Generate via Stable Diffusion API
+│   │   │   └── ScaleOriginal.php # Scale & create variations
 │   │   ├── map/                  # MapController actions
 │   │   │   ├── Tiles.php
 │   │   │   └── CreateEntity.php
@@ -286,11 +312,19 @@ php yii migrate
 # Generate AR models
 composer run ar
 
-# Generate landing transition sprites
-php yii landing/generate-transitions
+# === Landing sprite generation ===
+# Generate AI sprites (requires WebUI running)
+php yii landing/generate-ai all      # All landings
+php yii landing/generate-ai grass    # Single landing
 
-# List landing adjacencies
-php yii landing/list-adjacencies
+# Scale original files to 32×24
+php yii landing/scale-original
+
+# Generate texture atlases
+php yii landing/generate
+
+# Legacy: Generate transitions (deprecated)
+php yii landing/generate-transitions
 ```
 
 ## Database Setup

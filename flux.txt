@@ -1,0 +1,71 @@
+ https://app.air.fail/images/flux
+
+ 1. Grass (Трава) - ID: 1
+
+  seamless tileable grass texture, top-down aerial view,
+  vibrant green grass field, natural grass blades,
+  bright daylight, game terrain texture,
+  repeatable pattern, no borders, high quality
+
+  2. Dirt (Земля) - ID: 2
+
+  seamless tileable dirt texture, top-down aerial view,
+  brown earth ground, dry soil with small stones,
+  natural terrain, game ground texture,
+  repeatable pattern, no borders, earthy colors
+
+  3. Sand (Песок) - ID: 3
+
+  seamless tileable sand texture, top-down aerial view,
+  golden yellow beach sand, fine grain texture,
+  desert or beach terrain, game ground texture,
+  repeatable pattern, no borders, warm tones
+
+  4. Water (Вода) - ID: 4
+
+  seamless tileable water texture, top-down aerial view,
+  clear blue water surface, gentle ripples,
+  lake or sea water, game terrain texture,
+  repeatable pattern, no borders, blue tones
+
+  5. Stone (Камень) - ID: 5
+
+  seamless tileable stone texture, top-down aerial view,
+  gray rocky ground, natural stone surface with cracks,
+  mountain or cave terrain, game ground texture,
+  repeatable pattern, no borders, gray tones
+
+  6. Lava (Лава) - ID: 6
+
+  seamless tileable lava texture, top-down aerial view,
+  molten lava surface, glowing red-orange magma,
+  volcanic terrain with dark crust and bright cracks,
+  game hazard texture, repeatable pattern, no borders
+
+  7. Snow (Снег) - ID: 7
+
+  seamless tileable snow texture, top-down aerial view,
+  white snow-covered ground, fresh winter snow,
+  cold terrain with slight shadows, game ground texture,
+  repeatable pattern, no borders, white and light blue tones
+
+  8. Swamp (Болото) - ID: 8
+
+  seamless tileable swamp texture, top-down aerial view,
+  dark green murky marshland, wet muddy ground with moss,
+  wetland terrain, game ground texture,
+  repeatable pattern, no borders, dark green-brown tones
+
+  9. Sky (Небо) - ID: 9
+
+  seamless tileable sky texture, top-down aerial view,
+  light blue sky with white fluffy clouds,
+  daytime sky background, game sky texture,
+  repeatable pattern, no borders, soft blue and white
+
+  10. Island Edge (Край острова) - ID: 10
+
+  seamless tileable island edge texture, cross-section view,
+  brown earth at top transitioning to blue sky at bottom,
+  floating island cliff edge, wavy natural border between ground and sky,
+  game terrain texture, repeatable pattern, no borders

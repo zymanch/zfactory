@@ -1,0 +1,1256 @@
+================================================================================
+СИСТЕМА ПЕРЕМЕЩЕНИЯ РЕСУРСОВ - СТРУКТУРИРОВАННЫЙ ПЛАН
+================================================================================
+
+## ЧАСТЬ 1: ИЗМЕНЕНИЯ В БАЗЕ ДАННЫХ
+
+### 1.1 Новая колонка в таблице resource
+```sql
+ALTER TABLE resource ADD COLUMN max_stack INT UNSIGNED NOT NULL DEFAULT 100;
+```
+- Определяет максимальный размер стека для каждого ресурса
+- Пример: Iron Ore max_stack=100, Iron Plate max_stack=50
+
+### 1.2 Использование существующих полей
+- `entity_type.power` для storage = максимальное количество слотов (стеков)
+- `entity_type.power` для transporter/manipulator = скорость (pixels_per_tick = power / 100)
+- `entity_type.power` для building = скорость крафта (уже реализовано)
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 2: ТИПЫ ENTITY И ИХ РОЛИ
+
+### 2.1 Классификация по возможностям
+
+| Type        | Хранит ресурсы | Принимает | Отдаёт    | Крафтит | Перемещает |
+|-------------|----------------|-----------|-----------|---------|------------|
+| building    | Да             | input*    | output*   | Да      | Нет        |
+| mining      | Да             | Нет       | output*   | Да**    | Нет        |
+| storage     | Да             | любой     | любой     | Нет     | Нет        |
+| transporter | Да (1 стек)    | любой     | любой     | Нет     | Да         |
+| manipulator | Да (1 стек)    | любой     | любой     | Нет     | Да         |
+| resource    | Да (deposit)   | Нет       | Нет       | Нет     | Нет        |
+| tree        | Нет            | Нет       | Нет       | Нет     | Нет        |
+| relief      | Нет            | Нет       | Нет       | Нет     | Нет        |
+| eye         | Нет            | Нет       | Нет       | Нет     | Нет        |
+
+* input/output = только ресурсы из рецептов данного entity
+** mining крафтит автоматически из deposit
+
+### 2.2 Взаимодействие между типами
+
+```
+[resource entity] --размещение Mining Drill--> [mining drill получает deposit]
+                                                      |
+                                                      | авто-крафт deposit→raw
+                                                      v
+[building] <--манипулятор кладёт input-- [manipulator] <--берёт raw-- [mining]
+    |                                          ^
+    | крафт input→output                       |
+    v                                          |
+[building] --манипулятор берёт output--> [manipulator] --> [transporter] --> ...
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 3: СТРУКТУРЫ ДАННЫХ (JavaScript)
+
+### 3.1 ResourceTransportManager (главный класс)
+```javascript
+class ResourceTransportManager {
+    constructor(game) {
+        this.game = game;
+
+        // Карты для быстрого доступа
+        this.transporters = new Map();  // entity_id → TransporterState
+        this.manipulators = new Map();  // entity_id → ManipulatorState
+        this.buildings = new Map();     // entity_id → BuildingState (building, mining, storage)
+
+        // Граф связей (пересчитывается при изменении карты)
+        this.links = new Map();         // entity_id → { source: entity_id|null, targets: entity_id[] }
+    }
+}
+```
+
+### 3.2 TransporterState (состояние конвейера)
+```javascript
+class TransporterState {
+    constructor(entity) {
+        this.entityId = entity.entity_id;
+        this.orientation = entity.orientation;        // 'up'|'down'|'left'|'right'
+        this.power = entity.power;                    // скорость
+
+        // Состояние
+        this.status = 'empty';                        // 'empty'|'carrying'|'waiting_transfer'
+        this.resourceId = null;                       // ID ресурса (или null)
+        this.resourceAmount = 0;                      // количество в стеке
+
+        // Позиция ресурса на конвейере (0.0 - 1.0)
+        // 0.0 = начало (где входит), 1.0 = конец (где выходит)
+        this.resourcePosition = 0.0;
+
+        // Если ресурс вошёл сбоку, нужно сначала выровнять к центру
+        this.lateralOffset = 0.0;                     // -0.5 до 0.5 (0 = центр)
+
+        // Ссылки (заполняются при пересчёте)
+        this.targetEntityId = null;                   // куда передаёт ресурс
+        this.sourceEntityIds = [];                    // откуда может получить ресурс
+        this.straightSourceId = null;                 // источник с тем же orientation (приоритет)
+    }
+}
+```
+
+### 3.3 ManipulatorState (состояние манипулятора)
+```javascript
+class ManipulatorState {
+    constructor(entity, entityType) {
+        this.entityId = entity.entity_id;
+        this.orientation = entity.orientation;
+        this.power = entityType.power;
+        this.reach = entityType.name.includes('Long') ? 2 : 1;  // Long = 2 клетки
+
+        // Состояние
+        this.status = 'idle';                         // 'idle'|'picking'|'carrying'|'placing'
+        this.resourceId = null;
+        this.resourceAmount = 0;
+
+        // Позиция "руки" манипулятора (0.0 - 1.0)
+        // 0.0 = у источника, 1.0 = у назначения
+        this.armPosition = 0.0;
+
+        // Ссылки
+        this.sourceEntityId = null;                   // откуда берёт (сзади)
+        this.targetEntityId = null;                   // куда кладёт (спереди)
+    }
+}
+```
+
+### 3.4 BuildingState (состояние здания/mining/storage)
+```javascript
+class BuildingState {
+    constructor(entity, entityType) {
+        this.entityId = entity.entity_id;
+        this.type = entityType.type;                  // 'building'|'mining'|'storage'
+        this.power = entityType.power;
+
+        // Ресурсы внутри: Map<resource_id, amount>
+        this.resources = new Map();
+
+        // Рецепты (предвычисленные)
+        this.recipeIds = [];                          // доступные рецепты
+        this.inputResourceIds = new Set();            // какие ресурсы можно класть
+        this.outputResourceIds = new Set();           // какие ресурсы можно брать
+
+        // Процесс крафта
+        this.craftingRecipeId = null;                 // текущий рецепт (null = не крафтит)
+        this.craftingTicksRemaining = 0;              // осталось тиков
+
+        // Для storage
+        this.maxSlots = entityType.power;             // макс. слотов (только для storage)
+    }
+}
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 4: МЕТОДЫ ENTITY
+
+### 4.1 canAcceptResource(resourceId, amount) → 'yes' | 'no' | 'yes_if_freed'
+
+| Entity Type | Логика                                                                    |
+|-------------|---------------------------------------------------------------------------|
+| building    | 'yes' если resourceId ∈ inputResourceIds И amount + current < 10         |
+|             | иначе 'no'                                                                |
+| mining      | всегда 'no' (не принимает ресурсы извне)                                  |
+| storage     | 'yes' если есть свободный слот ИЛИ существующий стек не полон             |
+|             | иначе 'no'                                                                |
+| transporter | 'yes' если status='empty'                                                 |
+|             | 'yes_if_freed' если status='waiting_transfer'                             |
+|             | 'no' если status='carrying'                                               |
+| manipulator | 'yes' если status='idle'                                                  |
+|             | иначе 'no'                                                                |
+| resource    | всегда 'no'                                                               |
+| tree/relief/eye | всегда 'no'                                                           |
+
+### 4.2 canGiveResource(requesterId, requesterType) → {resourceId, amount} | null
+
+| Source      | Requester   | Логика                                                      |
+|-------------|-------------|-------------------------------------------------------------|
+| transporter | transporter | отдаёт если resourcePosition >= 1.0 (доехал до конца)       |
+| transporter | manipulator | отдаёт в ЛЮБОЙ позиции (манипулятор хватает на лету)        |
+| manipulator | любой       | отдаёт если armPosition >= 1.0 (дошёл до назначения)        |
+| building    | manipulator | отдаёт первый ресурс из outputResourceIds с amount > 0      |
+| mining      | manipulator | отдаёт первый ресурс с type != 'deposit' и amount > 0       |
+| storage     | manipulator | отдаёт первый ресурс с amount > 0                           |
+
+### 4.3 giveResource(requesterId, requesterType) → {resourceId, amount}
+- Вызывается после canGiveResource для фактической передачи
+- Уменьшает amount у источника
+- Удаляет ресурс если amount = 0
+
+### 4.4 receiveResource(resourceId, amount) → boolean
+- Добавляет ресурс в entity
+- Возвращает true если успешно
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 5: ГРАФ СВЯЗЕЙ
+
+### 5.1 Расчёт связей (вызывается при изменении карты)
+
+```javascript
+calculateLinks() {
+    // Для каждого transporter
+    for (const [entityId, state] of this.transporters) {
+        const entity = this.getEntity(entityId);
+        const nextPos = this.getNextPosition(entity, state.orientation);
+
+        // Ищем entity в позиции nextPos
+        const targetEntity = this.findEntityAt(nextPos);
+        if (targetEntity && this.canReceiveFrom(targetEntity, 'transporter')) {
+            state.targetEntityId = targetEntity.entity_id;
+        }
+    }
+
+    // Для каждого manipulator
+    for (const [entityId, state] of this.manipulators) {
+        const entity = this.getEntity(entityId);
+
+        // Источник = позиция ПРОТИВ направления
+        const sourcePos = this.getPreviousPosition(entity, state.orientation, state.reach);
+        const sourceEntity = this.findEntityAt(sourcePos);
+        if (sourceEntity) {
+            state.sourceEntityId = sourceEntity.entity_id;
+        }
+
+        // Назначение = позиция ПО направлению
+        const targetPos = this.getNextPosition(entity, state.orientation, state.reach);
+        const targetEntity = this.findEntityAt(targetPos);
+        if (targetEntity) {
+            state.targetEntityId = targetEntity.entity_id;
+        }
+    }
+
+    // Заполняем обратные ссылки (sourceEntityIds)
+    this.calculateReverseLinks();
+}
+```
+
+### 5.2 Позиции по orientation
+
+```javascript
+getNextPosition(entity, orientation, distance = 1) {
+    const x = entity.x;
+    const y = entity.y;
+    switch (orientation) {
+        case 'up':    return { x, y: y - distance };
+        case 'down':  return { x, y: y + distance };
+        case 'left':  return { x: x - distance, y };
+        case 'right': return { x: x + distance, y };
+    }
+}
+
+getPreviousPosition(entity, orientation, distance = 1) {
+    // Противоположное направление
+    const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
+    return this.getNextPosition(entity, opposite[orientation], distance);
+}
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 6: ИГРОВОЙ ЦИКЛ (каждый тик)
+
+### 6.1 Порядок обработки
+
+```javascript
+tick() {
+    // ШАГ 1: Обновить процессы крафта (при завершении → авто-старт нового)
+    this.updateCrafting();
+
+    // ШАГ 2: Двигать ресурсы по конвейерам
+    this.updateTransporters();
+
+    // ШАГ 3: Обработать передачи (при получении ресурса → авто-старт крафта)
+    this.processTransporterTransfers();
+
+    // ШАГ 4: Двигать манипуляторы (при размещении → авто-старт крафта)
+    this.updateManipulators();
+
+    // ШАГ 5: Проверка автосохранения
+    this.checkAutoSave();
+}
+
+init() {
+    // ... other init code ...
+
+    // При загрузке игры проверяем ВСЕ здания на возможность крафта
+    this.tryStartAllCrafts();
+}
+```
+
+### 6.1.1 Автозапуск крафтинга (событийно)
+
+Крафтинг запускается автоматически при **событиях**, а не опросом каждый тик:
+
+| Событие                      | Действие                                    |
+|------------------------------|---------------------------------------------|
+| Загрузка игры                | `tryStartAllCrafts()` - проверить все здания |
+| Ресурс получен               | `tryStartCraftForEntity(id)` - проверить это здание |
+| Рецепт завершён              | `tryStartCraftForEntity(id)` - сразу новый рецепт |
+
+```javascript
+tryStartAllCrafts() {
+    for (const [entityId, state] of this.buildings) {
+        this.tryStartCraftForEntity(entityId);
+    }
+}
+
+tryStartCraftForEntity(entityId) {
+    const state = this.buildings.get(entityId);
+    if (!state) return;
+    if (state.isCrafting()) return;  // уже крафтит
+
+    if (state.type === 'mining') {
+        this.tryStartMiningCraft(state);
+    } else if (state.type === 'building') {
+        this.tryStartBuildingCraft(state);
+    }
+}
+```
+
+### 6.2 updateCrafting()
+```javascript
+updateCrafting() {
+    for (const [entityId, state] of this.buildings) {
+        if (state.craftingRecipeId === null) continue;
+
+        state.craftingTicksRemaining--;
+
+        if (state.craftingTicksRemaining <= 0) {
+            // Крафт завершён - добавить результат
+            const recipe = this.game.recipes[state.craftingRecipeId];
+            const currentAmount = state.resources.get(recipe.output_resource_id) || 0;
+            state.resources.set(recipe.output_resource_id, currentAmount + recipe.output_amount);
+
+            state.craftingRecipeId = null;
+
+            // ⚡ СРАЗУ пытаемся запустить новый рецепт
+            this.tryStartCraftForEntity(entityId);
+        }
+    }
+}
+```
+
+### 6.3 updateTransporters()
+```javascript
+updateTransporters() {
+    const speed = 1 / 60;  // базовая скорость: 1 тайл за 60 тиков
+
+    for (const [entityId, state] of this.transporters) {
+        if (state.status === 'empty') continue;
+
+        const moveSpeed = speed * (state.power / 100);
+
+        // Сначала выравниваем к центру если нужно
+        if (state.lateralOffset !== 0) {
+            const lateralSpeed = moveSpeed;
+            if (state.lateralOffset > 0) {
+                state.lateralOffset = Math.max(0, state.lateralOffset - lateralSpeed);
+            } else {
+                state.lateralOffset = Math.min(0, state.lateralOffset + lateralSpeed);
+            }
+        }
+
+        // Двигаем по основному направлению
+        if (state.lateralOffset === 0 && state.resourcePosition < 1.0) {
+            state.resourcePosition = Math.min(1.0, state.resourcePosition + moveSpeed);
+        }
+
+        // Проверяем достижение конца
+        if (state.resourcePosition >= 1.0) {
+            state.status = 'waiting_transfer';
+        }
+    }
+}
+```
+
+### 6.4 processTransporterTransfers()
+```javascript
+processTransporterTransfers() {
+    // ═══════════════════════════════════════════════════════════════════════
+    // ВАЖНО: Одновременные передачи для поддержки циклов (круговых конвейеров)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Фаза 1: Определяем кто БУДЕТ передавать
+    for (const [entityId, state] of this.transporters) {
+        state.willTransfer = false;  // сброс флага
+
+        if (state.status !== 'waiting_transfer') continue;
+
+        const targetId = state.targetEntityId;
+        if (!targetId) continue;
+
+        const canAccept = this.canEntityAccept(targetId, state.resourceId, state.resourceAmount);
+
+        if (canAccept === 'yes') {
+            // Цель свободна - передаём
+            state.willTransfer = true;
+        } else if (canAccept === 'yes_if_freed') {
+            // Цель тоже ждёт передачи - проверяем будет ли она освобождаться
+            const targetState = this.transporters.get(targetId);
+            if (targetState && targetState.status === 'waiting_transfer') {
+                // Цель тоже передаёт - одновременная передача (решает проблему циклов)
+                state.willTransfer = true;
+            }
+        }
+    }
+
+    // Фаза 2: Собираем все передачи (чтобы выполнить атомарно)
+    const transfers = [];
+    for (const [entityId, state] of this.transporters) {
+        if (!state.willTransfer) continue;
+
+        transfers.push({
+            fromId: entityId,
+            toId: state.targetEntityId,
+            resourceId: state.resourceId,
+            resourceAmount: state.resourceAmount,
+            fromOrientation: state.orientation
+        });
+    }
+
+    // Фаза 3: Очищаем ВСЕ источники сначала
+    for (const t of transfers) {
+        const state = this.transporters.get(t.fromId);
+        state.resourceId = null;
+        state.resourceAmount = 0;
+        state.resourcePosition = 0.0;
+        state.status = 'empty';
+        state.willTransfer = false;
+    }
+
+    // Фаза 4: Заполняем ВСЕ назначения
+    const buildingsReceived = [];  // ⚡ здания, получившие ресурсы
+    for (const t of transfers) {
+        const targetState = this.getState(t.toId);
+
+        if (targetState instanceof TransporterState) {
+            targetState.resourceId = t.resourceId;
+            targetState.resourceAmount = t.resourceAmount;
+            targetState.resourcePosition = 0.0;
+            targetState.status = 'carrying';
+            targetState.lateralOffset = this.calculateLateralOffset(t.fromOrientation, targetState.orientation);
+        } else if (targetState instanceof BuildingState) {
+            const current = targetState.resources.get(t.resourceId) || 0;
+            targetState.resources.set(t.resourceId, current + t.resourceAmount);
+            buildingsReceived.push(t.toId);  // ⚡ запомнить
+        }
+    }
+
+    // ⚡ Фаза 4.5: Запустить крафт для зданий получивших ресурсы
+    for (const entityId of buildingsReceived) {
+        this.tryStartCraftForEntity(entityId);
+    }
+
+    // Фаза 5: Подтягиваем ресурсы из источников освободившихся конвейеров
+    for (const t of transfers) {
+        const freedState = this.transporters.get(t.fromId);
+        if (freedState && freedState.status === 'empty') {
+            this.pullFromSources(freedState);
+        }
+    }
+}
+
+calculateLateralOffset(fromOrientation, toOrientation) {
+    // Если ресурс пришёл сбоку (разные ориентации), нужно смещение к центру
+    if (fromOrientation === toOrientation) {
+        return 0;  // прямо - без смещения
+    }
+
+    // Определяем с какой стороны пришёл ресурс
+    // Возвращаем -0.5 (слева) или 0.5 (справа) относительно направления движения
+    const lateralMap = {
+        'right': { 'up': -0.5, 'down': 0.5 },
+        'left':  { 'up': 0.5, 'down': -0.5 },
+        'up':    { 'left': -0.5, 'right': 0.5 },
+        'down':  { 'left': 0.5, 'right': -0.5 }
+    };
+
+    return lateralMap[toOrientation]?.[fromOrientation] || 0;
+}
+
+pullFromSources(freedState) {
+    // Приоритет 1: источник с тем же orientation (прямая линия)
+    if (freedState.straightSourceId) {
+        const sourceState = this.transporters.get(freedState.straightSourceId);
+        if (sourceState && sourceState.status === 'waiting_transfer') {
+            this.doSingleTransfer(sourceState, freedState);
+            this.pullFromSources(sourceState);  // рекурсия
+            return;
+        }
+    }
+
+    // Приоритет 2: боковые источники (по очереди, round-robin)
+    const sideSourceIds = freedState.sourceEntityIds.filter(id => id !== freedState.straightSourceId);
+    if (sideSourceIds.length === 0) return;
+
+    // Round-robin: выбираем следующий боковой источник
+    freedState.lastSideSourceIndex = ((freedState.lastSideSourceIndex || 0) + 1) % sideSourceIds.length;
+
+    for (let i = 0; i < sideSourceIds.length; i++) {
+        const idx = (freedState.lastSideSourceIndex + i) % sideSourceIds.length;
+        const sourceId = sideSourceIds[idx];
+
+        const sourceState = this.transporters.get(sourceId);
+        if (sourceState && sourceState.status === 'waiting_transfer') {
+            this.doSingleTransfer(sourceState, freedState);
+            this.pullFromSources(sourceState);
+            return;  // только один боковой за тик
+        }
+    }
+}
+
+doSingleTransfer(fromState, toState) {
+    // Передаём ресурс
+    toState.resourceId = fromState.resourceId;
+    toState.resourceAmount = fromState.resourceAmount;
+    toState.resourcePosition = 0.0;
+    toState.status = 'carrying';
+    toState.lateralOffset = this.calculateLateralOffset(fromState.orientation, toState.orientation);
+
+    // Очищаем источник
+    fromState.resourceId = null;
+    fromState.resourceAmount = 0;
+    fromState.resourcePosition = 0.0;
+    fromState.status = 'empty';
+}
+```
+
+### 6.5 updateManipulators()
+```javascript
+updateManipulators() {
+    const speed = 1 / 30;  // базовая скорость манипулятора
+
+    for (const [entityId, state] of this.manipulators) {
+        const moveSpeed = speed * (state.power / 100);
+
+        switch (state.status) {
+            case 'idle':
+                // Пытаемся взять ресурс из источника
+                this.tryPickupResource(state);
+                break;
+
+            case 'picking':
+                // Рука движется к источнику (armPosition: 1.0 → 0.0)
+                state.armPosition = Math.max(0, state.armPosition - moveSpeed);
+                if (state.armPosition <= 0) {
+                    // Взять ресурс
+                    const resource = this.takeResourceFrom(state.sourceEntityId, state);
+                    if (resource) {
+                        state.resourceId = resource.resourceId;
+                        state.resourceAmount = resource.amount;
+                        state.status = 'carrying';
+                    } else {
+                        state.status = 'idle';
+                    }
+                }
+                break;
+
+            case 'carrying':
+                // Рука движется к назначению (armPosition: 0.0 → 1.0)
+                state.armPosition = Math.min(1.0, state.armPosition + moveSpeed);
+                if (state.armPosition >= 1.0) {
+                    state.status = 'placing';
+                }
+                break;
+
+            case 'placing':
+                // Пытаемся положить ресурс
+                this.tryPlaceResource(state);
+                break;
+        }
+    }
+}
+
+tryPickupResource(state) {
+    if (!state.sourceEntityId) return;
+
+    const canGive = this.canEntityGive(state.sourceEntityId, state.entityId, 'manipulator');
+    if (canGive) {
+        state.status = 'picking';
+        state.armPosition = 1.0;  // начинаем от назначения, идём к источнику
+    }
+}
+
+tryPlaceResource(state) {
+    if (!state.targetEntityId) return;
+
+    const canAccept = this.canEntityAccept(state.targetEntityId, state.resourceId, state.resourceAmount);
+
+    if (canAccept === 'yes') {
+        this.placeResourceTo(state.targetEntityId, state.resourceId, state.resourceAmount);
+        state.resourceId = null;
+        state.resourceAmount = 0;
+        state.status = 'idle';
+        state.armPosition = 0.5;  // возвращаемся в среднее положение
+
+        // ⚡ Запустить крафт если положили в здание
+        this.tryStartCraftForEntity(state.targetEntityId);
+    }
+    // Если 'no' или 'yes_if_freed' - ждём
+}
+```
+
+### 6.6 Методы запуска крафта (событийно-ориентированные)
+
+**ВАЖНО:** Эти методы вызываются при событиях, а НЕ каждый тик!
+
+```javascript
+// Вызывается при загрузке игры - проверяет ВСЕ здания
+tryStartAllCrafts() {
+    for (const [entityId, state] of this.buildings) {
+        this.tryStartCraftForEntity(entityId);
+    }
+}
+
+// Вызывается при: получении ресурса, завершении крафта
+tryStartCraftForEntity(entityId) {
+    const state = this.buildings.get(entityId);
+    if (!state) return;
+    if (state.craftingRecipeId !== null) return;  // уже крафтит
+
+    if (state.type === 'mining') {
+        this.tryStartMiningCraft(state);
+    } else if (state.type === 'building') {
+        this.tryStartBuildingCraft(state);
+    }
+}
+
+tryStartMiningCraft(state) {
+    for (const recipeId of state.recipeIds) {
+        const recipe = this.game.recipes[recipeId];
+
+        // Проверяем есть ли deposit ресурс
+        const inputAmount = state.resources.get(recipe.input1_resource_id) || 0;
+        if (inputAmount < recipe.input1_amount) continue;
+
+        // Проверяем лимит output (не больше 10)
+        const outputAmount = state.resources.get(recipe.output_resource_id) || 0;
+        if (outputAmount >= 10) continue;
+
+        // Запускаем крафт
+        state.resources.set(recipe.input1_resource_id, inputAmount - recipe.input1_amount);
+        state.craftingRecipeId = recipeId;
+        state.craftingTicksRemaining = this.calculateCraftTime(recipe.ticks, state.power);
+        return;
+    }
+}
+
+tryStartBuildingCraft(state) {
+    for (const recipeId of state.recipeIds) {
+        const recipe = this.game.recipes[recipeId];
+
+        // Проверяем все input ресурсы
+        const input1 = state.resources.get(recipe.input1_resource_id) || 0;
+        if (input1 < recipe.input1_amount) continue;
+
+        if (recipe.input2_resource_id) {
+            const input2 = state.resources.get(recipe.input2_resource_id) || 0;
+            if (input2 < recipe.input2_amount) continue;
+        }
+
+        if (recipe.input3_resource_id) {
+            const input3 = state.resources.get(recipe.input3_resource_id) || 0;
+            if (input3 < recipe.input3_amount) continue;
+        }
+
+        // Проверяем лимит output
+        const outputAmount = state.resources.get(recipe.output_resource_id) || 0;
+        if (outputAmount >= 10) continue;
+
+        // Списываем ресурсы и запускаем крафт
+        state.resources.set(recipe.input1_resource_id, input1 - recipe.input1_amount);
+        if (recipe.input2_resource_id) {
+            const input2 = state.resources.get(recipe.input2_resource_id) || 0;
+            state.resources.set(recipe.input2_resource_id, input2 - recipe.input2_amount);
+        }
+        if (recipe.input3_resource_id) {
+            const input3 = state.resources.get(recipe.input3_resource_id) || 0;
+            state.resources.set(recipe.input3_resource_id, input3 - recipe.input3_amount);
+        }
+
+        state.craftingRecipeId = recipeId;
+        state.craftingTicksRemaining = this.calculateCraftTime(recipe.ticks, state.power);
+        return;
+    }
+}
+
+calculateCraftTime(baseTicks, power) {
+    // power=100 = нормальная скорость, power=200 = 2x быстрее
+    return Math.ceil(baseTicks * (100 / power));
+}
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 7: ВИЗУАЛИЗАЦИЯ (рендеринг)
+
+### 7.1 Отображение ресурсов на конвейере
+```javascript
+renderTransporterResource(state, entity) {
+    if (state.status === 'empty') return;
+
+    const resource = this.game.resources[state.resourceId];
+    const tileWidth = this.game.config.tileWidth;
+    const tileHeight = this.game.config.tileHeight;
+
+    // Базовая позиция entity
+    let x = entity.x * tileWidth;
+    let y = entity.y * tileHeight;
+
+    // Смещение по направлению движения
+    const progress = state.resourcePosition;
+    switch (state.orientation) {
+        case 'right': x += (progress - 0.5) * tileWidth; break;
+        case 'left':  x -= (progress - 0.5) * tileWidth; break;
+        case 'down':  y += (progress - 0.5) * tileHeight; break;
+        case 'up':    y -= (progress - 0.5) * tileHeight; break;
+    }
+
+    // Боковое смещение (если ресурс вошёл сбоку)
+    switch (state.orientation) {
+        case 'right':
+        case 'left':
+            y += state.lateralOffset * tileHeight;
+            break;
+        case 'up':
+        case 'down':
+            x += state.lateralOffset * tileWidth;
+            break;
+    }
+
+    // Рисуем иконку ресурса (16x16 в центре)
+    this.drawResourceIcon(resource.icon_url, x, y);
+}
+```
+
+### 7.2 Отображение ресурса в манипуляторе
+```javascript
+renderManipulatorResource(state, entity, entityType) {
+    if (!state.resourceId) return;
+
+    const resource = this.game.resources[state.resourceId];
+    const tileWidth = this.game.config.tileWidth;
+    const tileHeight = this.game.config.tileHeight;
+
+    // Позиция манипулятора
+    const baseX = entity.x * tileWidth + tileWidth / 2;
+    const baseY = entity.y * tileHeight + tileHeight / 2;
+
+    // Вычисляем позицию "руки" на основе armPosition
+    // 0.0 = у источника (сзади), 1.0 = у назначения (спереди)
+    const reach = state.reach * tileWidth;
+    let offsetX = 0, offsetY = 0;
+
+    switch (state.orientation) {
+        case 'right':
+            offsetX = (state.armPosition - 0.5) * reach * 2;
+            break;
+        case 'left':
+            offsetX = -(state.armPosition - 0.5) * reach * 2;
+            break;
+        case 'down':
+            offsetY = (state.armPosition - 0.5) * reach * 2;
+            break;
+        case 'up':
+            offsetY = -(state.armPosition - 0.5) * reach * 2;
+            break;
+    }
+
+    this.drawResourceIcon(resource.icon_url, baseX + offsetX, baseY + offsetY);
+}
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 8: ОПТИМИЗАЦИИ
+
+### 8.1 Пространственный индекс
+```javascript
+class SpatialIndex {
+    constructor() {
+        this.grid = new Map();  // "x_y" → entity_id
+    }
+
+    add(entity) {
+        const key = `${entity.x}_${entity.y}`;
+        this.grid.set(key, entity.entity_id);
+    }
+
+    remove(entity) {
+        const key = `${entity.x}_${entity.y}`;
+        this.grid.delete(key);
+    }
+
+    getAt(x, y) {
+        return this.grid.get(`${x}_${y}`);
+    }
+}
+```
+
+### 8.2 Группировка конвейеров в цепочки
+- Конвейеры с одинаковым orientation идущие подряд можно обрабатывать как одну "линию"
+- Это уменьшает количество итераций
+
+### 8.3 Ленивые обновления
+- Не пересчитывать связи каждый тик
+- Пересчитывать только при изменении карты (постройка/удаление)
+
+### 8.4 Skip неактивных
+- Пропускать конвейеры в состоянии 'empty' без источников
+- Пропускать манипуляторы в состоянии 'idle' без доступных ресурсов
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 9: СОХРАНЕНИЕ/ЗАГРУЗКА
+
+### 9.1 Данные для сохранения (PHP endpoint)
+```javascript
+getSaveData() {
+    const data = {
+        entities: [],
+        transporterStates: [],
+        manipulatorStates: []
+    };
+
+    // Сохраняем ресурсы зданий через entity_resource
+    for (const [entityId, state] of this.buildings) {
+        for (const [resourceId, amount] of state.resources) {
+            data.entities.push({
+                entity_id: entityId,
+                resource_id: resourceId,
+                amount: amount
+            });
+        }
+    }
+
+    // Сохраняем состояния транспортёров
+    for (const [entityId, state] of this.transporters) {
+        if (state.resourceId) {
+            data.transporterStates.push({
+                entity_id: entityId,
+                resource_id: state.resourceId,
+                amount: state.resourceAmount,
+                position: state.resourcePosition,
+                lateral_offset: state.lateralOffset
+            });
+        }
+    }
+
+    // Аналогично для манипуляторов
+    // ...
+
+    return data;
+}
+```
+
+### 9.2 Загрузка состояния
+```javascript
+loadState(data) {
+    // Загружаем ресурсы зданий из entity_resource
+    for (const entityResource of data.entityResources) {
+        const state = this.buildings.get(entityResource.entity_id);
+        if (state) {
+            state.resources.set(entityResource.resource_id, entityResource.amount);
+        }
+    }
+
+    // Загружаем состояния конвейеров
+    for (const ts of data.transporterStates) {
+        const state = this.transporters.get(ts.entity_id);
+        if (state) {
+            state.resourceId = ts.resource_id;
+            state.resourceAmount = ts.amount;
+            state.resourcePosition = ts.position;
+            state.lateralOffset = ts.lateral_offset;
+            state.status = 'carrying';
+        }
+    }
+}
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 10: ФАЙЛЫ ДЛЯ РЕАЛИЗАЦИИ
+
+```
+resources/js/modules/
+├── resourceTransport/
+│   ├── ResourceTransportManager.js   # Главный класс
+│   ├── TransporterState.js           # Состояние конвейера
+│   ├── ManipulatorState.js           # Состояние манипулятора
+│   ├── BuildingState.js              # Состояние здания
+│   ├── SpatialIndex.js               # Пространственный индекс
+│   └── LinkCalculator.js             # Расчёт связей
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 11: УДАЛЕНИЕ ENTITY
+
+### 11.1 Удаление Mining Drill
+При удалении mining drill нужно восстановить resource entity:
+
+```javascript
+removeMiningDrill(miningEntity) {
+    const state = this.buildings.get(miningEntity.entity_id);
+    if (!state) return;
+
+    // Находим deposit ресурс
+    let depositResourceId = null;
+    let depositAmount = 0;
+    for (const [resourceId, amount] of state.resources) {
+        const resource = this.game.resources[resourceId];
+        if (resource.type === 'deposit') {
+            depositResourceId = resourceId;
+            depositAmount = amount;
+            break;
+        }
+    }
+
+    if (depositResourceId && depositAmount > 0) {
+        // Определяем тип resource entity по deposit
+        // Iron Deposit (8) → Iron Ore entity (300)
+        // Copper Deposit (9) → Copper Ore entity (301)
+        const resourceEntityTypeId = this.getResourceEntityType(depositResourceId);
+
+        // Создаём resource entity на месте drill
+        this.createResourceEntity(
+            miningEntity.x,
+            miningEntity.y,
+            resourceEntityTypeId,
+            depositResourceId,
+            depositAmount
+        );
+    }
+
+    // Удаляем drill
+    this.removeEntity(miningEntity.entity_id);
+}
+
+getResourceEntityType(depositResourceId) {
+    // Iron Deposit → Iron Ore entity
+    // Copper Deposit → Copper Ore entity
+    const mapping = {
+        8: 300,   // Iron Deposit → entity_type 300 (Iron Ore)
+        9: 301    // Copper Deposit → entity_type 301 (Copper Ore)
+    };
+    return mapping[depositResourceId];
+}
+```
+
+### 11.2 Удаление других entity
+```javascript
+removeEntity(entityId) {
+    const entity = this.getEntity(entityId);
+    if (!entity) return;
+
+    const entityType = this.game.entityTypes[entity.entity_type_id];
+
+    switch (entityType.type) {
+        case 'transporter':
+            // Ресурс на конвейере — выбрасывается (теряется)
+            this.transporters.delete(entityId);
+            break;
+
+        case 'manipulator':
+            // Ресурс в манипуляторе — выбрасывается (теряется)
+            this.manipulators.delete(entityId);
+            break;
+
+        case 'building':
+        case 'storage':
+            // Ресурсы внутри — выбрасываются (теряются)
+            this.buildings.delete(entityId);
+            break;
+
+        case 'mining':
+            // Особая логика — см. removeMiningDrill
+            this.removeMiningDrill(entity);
+            return;  // уже удалён внутри
+    }
+
+    // Удаляем из пространственного индекса
+    this.spatialIndex.remove(entity);
+
+    // Пересчитываем связи
+    this.recalculateLinks();
+
+    // Отправляем на сервер
+    this.scheduleSync();
+}
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 12: ПРОГРЕСС-БАР КРАФТА
+
+### 12.1 Данные для рендеринга
+```javascript
+getCraftingProgress(entityId) {
+    const state = this.buildings.get(entityId);
+    if (!state || state.craftingRecipeId === null) {
+        return null;
+    }
+
+    const recipe = this.game.recipes[state.craftingRecipeId];
+    const totalTicks = this.calculateCraftTime(recipe.ticks, state.power);
+    const elapsed = totalTicks - state.craftingTicksRemaining;
+    const progress = elapsed / totalTicks;  // 0.0 - 1.0
+
+    return {
+        recipeId: state.craftingRecipeId,
+        progress: progress,
+        ticksRemaining: state.craftingTicksRemaining
+    };
+}
+```
+
+### 12.2 Рендеринг прогресс-бара
+```javascript
+renderCraftingProgress(entity, entityType) {
+    const craftInfo = this.getCraftingProgress(entity.entity_id);
+    if (!craftInfo) return;
+
+    const tileWidth = this.game.config.tileWidth;
+    const tileHeight = this.game.config.tileHeight;
+
+    // Позиция над зданием
+    const x = entity.x * tileWidth;
+    const y = entity.y * tileHeight - 8;  // над спрайтом
+    const width = entityType.width * tileWidth;
+    const barHeight = 4;
+
+    // Фон (серый)
+    this.drawRect(x, y, width, barHeight, 0x333333);
+
+    // Прогресс (зелёный)
+    const progressWidth = width * craftInfo.progress;
+    this.drawRect(x, y, progressWidth, barHeight, 0x44aa44);
+
+    // Иконка результата рецепта (опционально)
+    const recipe = this.game.recipes[craftInfo.recipeId];
+    const outputResource = this.game.resources[recipe.output_resource_id];
+    this.drawResourceIcon(outputResource.icon_url, x + width + 4, y - 4, 12, 12);
+}
+```
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 13: АВТОСОХРАНЕНИЕ
+
+### 13.1 Конфигурация (static_config.php)
+```php
+return [
+    // ... existing config ...
+    'params' => [
+        'asset_version' => 1,
+        'auto_save_interval' => 60,  // секунды (60 = каждую минуту)
+    ],
+];
+```
+
+### 13.2 Инициализация в JS
+```javascript
+class ResourceTransportManager {
+    constructor(game) {
+        // ... existing code ...
+
+        // Автосохранение
+        this.autoSaveInterval = this.game.config.autoSaveInterval || 60;  // секунды
+        this.lastSaveTime = 0;
+        this.pendingSync = false;
+    }
+
+    tick() {
+        // ... existing tick logic ...
+
+        // Проверяем нужно ли сохранить
+        const now = performance.now() / 1000;
+        if (now - this.lastSaveTime >= this.autoSaveInterval) {
+            this.syncToServer();
+            this.lastSaveTime = now;
+        }
+    }
+
+    scheduleSync() {
+        // Помечаем что есть изменения для синхронизации
+        this.pendingSync = true;
+    }
+
+    async syncToServer() {
+        if (!this.pendingSync) return;
+
+        const saveData = this.getSaveData();
+
+        try {
+            const response = await fetch(this.game.config.saveStateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
+                body: JSON.stringify(saveData)
+            });
+
+            if (response.ok) {
+                this.pendingSync = false;
+                console.log('State saved successfully');
+            }
+        } catch (e) {
+            console.error('Failed to save state:', e);
+        }
+    }
+}
+```
+
+### 13.3 Данные для сохранения (расширенные)
+```javascript
+getSaveData() {
+    const data = {
+        entityResources: [],
+        craftingStates: [],
+        transporterStates: [],
+        manipulatorStates: []
+    };
+
+    // Ресурсы и состояние крафта зданий
+    for (const [entityId, state] of this.buildings) {
+        // Ресурсы
+        for (const [resourceId, amount] of state.resources) {
+            if (amount > 0) {
+                data.entityResources.push({
+                    entity_id: entityId,
+                    resource_id: resourceId,
+                    amount: amount
+                });
+            }
+        }
+
+        // Состояние крафта
+        if (state.craftingRecipeId !== null) {
+            data.craftingStates.push({
+                entity_id: entityId,
+                recipe_id: state.craftingRecipeId,
+                ticks_remaining: state.craftingTicksRemaining
+            });
+        }
+    }
+
+    // Состояния конвейеров
+    for (const [entityId, state] of this.transporters) {
+        if (state.resourceId) {
+            data.transporterStates.push({
+                entity_id: entityId,
+                resource_id: state.resourceId,
+                amount: state.resourceAmount,
+                position: state.resourcePosition,
+                lateral_offset: state.lateralOffset,
+                status: state.status
+            });
+        }
+    }
+
+    // Состояния манипуляторов
+    for (const [entityId, state] of this.manipulators) {
+        if (state.resourceId || state.status !== 'idle') {
+            data.manipulatorStates.push({
+                entity_id: entityId,
+                resource_id: state.resourceId,
+                amount: state.resourceAmount,
+                arm_position: state.armPosition,
+                status: state.status
+            });
+        }
+    }
+
+    return data;
+}
+```
+
+### 13.4 PHP endpoint для сохранения
+```
+POST /game/save-state
+```
+
+Нужно создать action для сохранения:
+- Обновить entity_resource для зданий
+- Создать новую таблицу entity_crafting для состояния крафта
+- Создать новую таблицу entity_transport для конвейеров/манипуляторов
+
+--------------------------------------------------------------------------------
+
+## ЧАСТЬ 14: НОВЫЕ ТАБЛИЦЫ БД
+
+### 14.1 entity_crafting (состояние крафта)
+```sql
+CREATE TABLE entity_crafting (
+    entity_id INT UNSIGNED NOT NULL PRIMARY KEY,
+    recipe_id INT UNSIGNED NOT NULL,
+    ticks_remaining INT UNSIGNED NOT NULL,
+    CONSTRAINT fk_ec_entity FOREIGN KEY (entity_id) REFERENCES entity(entity_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ec_recipe FOREIGN KEY (recipe_id) REFERENCES recipe(recipe_id) ON DELETE CASCADE
+);
+```
+
+### 14.2 entity_transport (состояние транспортировки)
+```sql
+CREATE TABLE entity_transport (
+    entity_id INT UNSIGNED NOT NULL PRIMARY KEY,
+    resource_id INT UNSIGNED NULL,
+    amount INT UNSIGNED NOT NULL DEFAULT 0,
+    position DECIMAL(5,4) NOT NULL DEFAULT 0,        -- 0.0000 - 1.0000
+    lateral_offset DECIMAL(5,4) NOT NULL DEFAULT 0,  -- -0.5000 - 0.5000
+    arm_position DECIMAL(5,4) NOT NULL DEFAULT 0.5,  -- для манипуляторов
+    status ENUM('empty','carrying','waiting_transfer','idle','picking','placing') NOT NULL DEFAULT 'empty',
+    CONSTRAINT fk_et_entity FOREIGN KEY (entity_id) REFERENCES entity(entity_id) ON DELETE CASCADE,
+    CONSTRAINT fk_et_resource FOREIGN KEY (resource_id) REFERENCES resource(resource_id) ON DELETE SET NULL
+);
+```
+
+--------------------------------------------------------------------------------
+
+## ИТОГО: ФАЙЛЫ ДЛЯ РЕАЛИЗАЦИИ
+
+### JavaScript (resources/js/modules/)
+```
+resourceTransport/
+├── ResourceTransportManager.js   # Главный класс
+├── TransporterState.js           # Состояние конвейера
+├── ManipulatorState.js           # Состояние манипулятора
+├── BuildingState.js              # Состояние здания
+├── SpatialIndex.js               # Пространственный индекс
+├── LinkCalculator.js             # Расчёт связей
+└── ResourceRenderer.js           # Рендеринг ресурсов и прогресс-баров
+```
+
+### PHP (src/)
+```
+migrations/
+├── m251221_000000_add_resource_max_stack.php
+├── m251221_000100_create_entity_crafting.php
+└── m251221_000200_create_entity_transport.php
+
+actions/game/
+└── SaveState.php                 # Сохранение состояния
+
+models/
+├── EntityCrafting.php
+└── EntityTransport.php
+```
+
+### Конфигурация
+```
+config/static_config.php          # auto_save_interval
+```

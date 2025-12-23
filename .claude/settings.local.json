@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php:*)",
+      "Bash(npm run assets:*)",
+      "Bash(del:*)",
+      "Bash(dir:*)",
+      "Bash(npm run assets:build:*)",
+      "Bash(del:C:Siteszfactory.local)",
+      "Bash(npm run:*)",
+      "Bash(composer run:*)",
+      "Bash(ls:*)",
+      "Bash(ren:*)",
+      "Bash(move:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nUpdate documentation for landing atlas system\n\n- Add auto-generation logic for Island Edge and Sky\n- Update atlas coordinate formula \\(simplified\\)\n- Add special transition rules for Island Edge\n- Document wavy line algorithm parameters \\(cos, amplitude=1\\)\n- Add comprehensive guide for generating beautiful landing sprites\n- Include AI prompts, tools, techniques, and workflow\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ],
+    "defaultMode": "bypassPermissions"
+  }
+}
