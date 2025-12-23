@@ -10,6 +10,7 @@ namespace models\base;
  * @property integer $adjacency_id
  * @property integer $landing_id_1
  * @property integer $landing_id_2
+ * @property integer $atlas_z
  *
  * @property \models\Landing $landingId1
  * @property \models\Landing $landingId2
@@ -31,7 +32,7 @@ class BaseLandingAdjacency extends \yii\db\ActiveRecord
     {
         return [
             [[BaseLandingAdjacencyPeer::LANDING_ID_1, BaseLandingAdjacencyPeer::LANDING_ID_2], 'required'],
-            [[BaseLandingAdjacencyPeer::LANDING_ID_1, BaseLandingAdjacencyPeer::LANDING_ID_2], 'integer'],
+            [[BaseLandingAdjacencyPeer::LANDING_ID_1, BaseLandingAdjacencyPeer::LANDING_ID_2, BaseLandingAdjacencyPeer::ATLAS_Z], 'integer'],
             [[BaseLandingAdjacencyPeer::LANDING_ID_1, BaseLandingAdjacencyPeer::LANDING_ID_2], 'unique', 'targetAttribute' => [BaseLandingAdjacencyPeer::LANDING_ID_1, BaseLandingAdjacencyPeer::LANDING_ID_2]],
             [[BaseLandingAdjacencyPeer::LANDING_ID_1], 'exist', 'skipOnError' => true, 'targetClass' => BaseLanding::className(), 'targetAttribute' => [BaseLandingAdjacencyPeer::LANDING_ID_1 => BaseLandingPeer::LANDING_ID]],
             [[BaseLandingAdjacencyPeer::LANDING_ID_2], 'exist', 'skipOnError' => true, 'targetClass' => BaseLanding::className(), 'targetAttribute' => [BaseLandingAdjacencyPeer::LANDING_ID_2 => BaseLandingPeer::LANDING_ID]],
@@ -47,6 +48,7 @@ class BaseLandingAdjacency extends \yii\db\ActiveRecord
             BaseLandingAdjacencyPeer::ADJACENCY_ID => 'Adjacency ID',
             BaseLandingAdjacencyPeer::LANDING_ID_1 => 'Landing Id 1',
             BaseLandingAdjacencyPeer::LANDING_ID_2 => 'Landing Id 2',
+            BaseLandingAdjacencyPeer::ATLAS_Z => 'Atlas Z',
         ];
     }
     /**
@@ -82,6 +84,7 @@ class BaseLandingAdjacency extends \yii\db\ActiveRecord
             'adjacency_id' => BaseLandingAdjacencyPeer::ADJACENCY_ID,
             'landing_id_1' => BaseLandingAdjacencyPeer::LANDING_ID_1,
             'landing_id_2' => BaseLandingAdjacencyPeer::LANDING_ID_2,
+            'atlas_z' => BaseLandingAdjacencyPeer::ATLAS_Z,
         ];
     }
     

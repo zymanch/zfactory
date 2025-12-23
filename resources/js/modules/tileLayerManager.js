@@ -16,6 +16,8 @@ export class TileLayerManager {
         this.skyTiles = new Map();         // Sky tiles for empty spaces
         this.islandEdgeTiles = new Map();  // Island edge tiles (auto-generated)
         this.tileDataMap = new Map();      // Map of x_y -> landing_id
+        this.landingAtlases = {};          // Texture atlases for landings
+        this.atlasPadding = 0;             // Padding between sprites in atlas
     }
 
     /**
@@ -109,68 +111,53 @@ export class TileLayerManager {
     }
 
     /**
-     * Create a tile sprite with transition support
+     * Create a tile sprite with transition support using texture atlases
      * @param {number} landingId - Current tile landing ID
      * @param {number} tileX - Tile X position
      * @param {number} tileY - Tile Y position
      * @returns {PIXI.Sprite|null}
      */
     createTileWithTransitions(landingId, tileX, tileY) {
-        // Skip transitions for sky and island_edge
-        if (NON_TRANSITION_LANDINGS.has(landingId)) {
-            return this.createTileSprite(landingId, tileX, tileY, Z_INDEX.TERRAIN);
+        const landing = this.game.gameData.landings[landingId];
+        if (!landing) return null;
+
+        const atlasName = landing.image_url.replace('.png', '') + '_atlas';
+        const atlas = this.landingAtlases[atlasName];
+
+        if (!atlas) {
+            console.warn('Atlas not loaded:', atlasName);
+            return null;
         }
 
-        // Get adjacent tile landing IDs
+        // Get adjacent tile landing IDs (null if sky/empty)
         const topLandingId = this.getLandingAt(tileX, tileY - 1);
         const rightLandingId = this.getLandingAt(tileX + 1, tileY);
 
-        // Check if transitions are needed with other terrain types
-        const needsTopTransition = topLandingId !== undefined
-            && topLandingId !== landingId
-            && !NON_TRANSITION_LANDINGS.has(topLandingId)
-            && this.game.hasLandingAdjacency(landingId, topLandingId);
+        // Determine adjacency info for atlas coordinates
+        const adjacencyInfo = {
+            top: topLandingId !== undefined ? topLandingId : null,
+            right: rightLandingId !== undefined ? rightLandingId : null
+        };
 
-        const needsRightTransition = rightLandingId !== undefined
-            && rightLandingId !== landingId
-            && !NON_TRANSITION_LANDINGS.has(rightLandingId)
-            && this.game.hasLandingAdjacency(landingId, rightLandingId);
+        // Get atlas coordinates
+        const coords = this.getAtlasCoordinates(landingId, adjacencyInfo);
 
-        // Check if edges border sky (undefined = empty = sky)
-        const needsSkyTopTransition = topLandingId === undefined || topLandingId === LANDING_SKY_ID;
-        const needsSkyRightTransition = rightLandingId === undefined || rightLandingId === LANDING_SKY_ID;
-
-        // Determine texture key
-        let textureKey;
-        if (needsTopTransition && needsRightTransition) {
-            // Corner transition (both top and right are different terrain)
-            textureKey = `transition_${landingId}_${topLandingId}_rt`;
-        } else if (needsTopTransition) {
-            textureKey = `transition_${landingId}_${topLandingId}_t`;
-        } else if (needsRightTransition) {
-            textureKey = `transition_${landingId}_${rightLandingId}_r`;
-        } else if (needsSkyTopTransition && needsSkyRightTransition) {
-            // Both top and right border sky - try to use corner transition texture
-            textureKey = `transition_${landingId}_${LANDING_SKY_ID}_rt`;
-        } else if (needsSkyTopTransition) {
-            // Top edge borders sky
-            textureKey = `transition_${landingId}_${LANDING_SKY_ID}_t`;
-        } else if (needsSkyRightTransition) {
-            // Right edge borders sky
-            textureKey = `transition_${landingId}_${LANDING_SKY_ID}_r`;
-        } else {
-            textureKey = `landing_${landingId}`;
-        }
-
-        // Try to get transition texture, fallback to base texture
-        let texture = this.game.textures[textureKey];
-        if (!texture) {
-            texture = this.game.textures[`landing_${landingId}`];
-        }
-
-        if (!texture) return null;
-
+        // Create texture from atlas region with 0.5px inset to prevent bleeding
         const { tileWidth, tileHeight } = this.game.config;
+        const inset = 0.5;
+
+        const rect = new PIXI.Rectangle(
+            coords.col * tileWidth + inset,
+            coords.row * tileHeight + inset,
+            tileWidth - inset * 2,
+            tileHeight - inset * 2
+        );
+
+        const texture = new PIXI.Texture({
+            source: atlas.source,
+            frame: rect
+        });
+
         const sprite = new PIXI.Sprite(texture);
         sprite.x = tileX * tileWidth;
         sprite.y = tileY * tileHeight;
@@ -370,6 +357,64 @@ export class TileLayerManager {
                 }
             }
         }
+    }
+
+    /**
+     * Вычисляет координаты в атласе на основе смежностей
+     *
+     * @param {number} landingId ID текущего лендинга
+     * @param {object} adjacencyInfo { top: landingId|null, right: landingId|null }
+     * @returns {object} { row, col }
+     */
+    getAtlasCoordinates(landingId, adjacencyInfo) {
+        const { top, right } = adjacencyInfo;
+        const landing = this.game.gameData.landings[landingId];
+        if (!landing) return { row: 0, col: 0 };
+
+        const variationsCount = landing.variations_count || 5;
+
+        // Если нет смежностей (центр тайла) - берем случайную вариацию из строки 0
+        if (top === null && right === null) {
+            return {
+                row: 0,
+                col: Math.floor(Math.random() * variationsCount)
+            };
+        }
+
+        // Определяем top_z (строка)
+        let topZ = 0; // По умолчанию самоссылка
+        if (top !== null && top !== landingId) {
+            // Ищем atlas_z для этой смежности
+            topZ = this.getAtlasZ(landingId, top);
+        }
+
+        // Определяем right_z (колонка)
+        let rightZ = 0; // По умолчанию самоссылка
+        if (right !== null && right !== landingId) {
+            rightZ = this.getAtlasZ(landingId, right);
+        }
+
+        // Если оба соседа совпадают с текущим лендингом - рандомизируем вариацию
+        if ((top === null || top === landingId) && (right === null || right === landingId)) {
+            rightZ = Math.floor(Math.random() * variationsCount);
+        }
+
+        // Формула: Row = top_z + 1, Column = right_z
+        return {
+            row: topZ + 1,
+            col: rightZ
+        };
+    }
+
+    /**
+     * Получает atlas_z для смежности
+     */
+    getAtlasZ(landingId, adjacentId) {
+        const adjacencies = this.game.gameData.landingAdjacencies[landingId];
+        if (!adjacencies) return 0;
+
+        const adj = adjacencies.find(a => parseInt(a.landing_id_2) === parseInt(adjacentId));
+        return adj ? parseInt(adj.atlas_z) : 0;
     }
 }
 

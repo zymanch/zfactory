@@ -13,7 +13,22 @@ use Yii;
 class LandingController extends \yii\console\Controller
 {
     /**
-     * Generate transition sprites for all landing adjacencies
+     * Generate texture atlases for all landing types
+     * Usage: php yii landing/generate
+     */
+    public function actionGenerate()
+    {
+        $this->stdout("Generating landing texture atlases...\n\n");
+
+        $basePath = Yii::getAlias('@app/..');
+        $generator = new LandingTransitionGenerator($basePath);
+        $generator->generateAllAtlases();
+
+        return 0;
+    }
+
+    /**
+     * Generate transition sprites for all landing adjacencies (DEPRECATED - use actionGenerate instead)
      * Usage: php yii landing/generate-transitions
      */
     public function actionGenerateTransitions()

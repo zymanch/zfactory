@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS `landing` (
   `is_buildable` enum('yes','no') NOT NULL DEFAULT 'yes',
   `name` varchar(256) NOT NULL,
   `image_url` varchar(256) NOT NULL,
+  `variations_count` int(11) NOT NULL DEFAULT 5,
   PRIMARY KEY (`landing_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `landing_adjacency` (
   `adjacency_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `landing_id_1` int(10) unsigned NOT NULL,
   `landing_id_2` int(10) unsigned NOT NULL,
+  `atlas_z` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`adjacency_id`),
   UNIQUE KEY `idx_unique_pair` (`landing_id_1`, `landing_id_2`),
   CONSTRAINT `fk_landing_adjacency_1` FOREIGN KEY (`landing_id_1`) REFERENCES `landing` (`landing_id`) ON DELETE CASCADE ON UPDATE CASCADE,

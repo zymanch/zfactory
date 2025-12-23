@@ -2,19 +2,23 @@
 
 namespace helpers;
 
+use Yii;
+
 /**
- * LandingTransitionGenerator - Generates transition sprites between landing types
+ * LandingTransitionGenerator - Generates texture atlases for landing transitions
  *
- * Creates JPG images with wavy borders for smooth terrain transitions.
- * Transitions are generated for RIGHT, TOP, and CORNER (RT) cases.
+ * Creates single atlas PNG for each landing type containing all variations and transitions.
+ * Uses formula: Row = top_z + 1, Column = right_z for atlas coordinates.
  */
 class LandingTransitionGenerator
 {
-    /** @var int Tile width in pixels */
+    private $sourceDir;
+    private $outputDir;
     private $tileWidth = 32;
-
-    /** @var int Tile height in pixels */
     private $tileHeight = 24;
+
+    /** @var int Padding between sprites in atlas (to prevent bleeding) */
+    private $padding = 0;
 
     /** @var float Amplitude of the wavy line */
     private $waveAmplitude = 1.5;
@@ -25,20 +29,10 @@ class LandingTransitionGenerator
     /** @var int Outline width in pixels */
     private $outlineWidth = 1;
 
-    /** @var string Source directory for landing tiles */
-    private $sourceDir;
-
-    /** @var string Output directory for transition tiles */
-    private $outputDir;
-
-    /**
-     * Constructor
-     * @param string $basePath - Project base path
-     */
     public function __construct($basePath)
     {
         $this->sourceDir = $basePath . '/public/assets/tiles/landing';
-        $this->outputDir = $basePath . '/public/assets/tiles/landing/transitions';
+        $this->outputDir = $basePath . '/public/assets/tiles/landing/atlases';
 
         if (!is_dir($this->outputDir)) {
             mkdir($this->outputDir, 0755, true);
@@ -46,128 +40,186 @@ class LandingTransitionGenerator
     }
 
     /**
-     * Generate all transition sprites for a pair of landing types
-     *
-     * @param string $baseName - Base landing name (e.g., 'grass')
-     * @param string $adjacentName - Adjacent landing name (e.g., 'dirt')
-     * @return array - List of generated file paths
+     * Генерирует атласы для всех типов лендингов
      */
-    public function generatePair($baseName, $adjacentName)
+    public function generateAllAtlases()
     {
-        $generated = [];
+        $landings = $this->getLandings();
 
-        // Load source images
-        $baseImage = $this->loadImage($baseName);
-        $adjacentImage = $this->loadImage($adjacentName);
-
-        if (!$baseImage || !$adjacentImage) {
-            return $generated;
+        foreach ($landings as $landing) {
+            echo "Generating atlas for landing {$landing['landing_id']} ({$landing['name']})...\n";
+            $this->generateAtlas($landing);
         }
 
-        // Get outline color (darkened version of the darkest color in base image)
-        $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
+        echo "All atlases generated successfully!\n";
+    }
 
-        // Generate RIGHT transition (wavy line on right edge)
-        $rightPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_r.png";
-        $rightImage = $this->generateRightTransition($baseImage, $adjacentImage, $outlineColor);
-        if ($rightImage && $this->saveImage($rightImage, $rightPath)) {
-            $generated[] = $rightPath;
-            imagedestroy($rightImage);
+    /**
+     * Генерирует один атлас для конкретного лендинга
+     */
+    private function generateAtlas($landing)
+    {
+        $landingId = $landing['landing_id'];
+        $variationsCount = $landing['variations_count'];
+        $imageName = str_replace('.png', '', $landing['image_url']);
+
+        // Загружаем базовое изображение
+        $baseImage = $this->loadImage($landing['image_url']);
+
+        // Загружаем готовые вариации из папки
+        $variations = $this->loadVariations($imageName, $variationsCount);
+
+        // Получаем смежности с atlas_z
+        $adjacencies = $this->getAdjacencies($landingId);
+
+        // Размеры атласа с учетом padding
+        $tileWithPadding = $this->tileWidth + $this->padding;
+        $tileHeightWithPadding = $this->tileHeight + $this->padding;
+
+        // Колонки: z=0 (самоссылка) + N вариаций
+        $atlasWidth = ($variationsCount + 1) * $tileWithPadding;
+        // Строки: строка 0 (вариации) + строка 1 (самоссылка сверху) + N adjacency
+        $atlasHeight = (count($adjacencies) + 2) * $tileHeightWithPadding;
+
+        // Создаем пустой атлас
+        $atlas = imagecreatetruecolor($atlasWidth, $atlasHeight);
+        imagealphablending($atlas, false);
+        imagesavealpha($atlas, true);
+
+        // Заливаем прозрачностью
+        $transparent = imagecolorallocatealpha($atlas, 0, 0, 0, 127);
+        imagefill($atlas, 0, 0, $transparent);
+
+        // Строка 0: Вариации базового тайла (для рандомизации)
+        foreach ($variations as $colIdx => $variation) {
+            imagecopy(
+                $atlas,
+                $variation,
+                $colIdx * $tileWithPadding,
+                0,
+                0, 0,
+                $this->tileWidth,
+                $this->tileHeight
+            );
         }
 
-        // Generate TOP transition (wavy line on top edge)
-        $topPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_t.png";
-        $topImage = $this->generateTopTransition($baseImage, $adjacentImage, $outlineColor);
-        if ($topImage && $this->saveImage($topImage, $topPath)) {
-            $generated[] = $topPath;
+        // Строка 1: Самоссылки (top=self, right=variations)
+        // Row = 0 + 1 = 1, это когда сверху тот же лендинг
+        foreach ($variations as $colIdx => $variation) {
+            imagecopy(
+                $atlas,
+                $variation,
+                $colIdx * $tileWithPadding,
+                1 * $tileHeightWithPadding,
+                0, 0,
+                $this->tileWidth,
+                $this->tileHeight
+            );
+        }
+
+        // Строки 2+: Переходы с разными верхними соседями
+        foreach ($adjacencies as $adj) {
+            $topZ = $adj['atlas_z'];
+            $topLanding = $this->getLandingById($adj['landing_id_2']);
+            $topImageName = str_replace('.png', '', $topLanding['image_url']);
+
+            // Загружаем первую вариацию соседа сверху
+            $topImage = $this->loadVariationImage($topImageName, 0);
+
+            // Row = topZ + 1
+            $row = $topZ + 1;
+
+            // Для каждой вариации справа (включая самоссылку в колонке 0)
+            // Колонка 0 = сам лендинг справа
+            $rightVariations = array_merge([$baseImage], $variations);
+
+            foreach ($rightVariations as $colIdx => $rightImage) {
+                // Генерируем переход: сверху topImage, справа rightImage
+                $transition = $this->createTransition($baseImage, $topImage, $rightImage);
+
+                imagecopy(
+                    $atlas,
+                    $transition,
+                    $colIdx * $tileWithPadding,
+                    $row * $tileHeightWithPadding,
+                    0, 0,
+                    $this->tileWidth,
+                    $this->tileHeight
+                );
+
+                imagedestroy($transition);
+            }
+
             imagedestroy($topImage);
         }
 
-        // Generate CORNER transition (both right and top different)
-        $cornerPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_rt.png";
-        $cornerImage = $this->generateCornerTransition($baseImage, $adjacentImage, $adjacentImage, $outlineColor);
-        if ($cornerImage && $this->saveImage($cornerImage, $cornerPath)) {
-            $generated[] = $cornerPath;
-            imagedestroy($cornerImage);
+        // Сохраняем атлас
+        $atlasPath = $this->outputDir . "/{$imageName}_atlas.png";
+        imagepng($atlas, $atlasPath, 9);
+        imagedestroy($atlas);
+
+        foreach ($variations as $variation) {
+            imagedestroy($variation);
         }
-
         imagedestroy($baseImage);
-        imagedestroy($adjacentImage);
 
-        return $generated;
+        echo "  Atlas saved: {$atlasPath} ({$atlasWidth}x{$atlasHeight})\n";
     }
 
     /**
-     * Generate only TOP transition for a pair
-     * Used for island_edge which only needs top transitions
-     *
-     * @param string $baseName - Base landing name (e.g., 'island_edge')
-     * @param string $adjacentName - Adjacent landing name (e.g., 'grass')
-     * @return array - List of generated file paths
+     * Создает переход между тайлами с волнистыми линиями
+     * @param resource $base - Базовый тайл
+     * @param resource $top - Тайл сверху
+     * @param resource $right - Тайл справа
+     * @return resource
      */
-    public function generateTopOnly($baseName, $adjacentName)
+    private function createTransition($base, $top, $right)
     {
-        $generated = [];
+        // Получаем цвет outline (затемненная версия самого темного цвета в базовом тайле)
+        $outlineColor = $this->getDarkenedColor($base, 0.5);
 
-        $baseImage = $this->loadImage($baseName);
-        $adjacentImage = $this->loadImage($adjacentName);
+        // Определяем, совпадают ли соседи с базой
+        $topIsSame = $this->imagesEqual($base, $top);
+        $rightIsSame = $this->imagesEqual($base, $right);
 
-        if (!$baseImage || !$adjacentImage) {
-            return $generated;
+        if ($topIsSame && $rightIsSame) {
+            // Оба соседа совпадают - просто возвращаем копию базы
+            return $this->cloneImage($base);
+        } elseif (!$topIsSame && $rightIsSame) {
+            // Только сверху другой - TOP transition
+            return $this->generateTopTransition($base, $top, $outlineColor);
+        } elseif ($topIsSame && !$rightIsSame) {
+            // Только справа другой - RIGHT transition
+            return $this->generateRightTransition($base, $right, $outlineColor);
+        } else {
+            // Оба соседа разные - CORNER transition
+            return $this->generateCornerTransition($base, $top, $right, $outlineColor);
         }
-
-        $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
-
-        $topPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_t.png";
-        $topImage = $this->generateTopTransition($baseImage, $adjacentImage, $outlineColor);
-        if ($topImage && $this->saveImage($topImage, $topPath)) {
-            $generated[] = $topPath;
-            imagedestroy($topImage);
-        }
-
-        imagedestroy($baseImage);
-        imagedestroy($adjacentImage);
-
-        return $generated;
     }
 
     /**
-     * Generate only RIGHT transition for a pair
-     * Used for sky which only needs right transitions
-     *
-     * @param string $baseName - Base landing name (e.g., 'sky')
-     * @param string $adjacentName - Adjacent landing name (e.g., 'grass')
-     * @return array - List of generated file paths
+     * Проверяет, совпадают ли два изображения (сравнивает несколько пикселей)
      */
-    public function generateRightOnly($baseName, $adjacentName)
+    private function imagesEqual($img1, $img2)
     {
-        $generated = [];
+        // Сравниваем несколько точек для быстрой проверки
+        $points = [
+            [0, 0], [$this->tileWidth - 1, 0],
+            [0, $this->tileHeight - 1], [$this->tileWidth - 1, $this->tileHeight - 1],
+            [$this->tileWidth / 2, $this->tileHeight / 2]
+        ];
 
-        $baseImage = $this->loadImage($baseName);
-        $adjacentImage = $this->loadImage($adjacentName);
-
-        if (!$baseImage || !$adjacentImage) {
-            return $generated;
+        foreach ($points as [$x, $y]) {
+            if (imagecolorat($img1, $x, $y) !== imagecolorat($img2, $x, $y)) {
+                return false;
+            }
         }
 
-        $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
-
-        $rightPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_r.png";
-        $rightImage = $this->generateRightTransition($baseImage, $adjacentImage, $outlineColor);
-        if ($rightImage && $this->saveImage($rightImage, $rightPath)) {
-            $generated[] = $rightPath;
-            imagedestroy($rightImage);
-        }
-
-        imagedestroy($baseImage);
-        imagedestroy($adjacentImage);
-
-        return $generated;
+        return true;
     }
 
     /**
-     * Generate RIGHT transition
-     * Wavy line from bottom-right to top-right, adjacent pixels on right side
+     * Generate RIGHT transition - Wavy line from bottom-right to top-right
      */
     private function generateRightTransition($baseImage, $rightImage, $outlineColor)
     {
@@ -176,11 +228,8 @@ class LandingTransitionGenerator
         // Generate wavy boundary X positions for each Y
         $wavyX = [];
         for ($y = 0; $y < $this->tileHeight; $y++) {
-            // Normalize y to 0-1 range
             $t = $y / ($this->tileHeight - 1);
-            // Wavy offset from right edge
             $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
-            // X position: hugging right edge
             $wavyX[$y] = (int)round($this->tileWidth - 4 + $wave);
         }
 
@@ -200,8 +249,7 @@ class LandingTransitionGenerator
     }
 
     /**
-     * Generate TOP transition
-     * Wavy line from top-left to top-right, adjacent pixels above
+     * Generate TOP transition - Wavy line from top-left to top-right
      */
     private function generateTopTransition($baseImage, $topImage, $outlineColor)
     {
@@ -231,83 +279,84 @@ class LandingTransitionGenerator
     }
 
     /**
-     * Generate CORNER transition (both right and top different)
-     * L-shaped wavy line: top edge (left to right) + right edge (top to bottom)
+     * Generate CORNER transition - L-shaped wavy line
      */
     private function generateCornerTransition($baseImage, $topImage, $rightImage, $outlineColor)
     {
         $result = $this->cloneImage($baseImage);
 
-        // Generate L-shaped wavy line:
-        // Part 1: Top edge from (0, 0) to (width-1, 0) - horizontal
-        // Part 2: Right edge from (width-1, 0) to (width-1, height-1) - vertical
-        $wavyPoints = [];
-
-        // Part 1: Top edge (horizontal)
+        // Top edge wavy Y positions
+        $topWavyY = [];
         for ($x = 0; $x < $this->tileWidth; $x++) {
             $t = $x / ($this->tileWidth - 1);
             $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
-            $wavyPoints[] = [
-                'x' => $x,
-                'y' => (int)round(4 - $wave),
-                'type' => 'top'
-            ];
+            $topWavyY[$x] = (int)round(4 - $wave);
         }
 
-        // Part 2: Right edge (vertical)
+        // Right edge wavy X positions
+        $rightWavyX = [];
         for ($y = 0; $y < $this->tileHeight; $y++) {
             $t = $y / ($this->tileHeight - 1);
             $wave = sin($t * 2 * M_PI * $this->waveFrequency) * $this->waveAmplitude;
-            $wavyPoints[] = [
-                'x' => (int)round($this->tileWidth - 4 + $wave),
-                'y' => $y,
-                'type' => 'right'
-            ];
+            $rightWavyX[$y] = (int)round($this->tileWidth - 4 + $wave);
         }
 
-        // Build lookup arrays for quick access
-        $topWavyY = [];
-        $rightWavyX = [];
-
-        foreach ($wavyPoints as $point) {
-            if ($point['type'] === 'top') {
-                $topWavyY[$point['x']] = $point['y'];
-            } else {
-                $rightWavyX[$point['y']] = $point['x'];
-            }
-        }
-
-        // For each pixel, determine which region it's in
+        // Apply regions based on L-shaped boundary
         for ($x = 0; $x < $this->tileWidth; $x++) {
             for ($y = 0; $y < $this->tileHeight; $y++) {
                 $isAboveTopLine = isset($topWavyY[$x]) && $y < $topWavyY[$x];
                 $isRightOfRightLine = isset($rightWavyX[$y]) && $x >= $rightWavyX[$y];
 
                 if ($isAboveTopLine) {
-                    // Above top wavy line -> use top image
                     $color = imagecolorat($topImage, $x, $y);
                     imagesetpixel($result, $x, $y, $color);
                 } elseif ($isRightOfRightLine) {
-                    // Right of right wavy line -> use right image
                     $color = imagecolorat($rightImage, $x, $y);
                     imagesetpixel($result, $x, $y, $color);
                 }
-                // else: keep base image
             }
         }
 
-        // Draw outline along the L-shaped wavy line
+        // Draw L-shaped outline
         $this->drawLShapedOutline($result, $topWavyY, $rightWavyX, $outlineColor);
 
         return $result;
     }
 
     /**
-     * Draw outline along L-shaped wavy line
+     * Draw outline along wavy line
+     */
+    private function drawOutline($image, $wavyPositions, $direction, $color)
+    {
+        if ($direction === 'vertical') {
+            for ($y = 0; $y < $this->tileHeight; $y++) {
+                $x = $wavyPositions[$y];
+                for ($w = 0; $w < $this->outlineWidth; $w++) {
+                    $drawX = $x - $w;
+                    if ($drawX >= 0 && $drawX < $this->tileWidth) {
+                        imagesetpixel($image, $drawX, $y, $color);
+                    }
+                }
+            }
+        } else {
+            for ($x = 0; $x < $this->tileWidth; $x++) {
+                $y = $wavyPositions[$x];
+                for ($w = 0; $w < $this->outlineWidth; $w++) {
+                    $drawY = $y + $w;
+                    if ($drawY >= 0 && $drawY < $this->tileHeight) {
+                        imagesetpixel($image, $x, $drawY, $color);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Draw L-shaped outline
      */
     private function drawLShapedOutline($image, $topWavyY, $rightWavyX, $color)
     {
-        // Draw top edge outline
+        // Top edge outline
         for ($x = 0; $x < $this->tileWidth; $x++) {
             if (isset($topWavyY[$x])) {
                 $y = $topWavyY[$x];
@@ -320,7 +369,7 @@ class LandingTransitionGenerator
             }
         }
 
-        // Draw right edge outline
+        // Right edge outline
         for ($y = 0; $y < $this->tileHeight; $y++) {
             if (isset($rightWavyX[$y])) {
                 $x = $rightWavyX[$y];
@@ -335,62 +384,6 @@ class LandingTransitionGenerator
     }
 
     /**
-     * Draw outline along vertical wavy line
-     */
-    private function drawOutline($image, $wavyPositions, $direction, $color)
-    {
-        if ($direction === 'vertical') {
-            // Vertical wavy line (for right transition)
-            for ($y = 0; $y < $this->tileHeight; $y++) {
-                $x = $wavyPositions[$y];
-                for ($w = 0; $w < $this->outlineWidth; $w++) {
-                    $drawX = $x - $w;
-                    if ($drawX >= 0 && $drawX < $this->tileWidth) {
-                        imagesetpixel($image, $drawX, $y, $color);
-                    }
-                }
-            }
-        } else {
-            // Horizontal wavy line (for top transition)
-            for ($x = 0; $x < $this->tileWidth; $x++) {
-                $y = $wavyPositions[$x];
-                for ($w = 0; $w < $this->outlineWidth; $w++) {
-                    $drawY = $y + $w;
-                    if ($drawY >= 0 && $drawY < $this->tileHeight) {
-                        imagesetpixel($image, $x, $drawY, $color);
-                    }
-                }
-            }
-        }
-    }
-
-
-    /**
-     * Load PNG image from source directory
-     */
-    private function loadImage($filename)
-    {
-        $path = $this->sourceDir . '/' . $filename;
-        if (!file_exists($path)) {
-            echo "Warning: Image not found: {$path}\n";
-            return null;
-        }
-        $image = imagecreatefrompng($path);
-        imagesavealpha($image, true);
-        return $image;
-    }
-
-    /**
-     * Save PNG image to output directory
-     */
-    private function saveImage($image, $filename)
-    {
-        $path = $this->outputDir . '/' . $filename;
-        imagesavealpha($image, true);
-        return imagepng($image, $path, 9);
-    }
-
-    /**
      * Clone an image
      */
     private function cloneImage($source)
@@ -398,6 +391,8 @@ class LandingTransitionGenerator
         $width = imagesx($source);
         $height = imagesy($source);
         $clone = imagecreatetruecolor($width, $height);
+        imagealphablending($clone, false);
+        imagesavealpha($clone, true);
         imagecopy($clone, $source, 0, 0, 0, 0, $width, $height);
         return $clone;
     }
@@ -439,5 +434,80 @@ class LandingTransitionGenerator
         $darkB = (int)round($darkestB * $darkenFactor);
 
         return imagecolorallocate($image, $darkR, $darkG, $darkB);
+    }
+
+    /**
+     * Загружает изображение
+     */
+    private function loadImage($filename)
+    {
+        $path = $this->sourceDir . '/' . $filename;
+        $image = imagecreatefrompng($path);
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        return $image;
+    }
+
+    /**
+     * Загружает готовые вариации из папки
+     * @param string $landingName - Имя лендинга (например, 'grass')
+     * @param int $count - Количество вариаций
+     * @return array - Массив GD image resources
+     */
+    private function loadVariations($landingName, $count)
+    {
+        $variations = [];
+        for ($i = 0; $i < $count; $i++) {
+            $variations[] = $this->loadVariationImage($landingName, $i);
+        }
+        return $variations;
+    }
+
+    /**
+     * Загружает одну вариацию
+     * @param string $landingName - Имя лендинга
+     * @param int $index - Индекс вариации
+     * @return resource - GD image resource
+     */
+    private function loadVariationImage($landingName, $index)
+    {
+        $path = $this->sourceDir . '/' . $landingName . '/' . $landingName . '_' . $index . '.png';
+        $image = imagecreatefrompng($path);
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        return $image;
+    }
+
+    /**
+     * Получает все лендинги
+     */
+    private function getLandings()
+    {
+        return Yii::$app->db->createCommand(
+            'SELECT landing_id, name, image_url, variations_count FROM {{%landing}} ORDER BY landing_id'
+        )->queryAll();
+    }
+
+    /**
+     * Получает лендинг по ID
+     */
+    private function getLandingById($id)
+    {
+        return Yii::$app->db->createCommand(
+            'SELECT landing_id, image_url FROM {{%landing}} WHERE landing_id = :id'
+        )->bindValue(':id', $id)->queryOne();
+    }
+
+    /**
+     * Получает смежности для лендинга
+     */
+    private function getAdjacencies($landingId)
+    {
+        return Yii::$app->db->createCommand(
+            'SELECT landing_id_2, atlas_z
+             FROM {{%landing_adjacency}}
+             WHERE landing_id_1 = :id
+             ORDER BY atlas_z'
+        )->bindValue(':id', $landingId)->queryAll();
     }
 }

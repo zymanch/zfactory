@@ -8,5 +8,6 @@ class BaseLandingPeer  {
     const NAME = "name";
     const IS_BUILDABLE = "is_buildable";
     const IMAGE_URL = "image_url";
+    const VARIATIONS_COUNT = "variations_count";
 
 }

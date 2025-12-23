@@ -208,6 +208,13 @@ class ZFactoryGame {
         this.initialCraftingStates = data.craftingStates || [];
         this.initialTransportStates = data.transportStates || [];
 
+        // Setup gameData structure for new atlas system
+        this.gameData = {
+            landings: this.landingTypes,
+            entityTypes: this.entityTypes,
+            landingAdjacencies: this.indexByLandingId(this.landingAdjacencies)
+        };
+
         // Initialize building rules from server config
         if (this.buildingRules && data.buildingRules) {
             this.buildingRules.init(data.buildingRules);
@@ -247,118 +254,25 @@ class ZFactoryGame {
     }
 
     /**
-     * Load transition textures for adjacent landing types
+     * Load texture atlases for all landing types
      */
     async loadTransitionTextures() {
-        if (!this.landingAdjacencies || this.landingAdjacencies.length === 0) {
-            return;
-        }
+        const landings = Object.values(this.landingTypes);
 
-        const v = this.config.assetVersion || 1;
-        const variants = ['r', 't', 'rt'];  // right, top, right+top
+        for (const landing of landings) {
+            const imageName = landing.image_url.replace('.png', '');
+            const atlasUrl = this.assetUrl(`${this.config.tilesPath}landing/atlases/${imageName}_atlas.png`);
 
-        // Build adjacency set for quick lookup
-        this.adjacencySet = new Set();
-        for (const adj of this.landingAdjacencies) {
-            // Store both directions
-            this.adjacencySet.add(`${adj.landing_id_1}_${adj.landing_id_2}`);
-            this.adjacencySet.add(`${adj.landing_id_2}_${adj.landing_id_1}`);
-        }
-
-        // Load transition textures for each adjacency pair
-        for (const adj of this.landingAdjacencies) {
-            const landing1 = this.landingTypes[adj.landing_id_1];
-            const landing2 = this.landingTypes[adj.landing_id_2];
-
-            if (!landing1 || !landing2) continue;
-
-            // Get names without extension
-            const name1 = landing1.image_url.replace('.jpg', '');
-            const name2 = landing2.image_url.replace('.jpg', '');
-
-            // Load both directions (A->B and B->A)
-            for (const variant of variants) {
-                // A is base, B is adjacent
-                const key1 = `transition_${adj.landing_id_1}_${adj.landing_id_2}_${variant}`;
-                const url1 = this.assetUrl(`${this.config.tilesPath}landing/transitions/${name1}_${name2}_${variant}.jpg`);
-                try {
-                    this.textures[key1] = await PIXI.Assets.load(url1);
-                } catch (e) {
-                    // Silent fail - transition might not exist yet
-                }
-
-                // B is base, A is adjacent
-                const key2 = `transition_${adj.landing_id_2}_${adj.landing_id_1}_${variant}`;
-                const url2 = this.assetUrl(`${this.config.tilesPath}landing/transitions/${name2}_${name1}_${variant}.jpg`);
-                try {
-                    this.textures[key2] = await PIXI.Assets.load(url2);
-                } catch (e) {
-                    // Silent fail - transition might not exist yet
-                }
-            }
-        }
-
-        // Load special transitions for island_edge (TOP) and sky (RIGHT)
-        const specialLandings = {
-            9: { name: 'sky', variant: 'r' },      // sky needs RIGHT transitions
-            10: { name: 'island_edge', variant: 't' } // island_edge needs TOP transitions
-        };
-        const realLandingIds = [1, 2, 3, 4, 5, 6, 7, 8];
-
-        for (const [specialId, config] of Object.entries(specialLandings)) {
-            for (const landingId of realLandingIds) {
-                const landing = this.landingTypes[landingId];
-                if (!landing) continue;
-
-                const landingName = landing.image_url.replace('.jpg', '');
-                const key = `transition_${specialId}_${landingId}_${config.variant}`;
-                const url = this.assetUrl(`${this.config.tilesPath}landing/transitions/${config.name}_${landingName}_${config.variant}.jpg`);
-
-                try {
-                    this.textures[key] = await PIXI.Assets.load(url);
-                } catch (e) {
-                    // Silent fail
-                }
-            }
-        }
-
-        // Load landing->sky transitions (real landings with sky on edges)
-        const skyLanding = this.landingTypes[9];
-        const skyName = skyLanding ? skyLanding.image_url.replace('.jpg', '') : 'sky';
-
-        for (const landingId of realLandingIds) {
-            const landing = this.landingTypes[landingId];
-            if (!landing) continue;
-
-            const landingName = landing.image_url.replace('.jpg', '');
-
-            // RIGHT transition (sky on right)
-            const keyR = `transition_${landingId}_9_r`;
-            const urlR = this.assetUrl(`${this.config.tilesPath}landing/transitions/${landingName}_${skyName}_r.jpg`);
             try {
-                this.textures[keyR] = await PIXI.Assets.load(urlR);
+                const texture = await PIXI.Assets.load(atlasUrl);
+                this.tileManager.landingAtlases[imageName + '_atlas'] = texture;
+                console.log('Loaded atlas:', imageName + '_atlas');
             } catch (e) {
-                // Silent fail
-            }
-
-            // TOP transition (sky on top)
-            const keyT = `transition_${landingId}_9_t`;
-            const urlT = this.assetUrl(`${this.config.tilesPath}landing/transitions/${landingName}_${skyName}_t.jpg`);
-            try {
-                this.textures[keyT] = await PIXI.Assets.load(urlT);
-            } catch (e) {
-                // Silent fail
-            }
-
-            // CORNER transition (sky on top and right)
-            const keyRT = `transition_${landingId}_9_rt`;
-            const urlRT = this.assetUrl(`${this.config.tilesPath}landing/transitions/${landingName}_${skyName}_rt.jpg`);
-            try {
-                this.textures[keyRT] = await PIXI.Assets.load(urlRT);
-            } catch (e) {
-                // Silent fail
+                console.error('Failed to load atlas:', atlasUrl, e);
             }
         }
+
+        console.log('All atlases loaded.');
     }
 
     /**
@@ -656,6 +570,22 @@ class ZFactoryGame {
 
     get tileDataMap() {
         return this.tileManager?.tileDataMap || new Map();
+    }
+
+    /**
+     * Index adjacency array by landing_id_1
+     * @param {Array} items - Array of adjacency objects
+     * @returns {Object} - Indexed by landing_id_1
+     */
+    indexByLandingId(items) {
+        const indexed = {};
+        items.forEach(item => {
+            if (!indexed[item.landing_id_1]) {
+                indexed[item.landing_id_1] = [];
+            }
+            indexed[item.landing_id_1].push(item);
+        });
+        return indexed;
     }
 }
 

@@ -46,11 +46,12 @@
 ### landing (terrain types)
 Defines types of terrain tiles for the background layer.
 
-| Column       | Type                  | Description                     |
-|--------------|-----------------------|---------------------------------|
-| landing_id   | INT UNSIGNED AUTO_INC | Primary key                     |
-| is_buildable | ENUM('yes','no')      | Can buildings be placed here?   |
-| image_url    | VARCHAR(256)          | Path to 32x24 tile image        |
+| Column            | Type                  | Description                          |
+|-------------------|-----------------------|--------------------------------------|
+| landing_id        | INT UNSIGNED AUTO_INC | Primary key                          |
+| is_buildable      | ENUM('yes','no')      | Can buildings be placed here?        |
+| image_url         | VARCHAR(256)          | Path to 32x24 tile image             |
+| variations_count  | INT DEFAULT 5         | Procedurally generated variations    |
 
 **Landing Types:**
 | ID | Name        | Buildable | Description                      |
@@ -80,6 +81,25 @@ Stores actual terrain placement on the game map.
 - **Max bounds**: 100x75 tiles (3200x1800 pixels)
 - **Actual tiles**: ~6251 (island shape with holes)
 - **Style**: Wavy edges, internal holes for floating island effect
+
+### landing_adjacency (terrain transitions)
+Defines which landing types can be adjacent to each other, with atlas coordinates for texture atlas system.
+
+| Column              | Type         | Description                              |
+|---------------------|--------------|------------------------------------------|
+| adjacency_id        | INT UNSIGNED | Primary key                              |
+| landing_id_1        | INT UNSIGNED | FK to landing.landing_id (base terrain)  |
+| landing_id_2        | INT UNSIGNED | FK to landing.landing_id (adjacent)      |
+| atlas_z             | INT DEFAULT 0| Z-index in texture atlas (0=self-ref)    |
+
+**Adjacency System:**
+- Bidirectional entries for all terrain pairs (except special rules)
+- `atlas_z` is unique per `landing_id_1` group (1, 2, 3...)
+- z=0 reserved for self-reference in atlas coordinate formula
+- **Special rules:**
+  - sky (id=9) NOT adjacent to sky
+  - sky (id=9) NOT adjacent to island_edge (id=10)
+- Total records: 88 bidirectional adjacencies
 
 ### entity_type (entity definitions)
 Defines types of entities that can be placed on the map.

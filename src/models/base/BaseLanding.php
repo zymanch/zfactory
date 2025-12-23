@@ -11,6 +11,7 @@ namespace models\base;
  * @property string $name
  * @property string $is_buildable
  * @property string $image_url
+ * @property integer $variations_count
  *
  * @property \models\LandingAdjacency[] $landingAdjacencies
  * @property \models\LandingAdjacency[] $landingAdjacencies0
@@ -35,6 +36,7 @@ class BaseLanding extends \yii\db\ActiveRecord
         return [
             [[BaseLandingPeer::NAME, BaseLandingPeer::IMAGE_URL], 'required'],
             [[BaseLandingPeer::IS_BUILDABLE], 'string'],
+            [[BaseLandingPeer::VARIATIONS_COUNT], 'integer'],
             [[BaseLandingPeer::NAME], 'string', 'max' => 64],
             [[BaseLandingPeer::IMAGE_URL], 'string', 'max' => 256],
         ];
@@ -50,6 +52,7 @@ class BaseLanding extends \yii\db\ActiveRecord
             BaseLandingPeer::NAME => 'Name',
             BaseLandingPeer::IS_BUILDABLE => 'Is Buildable',
             BaseLandingPeer::IMAGE_URL => 'Image Url',
+            BaseLandingPeer::VARIATIONS_COUNT => 'Variations Count',
         ];
     }
     /**
@@ -98,6 +101,7 @@ class BaseLanding extends \yii\db\ActiveRecord
             'name' => BaseLandingPeer::NAME,
             'is_buildable' => BaseLandingPeer::IS_BUILDABLE,
             'image_url' => BaseLandingPeer::IMAGE_URL,
+            'variations_count' => BaseLandingPeer::VARIATIONS_COUNT,
         ];
     }
     
