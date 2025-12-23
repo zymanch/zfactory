@@ -12,6 +12,7 @@ import { ResourceTransportManager } from './modules/resourceTransport/ResourceTr
 import { ResourceRenderer } from './modules/resourceTransport/ResourceRenderer.js';
 import { LandingWindow } from './modules/landingWindow.js';
 import { LandingEditMode } from './modules/landingEditMode.js';
+import { CloudManager } from './modules/cloudManager.js';
 import { SPRITE_STATES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 
 /**
@@ -61,6 +62,7 @@ class ZFactoryGame {
         this.resourceRenderer = null;
         this.landingWindow = null;
         this.landingEditMode = null;
+        this.cloudManager = null;
     }
 
     /**
@@ -73,7 +75,7 @@ class ZFactoryGame {
         this.initLayers();
         this.initCamera();
         await this.loadTextures();
-        this.initModulesPost();
+        await this.initModulesPost();
         await this.loadViewport();
         this.startGameLoop();
     }
@@ -95,6 +97,7 @@ class ZFactoryGame {
         this.resourceRenderer = new ResourceRenderer(this);
         this.landingWindow = new LandingWindow(this);
         this.landingEditMode = new LandingEditMode(this);
+        this.cloudManager = new CloudManager(this);
     }
 
     /**
@@ -105,7 +108,7 @@ class ZFactoryGame {
         await this.app.init({
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: 0x1a1a2e,
+            backgroundColor: 0x87CEEB,
             resizeTo: window,
             antialias: false,
             resolution: window.devicePixelRatio || 1
@@ -155,7 +158,7 @@ class ZFactoryGame {
     /**
      * Initialize modules that need assets loaded first
      */
-    initModulesPost() {
+    async initModulesPost() {
         this.input.init();
         this.buildPanel.init();
         this.buildingWindow.init();
@@ -164,6 +167,11 @@ class ZFactoryGame {
         this.entityTooltip.init();
         this.landingWindow.init();
         this.landingEditMode.init();
+
+        if (this.cloudManager) {
+            await this.cloudManager.init();
+        }
+
         this.buildPanel.refresh();
         // Note: resourceTransport.init() is called after entities are loaded in loadViewport()
     }
@@ -428,7 +436,7 @@ class ZFactoryGame {
 
         const viewport = this.calculateViewport();
 
-        this.tileManager.renderSkyTiles(viewport.startX, viewport.startY, viewport.width, viewport.height);
+        // Sky tiles removed - using solid background color + cloud system
         this.updateEntityVisibility();
 
         if (this.fogOfWar) {
@@ -589,6 +597,10 @@ class ZFactoryGame {
         const moved = this.camera.update();
         this.camera.apply();
 
+        if (this.cloudManager) {
+            this.cloudManager.applyParallax();
+        }
+
         if (moved) {
             this.needsReload = true;
         }
@@ -605,6 +617,11 @@ class ZFactoryGame {
 
         // Render resource sprites on conveyors/manipulators
         this.resourceRenderer.render();
+
+        // Update cloud positions
+        if (this.cloudManager) {
+            this.cloudManager.update();
+        }
 
         this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);
         this.updateFPS(now);

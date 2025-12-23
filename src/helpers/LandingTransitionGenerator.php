@@ -68,7 +68,7 @@ class LandingTransitionGenerator
         $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
 
         // Generate RIGHT transition (wavy line on right edge)
-        $rightPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_r.jpg";
+        $rightPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_r.png";
         $rightImage = $this->generateRightTransition($baseImage, $adjacentImage, $outlineColor);
         if ($rightImage && $this->saveImage($rightImage, $rightPath)) {
             $generated[] = $rightPath;
@@ -76,7 +76,7 @@ class LandingTransitionGenerator
         }
 
         // Generate TOP transition (wavy line on top edge)
-        $topPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_t.jpg";
+        $topPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_t.png";
         $topImage = $this->generateTopTransition($baseImage, $adjacentImage, $outlineColor);
         if ($topImage && $this->saveImage($topImage, $topPath)) {
             $generated[] = $topPath;
@@ -84,7 +84,7 @@ class LandingTransitionGenerator
         }
 
         // Generate CORNER transition (both right and top different)
-        $cornerPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_rt.jpg";
+        $cornerPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_rt.png";
         $cornerImage = $this->generateCornerTransition($baseImage, $adjacentImage, $adjacentImage, $outlineColor);
         if ($cornerImage && $this->saveImage($cornerImage, $cornerPath)) {
             $generated[] = $cornerPath;
@@ -118,7 +118,7 @@ class LandingTransitionGenerator
 
         $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
 
-        $topPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_t.jpg";
+        $topPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_t.png";
         $topImage = $this->generateTopTransition($baseImage, $adjacentImage, $outlineColor);
         if ($topImage && $this->saveImage($topImage, $topPath)) {
             $generated[] = $topPath;
@@ -152,7 +152,7 @@ class LandingTransitionGenerator
 
         $outlineColor = $this->getDarkenedColor($baseImage, 0.5);
 
-        $rightPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_r.jpg";
+        $rightPath = pathinfo($baseName, PATHINFO_FILENAME).'_'.pathinfo($adjacentName, PATHINFO_FILENAME)."_r.png";
         $rightImage = $this->generateRightTransition($baseImage, $adjacentImage, $outlineColor);
         if ($rightImage && $this->saveImage($rightImage, $rightPath)) {
             $generated[] = $rightPath;
@@ -366,7 +366,7 @@ class LandingTransitionGenerator
 
 
     /**
-     * Load JPG image from source directory
+     * Load PNG image from source directory
      */
     private function loadImage($filename)
     {
@@ -375,16 +375,19 @@ class LandingTransitionGenerator
             echo "Warning: Image not found: {$path}\n";
             return null;
         }
-        return imagecreatefromjpeg($path);
+        $image = imagecreatefrompng($path);
+        imagesavealpha($image, true);
+        return $image;
     }
 
     /**
-     * Save JPG image to output directory
+     * Save PNG image to output directory
      */
     private function saveImage($image, $filename)
     {
         $path = $this->outputDir . '/' . $filename;
-        return imagejpeg($image, $path, 90);
+        imagesavealpha($image, true);
+        return imagepng($image, $path, 9);
     }
 
     /**

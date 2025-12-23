@@ -27,16 +27,16 @@ CREATE TABLE IF NOT EXISTS `landing` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `landing` (`landing_id`, `is_buildable`, `name`, `image_url`) VALUES
-    (1, 'yes', 'Grass', 'grass.jpg'),
-    (2, 'yes', 'Dirt', 'dirt.jpg'),
-    (3, 'yes', 'Sand', 'sand.jpg'),
-    (4, 'no', 'Water', 'water.jpg'),
-    (5, 'no', 'Stone', 'stone.jpg'),
-    (6, 'no', 'Lava', 'lava.jpg'),
-    (7, 'yes', 'Snow', 'snow.jpg'),
-    (8, 'no', 'Swamp', 'swamp.jpg'),
-    (9, 'no', 'Sky', 'sky.jpg'),
-    (10, 'no', 'Island Edge', 'island_edge.jpg');
+    (1, 'yes', 'Grass', 'grass.png'),
+    (2, 'yes', 'Dirt', 'dirt.png'),
+    (3, 'yes', 'Sand', 'sand.png'),
+    (4, 'no', 'Water', 'water.png'),
+    (5, 'no', 'Stone', 'stone.png'),
+    (6, 'no', 'Lava', 'lava.png'),
+    (7, 'yes', 'Snow', 'snow.png'),
+    (8, 'no', 'Swamp', 'swamp.png'),
+    (9, 'no', 'Sky', 'sky.png'),
+    (10, 'no', 'Island Edge', 'island_edge.png');
 
 
 -- --------------------------------------------------------
