@@ -1,5 +1,6 @@
 # Stable Diffusion WebUI
 stable-diffusion-webui/
+ComfyUI/
 
 # Models (large files)
 model/*.safetensors

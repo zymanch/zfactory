@@ -20,6 +20,8 @@
 ```bash
 # 1. Скачайте модель Realistic Vision v6.0:
 # https://civitai.com/models/4201
+# а лучше Flux
+# https://civitai.com/models/618692?modelVersionId=691639
 # Прямая ссылка: https://civitai.com/api/download/models/245598
 
 # 2. Переместите скачанный .safetensors файл в папку:

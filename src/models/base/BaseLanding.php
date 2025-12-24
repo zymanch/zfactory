@@ -10,7 +10,7 @@ namespace models\base;
  * @property integer $landing_id
  * @property string $name
  * @property string $is_buildable
- * @property string $image_url
+ * @property string $folder
  * @property integer $variations_count
  * @property integer $ai_seed
  *
@@ -35,11 +35,11 @@ class BaseLanding extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseLandingPeer::NAME, BaseLandingPeer::IMAGE_URL], 'required'],
+            [[BaseLandingPeer::NAME, BaseLandingPeer::FOLDER], 'required'],
             [[BaseLandingPeer::IS_BUILDABLE], 'string'],
             [[BaseLandingPeer::VARIATIONS_COUNT, BaseLandingPeer::AI_SEED], 'integer'],
             [[BaseLandingPeer::NAME], 'string', 'max' => 64],
-            [[BaseLandingPeer::IMAGE_URL], 'string', 'max' => 256],
+            [[BaseLandingPeer::FOLDER], 'string', 'max' => 256],
         ];
     }
 
@@ -52,7 +52,7 @@ class BaseLanding extends \yii\db\ActiveRecord
             BaseLandingPeer::LANDING_ID => 'Landing ID',
             BaseLandingPeer::NAME => 'Name',
             BaseLandingPeer::IS_BUILDABLE => 'Is Buildable',
-            BaseLandingPeer::IMAGE_URL => 'Image Url',
+            BaseLandingPeer::FOLDER => 'Folder',
             BaseLandingPeer::VARIATIONS_COUNT => 'Variations Count',
             BaseLandingPeer::AI_SEED => 'Ai Seed',
         ];
@@ -102,7 +102,7 @@ class BaseLanding extends \yii\db\ActiveRecord
             'landing_id' => BaseLandingPeer::LANDING_ID,
             'name' => BaseLandingPeer::NAME,
             'is_buildable' => BaseLandingPeer::IS_BUILDABLE,
-            'image_url' => BaseLandingPeer::IMAGE_URL,
+            'folder' => BaseLandingPeer::FOLDER,
             'variations_count' => BaseLandingPeer::VARIATIONS_COUNT,
             'ai_seed' => BaseLandingPeer::AI_SEED,
         ];
