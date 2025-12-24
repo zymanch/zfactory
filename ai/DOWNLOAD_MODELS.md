@@ -23,8 +23,10 @@ https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensor
 
 **Сохраните в:**
 ```
-C:\Sites\zfactory.local\ai\ComfyUI\ComfyUI\models\checkpoints\
+C:\Sites\zfactory.local\ai\ComfyUI\ComfyUI\models\unet\
 ```
+
+⚠️ **ВАЖНО:** FLUX использует папку `unet/`, а не `checkpoints/`!
 
 ---
 
@@ -76,7 +78,7 @@ C:\Sites\zfactory.local\ai\ComfyUI\ComfyUI\models\vae\
 
 ```
 ai/ComfyUI/ComfyUI/models/
-├── checkpoints/
+├── unet/
 │   └── flux1-dev-fp8.safetensors           ✓ 11.9 GB
 ├── clip/
 │   ├── t5xxl_fp8_e4m3fn.safetensors        ✓ 9.8 GB

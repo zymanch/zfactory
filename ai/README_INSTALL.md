@@ -36,7 +36,7 @@ install_comfyui.bat
 
 ### 1. FLUX Model (11.9 GB)
 - Ссылка: https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors
-- Сохраните в: `ai/ComfyUI/models/checkpoints/`
+- Сохраните в: `ai/ComfyUI/models/unet/` ⚠️ НЕ checkpoints!
 
 ### 2. T5 Text Encoder (9.8 GB)
 - Ссылка: https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors
@@ -62,7 +62,7 @@ ai/
 ├── ComfyUI/
 │   ├── main.py                                    ✓
 │   ├── models/
-│   │   ├── checkpoints/
+│   │   ├── unet/
 │   │   │   └── flux1-dev-fp8.safetensors          ✓ 11.9 GB
 │   │   ├── clip/
 │   │   │   ├── t5xxl_fp8_e4m3fn.safetensors       ✓ 9.8 GB
@@ -72,7 +72,7 @@ ai/
 │   └── ...
 ├── start_comfyui.bat
 ├── install_comfyui.bat
-└── workflow_seamless_sprite.json
+└── workflow_flux_api.json
 ```
 
 ### Тест запуска:

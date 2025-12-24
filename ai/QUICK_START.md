@@ -2,10 +2,12 @@
 
 ## ✅ Подготовка (выполните один раз)
 
-### 1. Увеличьте Pagefile до 32GB
+### 1. Увеличьте Pagefile до 32GB (минимум) или 48-64GB (рекомендуется)
 ⚠️ **ОБЯЗАТЕЛЬНО** для работы с 16GB RAM!
 
 См. подробности в `FLUX_SETUP.md` → Раздел "Увеличение Pagefile"
+
+**⚠️ ПОСЛЕ ИЗМЕНЕНИЯ PAGEFILE - ОБЯЗАТЕЛЬНО ПЕРЕЗАГРУЗИТЕ КОМПЬЮТЕР!**
 
 ### 2. Установите ComfyUI
 
@@ -48,7 +50,7 @@ cd C:\Sites\zfactory.local\ai\ComfyUI
 ```
 ai/ComfyUI/
 ├── models/
-│   ├── checkpoints/
+│   ├── unet/
 │   │   └── flux1-dev-fp8.safetensors     (11.9 GB) ✓
 │   ├── clip/
 │   │   ├── t5xxl_fp8_e4m3fn.safetensors  (9.8 GB) ✓
@@ -145,9 +147,9 @@ python main.py --lowvram --normalvram
 - Закройте другие программы
 
 ### Не находит модели
-Проверьте пути:
+Проверьте пути (FLUX использует `unet/`, не `checkpoints/`):
 ```
-ai/ComfyUI/models/checkpoints/flux1-dev-fp8.safetensors
+ai/ComfyUI/models/unet/flux1-dev-fp8.safetensors
 ai/ComfyUI/models/clip/t5xxl_fp8_e4m3fn.safetensors
 ai/ComfyUI/models/clip/clip_l.safetensors
 ai/ComfyUI/models/vae/ae.safetensors
