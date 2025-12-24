@@ -36,13 +36,13 @@ class GenerateAi extends ConsoleAction
         if ($landingName === 'all') {
             $landings = Landing::find()->asArray()->all();
             foreach ($landings as $landing) {
-                $name = str_replace('.png', '', $landing['image_url']);
+                $name = $landing['folder'];
                 if (isset($prompts[$name])) {
                     $landingsToProcess[$name] = $landing;
                 }
             }
         } else {
-            $landing = Landing::find()->where(['image_url' => $landingName . '.png'])->asArray()->one();
+            $landing = Landing::find()->where(['folder' => $landingName])->asArray()->one();
             if ($landing && isset($prompts[$landingName])) {
                 $landingsToProcess[$landingName] = $landing;
             } else {
@@ -83,7 +83,7 @@ class GenerateAi extends ConsoleAction
                 $varPrompt = $prompts[$name]['positive'] . ($modifier ? ', ' . $modifier : '');
 
                 // Use img2img with low denoising to preserve seamless edges
-                $varImageData = false && $this->generateImg2ImgViaSdApi(
+                $varImageData = $this->generateImg2ImgViaSdApi(
                     $apiUrl,
                     $baseImageBase64,
                     $varPrompt,

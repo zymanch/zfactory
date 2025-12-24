@@ -29,8 +29,8 @@ abstract class EntityBehavior
     public function __construct(EntityType $entityType)
     {
         $this->entityType = $entityType;
-        $this->tileWidth = Yii::$app->params['tile_width'] ?? 32;
-        $this->tileHeight = Yii::$app->params['tile_height'] ?? 24;
+        $this->tileWidth = Yii::$app->params['tile_width'] ?? 64;
+        $this->tileHeight = Yii::$app->params['tile_height'] ?? 64;
     }
 
     /**

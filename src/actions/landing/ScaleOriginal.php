@@ -27,7 +27,7 @@ class ScaleOriginal extends ConsoleAction
         $processedCount = 0;
 
         foreach ($landings as $landing) {
-            $landingName = str_replace('.png', '', $landing['image_url']);
+            $landingName = $landing['folder'];
             $landingPath = realpath($landingDir . '/' . $landingName);
             $variationsCount = $landing['variations_count'] ?? 5;
 

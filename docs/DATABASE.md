@@ -50,7 +50,7 @@ Defines types of terrain tiles for the background layer.
 |-------------------|-----------------------|--------------------------------------|
 | landing_id        | INT UNSIGNED AUTO_INC | Primary key                          |
 | is_buildable      | ENUM('yes','no')      | Can buildings be placed here?        |
-| image_url         | VARCHAR(256)          | Path to 32x24 tile image             |
+| folder            | VARCHAR(256)          | Folder name (e.g., 'grass', 'lava')  |
 | variations_count  | INT DEFAULT 5         | Procedurally generated variations    |
 | ai_seed           | BIGINT NULL           | Stable Diffusion seed for base image |
 
@@ -115,7 +115,7 @@ Defines types of entities that can be placed on the map.
 | max_durability       | INT UNSIGNED                                                                      | Maximum durability (health)           |
 | width                | TINYINT UNSIGNED DEFAULT 1                                                        | Entity width in tiles                 |
 | height               | TINYINT UNSIGNED DEFAULT 1                                                        | Entity height in tiles                |
-| icon_url             | VARCHAR(256) NULL                                                                 | 32x24 icon for UI panels              |
+| icon_url             | VARCHAR(256) NULL                                                                 | 64x64 icon for UI panels              |
 | power                | INT UNSIGNED DEFAULT 1                                                            | Visibility radius for eye type        |
 | parent_entity_type_id| INT UNSIGNED NULL                                                                 | Parent entity for orientation variants|
 | orientation          | ENUM('none','up','right','down','left') DEFAULT 'none'                            | Entity orientation/direction          |
@@ -344,8 +344,8 @@ Links entity types to available recipes.
 
 - **Map coordinates**: tile-based (x=0 means tile 0, x=1 means tile 1)
 - **Entity coordinates**: tile-based (same as map coordinates)
-- **Tile dimensions**: 32x24 pixels
-- **Conversion (JS rendering)**: `pixel_x = tile_x * 32`, `pixel_y = tile_y * 24`
+- **Tile dimensions**: 64x64 pixels
+- **Conversion (JS rendering)**: `pixel_x = tile_x * 64`, `pixel_y = tile_y * 64`
 
 ## SQL Files
 

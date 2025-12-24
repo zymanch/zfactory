@@ -243,7 +243,7 @@ class ZFactoryGame {
     async loadLandingTextures() {
         for (const landingId in this.landingTypes) {
             const landing = this.landingTypes[landingId];
-            const url = this.assetUrl(this.config.tilesPath + 'landing/' + landing.image_url);
+            const url = this.assetUrl(this.config.tilesPath + 'landing/' + landing.folder + '.png');
             try {
                 this.textures['landing_' + landingId] = await PIXI.Assets.load(url);
             } catch (e) {
@@ -259,13 +259,12 @@ class ZFactoryGame {
         const landings = Object.values(this.landingTypes);
 
         for (const landing of landings) {
-            const imageName = landing.image_url.replace('.png', '');
-            const atlasUrl = this.assetUrl(`${this.config.tilesPath}landing/atlases/${imageName}_atlas.png`);
+            const atlasUrl = this.assetUrl(`${this.config.tilesPath}landing/atlases/${landing.folder}_atlas.png`);
 
             try {
                 const texture = await PIXI.Assets.load(atlasUrl);
-                this.tileManager.landingAtlases[imageName + '_atlas'] = texture;
-                console.log('Loaded atlas:', imageName + '_atlas');
+                this.tileManager.landingAtlases[landing.folder + '_atlas'] = texture;
+                console.log('Loaded atlas:', landing.folder + '_atlas');
             } catch (e) {
                 console.error('Failed to load atlas:', atlasUrl, e);
             }

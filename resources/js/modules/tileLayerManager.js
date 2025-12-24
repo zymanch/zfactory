@@ -145,7 +145,7 @@ export class TileLayerManager {
         const landing = this.game.gameData.landings[landingId];
         if (!landing) return null;
 
-        const atlasName = landing.image_url.replace('.png', '') + '_atlas';
+        const atlasName = landing.folder + '_atlas';
         const atlas = this.landingAtlases[atlasName];
 
         if (!atlas) {

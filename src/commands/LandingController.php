@@ -22,6 +22,7 @@ class LandingController extends \yii\console\Controller
             'generate' => \actions\landing\Generate::class,
             'scale-original' => \actions\landing\ScaleOriginal::class,
             'generate-ai' => \actions\landing\GenerateAi::class,
+            'generate-ai-flux' => \actions\landing\GenerateAiFlux::class,
             'generate-sids' => \actions\landing\GenerateSids::class,
         ];
     }

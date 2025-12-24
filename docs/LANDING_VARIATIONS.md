@@ -7,7 +7,7 @@
 ```
 public/assets/tiles/landing/
 ├── grass/
-│   ├── grass_0.png   (32x24 px)
+│   ├── grass_0.png   (64x64 px)
 │   ├── grass_1.png
 │   ├── grass_2.png
 │   ├── grass_3.png
@@ -21,7 +21,7 @@ public/assets/tiles/landing/
 ## Замена вариаций на качественные текстуры
 
 1. Откройте папку нужного лендинга: `public/assets/tiles/landing/{name}/`
-2. Замените PNG файлы на ваши качественные текстуры (32x24 px)
+2. Замените PNG файлы на ваши качественные текстуры (64x64 px)
 3. Перегенерируйте атласы: `php yii landing/generate`
 4. Скомпилируйте assets: `npm run assets`
 
@@ -148,23 +148,23 @@ $wavyX[$y] = (int)round($tileWidth - 1 - $waveAmplitude + $wave);
 **Midjourney / DALL-E / Stable Diffusion:**
 ```
 Промпт шаблон:
-"seamless tileable texture, 32x24 pixel art, [тип текстуры],
+"seamless tileable texture, 64x64 pixel art, [тип текстуры],
 top-down view, isometric perspective, game asset,
 pixel perfect, no borders, repeatable pattern"
 
 Примеры:
-- "seamless tileable texture, 32x24 pixel art, grass field,
+- "seamless tileable texture, 64x64 pixel art, grass field,
    top-down view, bright green, game asset"
-- "seamless tileable texture, 32x24 pixel art, dirt ground,
+- "seamless tileable texture, 64x64 pixel art, dirt ground,
    brown earth, top-down view, game tile"
-- "seamless tileable texture, 32x24 pixel art, sand beach,
+- "seamless tileable texture, 64x64 pixel art, sand beach,
    yellow beige, desert texture, game asset"
 ```
 
 **Важно:**
 - Указывайте "seamless" и "tileable" для бесшовности
 - "pixel art" даст пиксельную стилистику
-- "32x24" - точный размер (но AI может не соблюсти, потребуется resize)
+- "64x64" - точный размер (но AI может не соблюсти, потребуется resize)
 
 #### 2. **Pixelart редакторы (для ручной работы)**
 
@@ -202,7 +202,7 @@ pixel perfect, no borders, repeatable pattern"
 
 #### Общие правила:
 
-1. **Размер:** Строго 32×24 пикселя (без исключений!)
+1. **Размер:** Строго 64×64 пикселя (без исключений!)
 
 2. **Бесшовность (Seamless Tiling):**
    - Левый край должен совпадать с правым
@@ -215,7 +215,7 @@ pixel perfect, no borders, repeatable pattern"
    - Контрастные цвета для читаемости
 
 4. **Детализация:**
-   - На 32×24 пикселях не помещается много деталей
+   - На 64×64 пикселях не помещается много деталей
    - Используйте крупные пиксельные блоки (2×2, 3×3)
    - Меньше деталей = лучше читаемость
 
@@ -261,7 +261,7 @@ pixel perfect, no borders, repeatable pattern"
 #### Workflow для AI генерации:
 
 1. **Генерируйте в большом разрешении** (256×192 или больше)
-2. **Downscale с nearest neighbor** до 32×24
+2. **Downscale с nearest neighbor** до 64×64
 3. **Проверьте бесшовность:**
    - GIMP: Filters → Map → Tile (создает превью)
    - Photoshop: Filter → Other → Offset (сдвиг на 50%)
@@ -289,7 +289,7 @@ npm run assets
 ### Готовые ресурсы
 
 **Бесплатные Pixelart Tilesets:**
-- https://opengameart.org (тег: "terrain", "tileset", "32x24" или "isometric")
+- https://opengameart.org (тег: "terrain", "tileset", "64x64" или "isometric")
 - https://itch.io/game-assets/free/tag-tileset
 - https://kenney.nl/assets (надо будет нарезать и адаптировать)
 

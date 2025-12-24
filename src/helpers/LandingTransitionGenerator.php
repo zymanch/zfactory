@@ -63,10 +63,10 @@ class LandingTransitionGenerator
     {
         $landingId = $landing['landing_id'];
         $variationsCount = $landing['variations_count'];
-        $imageName = str_replace('.png', '', $landing['image_url']);
+        $imageName = $landing['folder'];
 
         // Загружаем базовое изображение
-        $baseImage = $this->loadImage($landing['image_url']);
+        $baseImage = $this->loadImage($landing['folder']);
 
         // Загружаем готовые вариации из папки
         $variations = $this->loadVariations($imageName, $variationsCount);
@@ -118,7 +118,7 @@ class LandingTransitionGenerator
 
         foreach ($allLandings as $l) {
             $lId = $l['landing_id'];
-            $lImageName = str_replace('.png', '', $l['image_url']);
+            $lImageName = $l['folder'];
 
             // Загружаем первую вариацию каждого лендинга
             $landingImages[$lId] = $this->loadVariationImage($lImageName, 0);
@@ -462,11 +462,10 @@ class LandingTransitionGenerator
     /**
      * Загружает изображение (первую вариацию из папки)
      */
-    private function loadImage($filename)
+    private function loadImage($folder)
     {
         // Файлы теперь находятся в папках вариаций
-        $landingName = str_replace('.png', '', $filename);
-        return $this->loadVariationImage($landingName, 0);
+        return $this->loadVariationImage($folder, 0);
     }
 
     /**

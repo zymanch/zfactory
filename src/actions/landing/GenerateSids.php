@@ -33,7 +33,7 @@ class GenerateSids extends GenerateAi
         if ($landingName === 'all') {
             $landings = Landing::find()->asArray()->all();
             foreach ($landings as $landing) {
-                $name = str_replace('.png', '', $landing['image_url']);
+                $name = $landing['folder'];
                 // Skip sky
                 if ($name === 'sky') {
                     continue;
@@ -49,7 +49,7 @@ class GenerateSids extends GenerateAi
                 return 1;
             }
 
-            $landing = Landing::find()->where(['image_url' => $landingName . '.png'])->asArray()->one();
+            $landing = Landing::find()->where(['folder' => $landingName])->asArray()->one();
             if ($landing && isset($prompts[$landingName])) {
                 $landingsToProcess[$landingName] = $landing;
             } else {

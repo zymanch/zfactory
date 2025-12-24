@@ -18,25 +18,41 @@ export class CloudManager {
     }
 
     async loadCloudTextures() {
-        for (let i = 1; i <= 12; i++) {
-            const url = this.game.assetUrl(`/assets/clouds/cloud_${i}.svg`);
-            try {
-                const texture = await PIXI.Assets.load(url);
-                this.cloudTextures.push(texture);
-            } catch (e) {
-                console.warn('Failed to load cloud:', url);
+        // Load cloud atlas (5x5 grid, 1280x720px)
+        const atlasUrl = this.game.assetUrl(`/assets/clouds/clouds_atlas.png`);
+        try {
+            const atlasTexture = await PIXI.Assets.load(atlasUrl);
+
+            // Extract 25 cloud textures from atlas (5 cols x 5 rows)
+            const cloudWidth = 256;  // 1280 / 5
+            const cloudHeight = 144; // 720 / 5
+
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const x = col * cloudWidth;
+                    const y = row * cloudHeight;
+
+                    const texture = new PIXI.Texture({
+                        source: atlasTexture.source,
+                        frame: new PIXI.Rectangle(x, y, cloudWidth, cloudHeight)
+                    });
+
+                    this.cloudTextures.push(texture);
+                }
             }
+        } catch (e) {
+            console.warn('Failed to load cloud atlas:', atlasUrl, e);
         }
     }
 
     generateClouds() {
         const mapWidth = 3200;
         const mapHeight = 1800;
-        const cloudCount = 12; // Fixed count for better distribution
+        const cloudCount = 20; // Fixed count for better distribution
 
         // Divide map into grid cells for even distribution
-        const cols = 4;
-        const rows = 3;
+        const cols = 5;
+        const rows = 4;
         const cellWidth = mapWidth / cols;
         const cellHeight = mapHeight / rows;
 

@@ -262,7 +262,7 @@ Configured in `static_config.php`:
 ### Terrain Textures
 ```javascript
 // Single file per terrain type
-const url = this.assetUrl(this.config.tilesPath + 'landing/' + landing.image_url);
+const url = this.assetUrl(this.config.tilesPath + 'landing/' + landing.folder + '.png');
 textures['landing_1'] = await PIXI.Assets.load(url);
 ```
 
@@ -286,7 +286,7 @@ Load game configuration with all reference data. Called once on init.
 {
     "result": "ok",
     "landing": {
-        "1": {"landing_id": 1, "name": "Grass", "image_url": "grass.svg", ...}
+        "1": {"landing_id": 1, "name": "Grass", "folder": "grass", ...}
     },
     "entityTypes": {
         "100": {"entity_type_id": 100, "name": "Conveyor", "extension": "svg", "max_durability": 100, "width": 1, "height": 1, "icon_url": "conveyor/icon.svg", ...}
@@ -705,7 +705,7 @@ Each landing type has 5 pre-generated variations stored in folders:
 ```
 public/assets/tiles/landing/
 ├── grass/
-│   ├── grass_0.png  (32x24 px)
+│   ├── grass_0.png  (64x64 px)
 │   ├── grass_1.png
 │   ├── grass_2.png
 │   ├── grass_3.png

@@ -15,27 +15,27 @@ ZFactory is a browser-based automation game inspired by Factorio. The game featu
 ## Tile System
 
 ### Dimensions
-- **Base tile size**: 32px (width) x 24px (height)
+- **Base tile size**: 64px x 64px
 - All game elements must be multiples of this base size
-- Entities can span multiple tiles (e.g., 64x48 = 2x2 tiles)
+- Entities can span multiple tiles (e.g., 128x128 = 2x2 tiles)
 
 ### Two-Layer Architecture
 1. **Background Layer (landing)** - terrain tiles (grass, water, stone, etc.)
-   - Always 32x24 px
+   - Always 64x64 px
    - Stored in `landing` table (types) and `map` table (instances)
 
 2. **Entity Layer (entity)** - buildings, conveyors, trees, etc.
-   - Can be larger: width = N*32px, height = M*24px
+   - Can be larger: width = N*64px, height = M*64px
    - Stored in `entity_type` table (types) and `entity` table (instances)
 
 ### Map Size
-- **Max bounds**: 100x75 tiles (3200x1800 pixels)
+- **Max bounds**: 50x28 tiles (3200x1792 pixels)
 - **Actual tiles**: ~6251 (floating island shape)
 - **Style**: Irregular edges, internal holes, sky background
 
 ### Landing Variations & Texture Atlases
 Terrain uses texture atlases with 5 procedural variations per landing type:
-- **Texture Atlases**: 352×288px (11 columns × 12 rows) containing all transition combinations
+- **Texture Atlases**: 704×768px (11 columns × 12 rows) containing all transition combinations
 - **Variations**: Each landing type has 5 variations generated via AI (img2img)
 - **Location**: `public/assets/tiles/landing/atlases/`
 - **Naming**: `{name}_atlas.png` (e.g., `grass_atlas.png`)
@@ -56,7 +56,7 @@ start.bat
 php yii landing/generate-ai all        # All landings
 php yii landing/generate-ai grass      # Single landing
 
-# 3. Scale to 32×24 and create variations
+# 3. Scale to 64×64 and create variations
 php yii landing/scale-original
 
 # 4. Generate texture atlases
@@ -189,7 +189,7 @@ public/assets/tiles/entities/{entity_name}/
 ├── blueprint.svg        # Construction outline
 ├── normal_selected.svg  # Normal + hover highlight
 ├── damaged_selected.svg # Damaged + hover highlight
-└── icon.svg             # 32x24 icon for UI panels
+└── icon.svg             # 64x64 icon for UI panels
 ```
 
 ### Sprite Selection Logic
@@ -209,7 +209,7 @@ public/assets/tiles/entities/{entity_name}/
 ### Landing (terrain types)
 - `landing_id` - primary key
 - `is_buildable` - enum('yes','no') - can buildings be placed here?
-- `image_url` - path to tile image
+- `folder` - folder name (e.g., 'grass', 'island_edge')
 
 ### LandingAdjacency (terrain transitions)
 - `adjacency_id` - primary key
@@ -230,7 +230,7 @@ public/assets/tiles/entities/{entity_name}/
 - `max_durability` - maximum health points
 - `width` - entity width in tiles (default 1)
 - `height` - entity height in tiles (default 1)
-- `icon_url` - 32x24 icon for UI panels
+- `icon_url` - 64x64 icon for UI panels
 - `power` - visibility radius for eye type entities
 
 ### Entity (entity instances)

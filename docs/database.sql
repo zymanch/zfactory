@@ -22,22 +22,22 @@ CREATE TABLE IF NOT EXISTS `landing` (
   `landing_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `is_buildable` enum('yes','no') NOT NULL DEFAULT 'yes',
   `name` varchar(256) NOT NULL,
-  `image_url` varchar(256) NOT NULL,
+  `folder` varchar(256) NOT NULL,
   `variations_count` int(11) NOT NULL DEFAULT 5,
   PRIMARY KEY (`landing_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `landing` (`landing_id`, `is_buildable`, `name`, `image_url`) VALUES
-    (1, 'yes', 'Grass', 'grass.png'),
-    (2, 'yes', 'Dirt', 'dirt.png'),
-    (3, 'yes', 'Sand', 'sand.png'),
-    (4, 'no', 'Water', 'water.png'),
-    (5, 'no', 'Stone', 'stone.png'),
-    (6, 'no', 'Lava', 'lava.png'),
-    (7, 'yes', 'Snow', 'snow.png'),
-    (8, 'no', 'Swamp', 'swamp.png'),
-    (9, 'no', 'Sky', 'sky.png'),
-    (10, 'no', 'Island Edge', 'island_edge.png');
+INSERT INTO `landing` (`landing_id`, `is_buildable`, `name`, `folder`) VALUES
+    (1, 'yes', 'Grass', 'grass'),
+    (2, 'yes', 'Dirt', 'dirt'),
+    (3, 'yes', 'Sand', 'sand'),
+    (4, 'no', 'Water', 'water'),
+    (5, 'no', 'Stone', 'stone'),
+    (6, 'no', 'Lava', 'lava'),
+    (7, 'yes', 'Snow', 'snow'),
+    (8, 'no', 'Swamp', 'swamp'),
+    (9, 'no', 'Sky', 'sky'),
+    (10, 'no', 'Island Edge', 'island_edge');
 
 
 -- --------------------------------------------------------
