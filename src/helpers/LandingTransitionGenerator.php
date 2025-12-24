@@ -14,8 +14,8 @@ class LandingTransitionGenerator
 {
     private $sourceDir;
     private $outputDir;
-    private $tileWidth = 32;
-    private $tileHeight = 24;
+    private $tileWidth;
+    private $tileHeight;
 
     /** @var int Padding between sprites in atlas (to prevent bleeding) */
     private $padding = 0;
@@ -33,6 +33,8 @@ class LandingTransitionGenerator
     {
         $this->sourceDir = $basePath . '/public/assets/tiles/landing';
         $this->outputDir = $basePath . '/public/assets/tiles/landing/atlases';
+        $this->tileWidth = Yii::$app->params['tile_width'];
+        $this->tileHeight = Yii::$app->params['tile_height'];
 
         if (!is_dir($this->outputDir)) {
             mkdir($this->outputDir, 0755, true);

@@ -69,45 +69,28 @@ class GenerateAi extends ConsoleAction
 
             // Generate base image (variation 0)
             $this->stdout("  Generating base image (0/{$variationsCount})...\n");
-            $baseImageData = $this->generateViaSdApi(
-                $apiUrl,
-                $prompts[$name]['positive'],
-                $prompts[$name]['negative'],
-                512,
-                384
-            );
-
-            if (!$baseImageData) {
-                $this->stdout("  Error: Failed to generate base image\n");
-                continue;
-            }
-
-            $baseImageBase64 = $baseImageData['image'];
-            $baseSeed = $baseImageData['seed'];
+            $originalPath = $landingPath . '/' . $name . '_0_original.png';
+            $baseImageBase64 = base64_encode(file_get_contents($originalPath));
 
             // Save variation 0
             $originalPath = $landingPath . '/' . $name . '_0_original.png';
-            file_put_contents($originalPath, base64_decode($baseImageBase64));
-            $this->stdout("  Saved variation 0 (seed: {$baseSeed})\n");
 
-            // Save seed to database
-            Landing::updateAll(['ai_seed' => $baseSeed], ['image_url' => $name . '.png']);
-
-            // Generate other variations using img2img
+            // Generate other variations using img2img with low denoising for seamless edges
             for ($i = 1; $i < $variationsCount; $i++) {
                 $this->stdout("  Generating variation {$i}/{$variationsCount}...\n");
 
                 $modifier = $variations[$i] ?? '';
                 $varPrompt = $prompts[$name]['positive'] . ($modifier ? ', ' . $modifier : '');
 
-                $varImageData = $this->generateImg2ImgViaSdApi(
+                // Use img2img with low denoising to preserve seamless edges
+                $varImageData = false && $this->generateImg2ImgViaSdApi(
                     $apiUrl,
                     $baseImageBase64,
                     $varPrompt,
                     $prompts[$name]['negative'],
                     512,
                     384,
-                    0.4  // Denoising strength (subtle changes)
+                    0.25  // Low denoising = preserve edges, subtle changes only
                 );
 
                 if (!$varImageData) {
@@ -135,55 +118,61 @@ class GenerateAi extends ConsoleAction
             }
         }
 
-        $this->stdout("\nDone! Now run:\n");
-        $this->stdout("  php yii landing/scale-original\n");
-        $this->stdout("  php yii landing/generate\n");
-        $this->stdout("  npm run assets\n");
+        $this->stdout("\nAI generation complete! Running scale-original...\n\n");
 
-        return 0;
+        // Automatically run scale-original
+        $result = $this->controller->runAction('scale-original');
+
+        if ($result === 0) {
+            $this->stdout("\nDone! Now run:\n");
+            $this->stdout("  php yii landing/generate\n");
+            $this->stdout("  npm run assets\n");
+        }
+
+        return $result;
     }
 
     /**
      * Get prompts for each landing type
      */
-    private function getPrompts()
+    protected  function getPrompts()
     {
         return [
             'grass' => [
-                'positive' => 'seamless tileable grass texture, aerial top-down view, vibrant green grass field, natural outdoor ground, photorealistic, high detail, 4k quality',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, people, animals, isometric, 3d perspective'
+                'positive' => 'seamless tileable grass texture, game sprite, 2D game asset, stylized grass, painted style, vibrant green, game terrain texture',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams'
             ],
             'dirt' => [
-                'positive' => 'seamless tileable dirt texture, aerial top-down view, brown earth ground, dry soil with small stones, natural terrain, photorealistic, high detail',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, grass, plants, isometric'
+                'positive' => 'seamless tileable dirt texture, game sprite, 2D game asset, stylized ground, painted style, brown earth, dry soil with small stones, game terrain texture',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, grass, plants, aerial view, birds eye'
             ],
             'sand' => [
-                'positive' => 'seamless tileable sand texture, aerial top-down view, golden yellow beach sand, fine grain texture, desert terrain, photorealistic, high detail',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, water, waves, isometric'
+                'positive' => 'seamless tileable sand texture, game sprite, 2D game asset, stylized ground, painted style, golden yellow beach sand, game terrain texture, warm tones',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, water, waves, aerial view, birds eye'
             ],
             'water' => [
-                'positive' => 'seamless tileable water texture, aerial top-down view, clear blue water surface, gentle ripples, lake water, photorealistic, high detail',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, foam, waves, beach, isometric'
+                'positive' => 'seamless tileable water texture, game sprite, 2D game asset, stylized water, painted style, clear blue water surface, gentle ripples, game terrain texture',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, foam, waves, beach, aerial view, birds eye'
             ],
             'stone' => [
-                'positive' => 'seamless tileable stone texture, aerial top-down view, gray rocky ground, natural stone surface with cracks, mountain terrain, photorealistic, high detail',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, moss, plants, isometric'
+                'positive' => 'seamless tileable stone texture, game sprite, 2D game asset, stylized ground, painted style, gray rocky ground, stone surface with cracks, game terrain texture',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, moss, plants, aerial view, birds eye'
             ],
             'lava' => [
-                'positive' => 'seamless tileable lava texture, aerial top-down view, molten lava surface, glowing red-orange magma, volcanic terrain with dark crust and bright cracks, photorealistic, high detail',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, water, isometric'
+                'positive' => 'seamless tileable lava texture, game sprite, 2D game asset, stylized ground, painted style, molten lava surface, glowing red-orange magma, volcanic terrain, game terrain texture',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, water, aerial view, birds eye'
             ],
             'snow' => [
-                'positive' => 'seamless tileable snow texture, aerial top-down view, white snow-covered ground, fresh winter snow, cold terrain, photorealistic, high detail',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, footprints, dirty snow, isometric'
+                'positive' => 'seamless tileable snow texture, game sprite, 2D game asset, stylized ground, painted style, white snow-covered ground, fresh winter snow, game terrain texture',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, footprints, dirty snow, aerial view, birds eye'
             ],
             'swamp' => [
-                'positive' => 'seamless tileable swamp texture, aerial top-down view, dark green murky marshland, wet muddy ground with moss, wetland terrain, photorealistic, high detail',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, clear water, isometric'
+                'positive' => 'seamless tileable swamp texture, game sprite, 2D game asset, stylized ground, painted style, dark green murky marshland, wet muddy ground with moss, game terrain texture',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, clear water, aerial view, birds eye'
             ],
             'island_edge' => [
-                'positive' => 'seamless tileable hanging stalactites, rocky earth surface at top, stone stalactites hanging downward, cave ceiling texture, side view, photorealistic, high detail, transparent background at bottom',
-                'negative' => 'borders, seams, blurry, low quality, text, watermark, isometric, top-down view, sky, clouds, ground at bottom'
+                'positive' => 'seamless tileable hanging stalactites, game sprite, 2D game asset, stylized, painted style, rocky earth surface at top, stone stalactites hanging downward, cave ceiling texture, side view, transparent background at bottom',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, top-down view, aerial view, birds eye, sky, clouds, ground at bottom'
             ]
         ];
     }
@@ -191,7 +180,7 @@ class GenerateAi extends ConsoleAction
     /**
      * Get variation prompts for img2img
      */
-    private function getVariationPrompts()
+    protected  function getVariationPrompts()
     {
         return [
             'grass' => [
@@ -264,19 +253,51 @@ class GenerateAi extends ConsoleAction
      * Generate image using Stable Diffusion API
      * Returns array ['image' => base64, 'seed' => int, 'info' => array] or null
      */
-    private function generateViaSdApi($apiUrl, $positivePrompt, $negativePrompt, $width, $height)
+    protected function generateViaSdApi($apiUrl, $positivePrompt, $negativePrompt, $width, $height)
     {
+
+
         $payload = [
             'prompt' => $positivePrompt,
             'negative_prompt' => $negativePrompt,
             'width' => $width,
             'height' => $height,
             'steps' => 25,
-            'cfg_scale' => 5,  // Lower = softer, less sharp (was 7)
+            //          cfg_scale (Classifier Free Guidance Scale)
+            //
+            //          Диапазон: 1-20, обычно 5-10
+            //
+            //          Что делает: Насколько строго следовать промпту
+            //            - Низкий (3-5): Мягкие, художественные, менее четкие результаты
+            //            - Средний (7-9): Баланс между креативностью и точностью
+            //            - Высокий (12-20): Очень четкие, но могут быть пересатурированные/резкие
+            'cfg_scale' => 3,
+            //          sampler_name (Метод генерации)
+            //
+            //          Варианты: Euler a, DPM++ 2M Karras, DDIM, и др.
+            //
+            //            Что делает: Алгоритм создания изображения
+            //            - Euler a: Быстрый, мягкий, хорош для текстур
+            //            - DPM++ 2M Karras: Более детальный, но медленнее
+            //            - DDIM: Стабильный, предсказуемый
             'sampler_name' => 'Euler a',  // Softer sampler (was DPM++ 2M Karras)
             'seed' => -1,  // Random seed
             'batch_size' => 1,
+            //          n_iter (Number of Iterations)
+            //
+            //          Что делает: Сколько изображений генерировать за раз
+            //
+            //            - n_iter: 1 = одно изображение
+            //            - n_iter: 4 = четыре изображения сразу
             'n_iter' => 1,
+            //          tiling (Бесшовность)
+            //
+            //          Что делает: Делает края изображения бесшовными
+            //
+            //            - true = края левая/правая и верх/низ совпадают (можно клонировать как плитку)
+            //          - false = обычное изображение
+            //
+            //          Сейчас у нас: true ✅ (критически важно для тайлов!)
             'tiling' => true,  // Enable seamless mode
         ];
 

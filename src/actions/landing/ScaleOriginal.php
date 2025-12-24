@@ -8,7 +8,7 @@ use Yii;
 use yii\helpers\Console;
 
 /**
- * Scale original.png files to 32x24 and create variations
+ * Scale original.png files to tile size and create variations
  * Usage: php yii landing/scale-original
  */
 class ScaleOriginal extends ConsoleAction
@@ -19,8 +19,8 @@ class ScaleOriginal extends ConsoleAction
 
         $basePath = Yii::getAlias('@app/..');
         $landingDir = $basePath . '/public/assets/tiles/landing';
-        $tileWidth = 32;
-        $tileHeight = 24;
+        $tileWidth = Yii::$app->params['tile_width'];
+        $tileHeight = Yii::$app->params['tile_height'];
 
         // Get all landings from database
         $landings = Landing::find()->asArray()->all();

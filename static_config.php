@@ -36,9 +36,9 @@ return [
     'timeZone' => 'Europe/Moscow',
     'params' => [
         'replicate_ai_api_key' => $secure['replicate']['token'],
-        'tile_width' => 32,
-        'tile_height' => 24,
-        'asset_version' => 23,
+        'tile_width' => 64,
+        'tile_height' => 64,
+        'asset_version' => 25,
         'auto_save_interval' => 60, // seconds between auto-saves
     ],
 
