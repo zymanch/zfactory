@@ -282,22 +282,43 @@ class ZFactoryGame {
     }
 
     /**
-     * Load entity textures (all states)
+     * Load entity textures from atlases (PNG only, no SVG)
      */
     async loadEntityTextures() {
+        const { tileWidth, tileHeight } = this.config;
+
         for (const typeId in this.entityTypes) {
             const entityType = this.entityTypes[typeId];
             const folder = entityType.image_url;
-            const ext = entityType.extension || 'svg';
+            const width = entityType.width || 1;
+            const height = entityType.height || 1;
 
-            for (const state of SPRITE_STATES) {
-                const url = this.assetUrl(`${this.config.tilesPath}entities/${folder}/${state}.${ext}`);
-                const textureKey = `entity_${typeId}_${state}`;
-                try {
-                    this.textures[textureKey] = await PIXI.Assets.load(url);
-                } catch (e) {
-                    console.warn('Failed to load entity texture:', url);
+            const pixelWidth = width * tileWidth;
+            const pixelHeight = height * tileHeight;
+
+            // Load atlas.png
+            const atlasUrl = this.assetUrl(`${this.config.tilesPath}entities/${folder}/atlas.png`);
+
+            try {
+                const atlasTexture = await PIXI.Assets.load(atlasUrl);
+
+                // Create textures for each state from atlas
+                // Atlas format: [normal][damaged][blueprint][normal_selected][damaged_selected]
+                let xOffset = 0;
+                for (const state of SPRITE_STATES) {
+                    const textureKey = `entity_${typeId}_${state}`;
+
+                    // Create texture from atlas region
+                    const rect = new PIXI.Rectangle(xOffset, 0, pixelWidth, pixelHeight);
+                    this.textures[textureKey] = new PIXI.Texture({
+                        source: atlasTexture.source,
+                        frame: rect
+                    });
+
+                    xOffset += pixelWidth;
                 }
+            } catch (e) {
+                console.warn('Failed to load entity atlas:', atlasUrl, e);
             }
         }
     }

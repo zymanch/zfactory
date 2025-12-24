@@ -9,19 +9,26 @@ use yii\helpers\Console;
 
 /**
  * Generate landing sprites using FLUX.1 Dev via ComfyUI
- * Usage: php yii landing/generate-ai-flux [landing_name]
+ * Usage: php yii landing/generate-ai-flux [landing_name] [testMode]
  * Examples:
- *   php yii landing/generate-ai-flux grass
+ *   php yii landing/generate-ai-flux grass --testMode=1  (quick test, only base sprite)
+ *   php yii landing/generate-ai-flux grass              (full generation with 4 variations)
  *   php yii landing/generate-ai-flux all
  */
 class GenerateAiFlux extends ConsoleAction
 {
     public $landingName = 'all';
+    public $testMode = false; // Generate only base sprite for testing
 
-    public function run($landingName = 'all')
+    public function run($landingName = 'all', $testMode = false)
     {
         $this->landingName = $landingName;
-        $this->stdout("Generating landing sprites using FLUX.1 Dev via ComfyUI...\n\n");
+        $this->testMode = $testMode;
+        $this->stdout("Generating landing sprites using FLUX.1 Dev via ComfyUI...\n");
+        if ($testMode) {
+            $this->stdout("TEST MODE: Generating only base sprite (no variations)\n");
+        }
+        $this->stdout("\n");
 
         $apiUrl = 'http://localhost:8188';
         $basePath = Yii::getAlias('@app/..');
@@ -88,11 +95,16 @@ class GenerateAiFlux extends ConsoleAction
 
             $originalPath = $landingPath . '/' . $name . '_0_original.png';
             file_put_contents($originalPath, base64_decode($imageData));
-            $this->stdout("  Saved base sprite\n", Console::FG_GREEN);
 
-            // Generate 4 variations
-            $this->stdout("  Generating variations (1-4)...\n");
-            for ($i = 1; $i <= 4; $i++) {
+            // Make seamless tileable
+            $this->makeSeamless($originalPath);
+            $this->stdout("  Saved base sprite (seamless)\n", Console::FG_GREEN);
+
+            // Generate 4 variations (skip in test mode)
+            if (!$this->testMode) {
+                $this->stdout("  Generating variations (1-4)...\n");
+            }
+            for ($i = 1; $i <= ($this->testMode ? 0 : 4); $i++) {
                 $varPrompt = $prompts[$name]['positive'];
                 if (isset($variationPrompts[$name][$i - 1])) {
                     $varPrompt .= ', ' . $variationPrompts[$name][$i - 1];
@@ -113,7 +125,10 @@ class GenerateAiFlux extends ConsoleAction
 
                 $varPath = $landingPath . '/' . $name . '_' . $i . '_original.png';
                 file_put_contents($varPath, base64_decode($varImageData));
-                $this->stdout("  Saved variation {$i}\n", Console::FG_GREEN);
+
+                // Make seamless tileable
+                $this->makeSeamless($varPath);
+                $this->stdout("  Saved variation {$i} (seamless)\n", Console::FG_GREEN);
             }
 
             // Apply transparency for island_edge
@@ -193,8 +208,10 @@ class GenerateAiFlux extends ConsoleAction
         $workflow['5']['inputs']['width'] = $width;
         $workflow['5']['inputs']['height'] = $height;
 
-        // Update seed
+        // Update generation parameters
         $workflow['6']['inputs']['seed'] = rand(0, 2147483647);
+        $workflow['6']['inputs']['steps'] = 28; // Increased for better quality
+        $workflow['6']['inputs']['cfg'] = 1.5; // Lower CFG for less saturated colors
 
         // Queue prompt
         $payload = [
@@ -292,6 +309,43 @@ class GenerateAiFlux extends ConsoleAction
     }
 
     /**
+     * Make texture seamless tileable using offset+blend method
+     */
+    private function makeSeamless($imagePath)
+    {
+        $img = imagecreatefrompng($imagePath);
+        $width = imagesx($img);
+        $height = imagesy($img);
+
+        imagesavealpha($img, true);
+
+        // Create new image
+        $seamless = imagecreatetruecolor($width, $height);
+        imagesavealpha($seamless, true);
+
+        // Offset by half width and height
+        $offsetX = (int)($width / 2);
+        $offsetY = (int)($height / 2);
+
+        // Copy in 4 quadrants (offset method)
+        imagecopy($seamless, $img, 0, 0, $offsetX, $offsetY, $width - $offsetX, $height - $offsetY);
+        imagecopy($seamless, $img, $width - $offsetX, 0, 0, $offsetY, $offsetX, $height - $offsetY);
+        imagecopy($seamless, $img, 0, $height - $offsetY, $offsetX, 0, $width - $offsetX, $offsetY);
+        imagecopy($seamless, $img, $width - $offsetX, $height - $offsetY, 0, 0, $offsetX, $offsetY);
+
+        imagedestroy($img);
+
+        // Apply Gaussian blur to hide seams (light blur to preserve details)
+        $blurRadius = 5; // Increased slightly to better hide seams
+        for ($i = 0; $i < $blurRadius; $i++) {
+            imagefilter($seamless, IMG_FILTER_GAUSSIAN_BLUR);
+        }
+
+        imagepng($seamless, $imagePath);
+        imagedestroy($seamless);
+    }
+
+    /**
      * Make bottom 50% of image transparent (for island_edge)
      */
     private function makeBottomTransparent($imagePath, $heightPercentage = 0.5)
@@ -328,8 +382,8 @@ class GenerateAiFlux extends ConsoleAction
     {
         return [
             'grass' => [
-                'positive' => 'seamless tileable texture, grass field, lush green grass, top-down view, game texture, clean design, natural lighting',
-                'negative' => 'blurry, low quality, ugly, distorted, text, watermark, 3d, perspective'
+                'positive' => 'seamless tileable texture, grass field texture from directly above, overhead shot, satellite view, flat surface, no perspective, short grass, natural green tones, varied grass pattern, game texture, top-down orthographic, photorealistic, high detail',
+                'negative' => 'solid color, flat color, uniform, neon, oversaturated, side view, perspective, 3d, depth, horizon line, camera angle, tall grass, blurry, low quality, text, watermark'
             ],
             'dirt' => [
                 'positive' => 'seamless tileable texture, brown dirt ground, earth soil, top-down view, game texture, natural, simple',
@@ -352,8 +406,8 @@ class GenerateAiFlux extends ConsoleAction
                 'negative' => 'blurry, low quality, water, ice, text, watermark'
             ],
             'snow' => [
-                'positive' => 'seamless tileable texture, snow surface, white snow, icy, top-down view, game texture, clean, soft',
-                'negative' => 'blurry, low quality, dirt, grass, text, watermark'
+                'positive' => 'seamless tileable texture, detailed snow surface, snow crystals, subtle shadows and highlights, varied white and light blue tones, natural snow texture, icy patches, top-down orthographic view, game asset, photorealistic, high detail',
+                'negative' => 'solid white, pure white, flat color, monochrome, uniform, blurry, low quality, dirt, grass, text, watermark, 3d perspective'
             ],
             'swamp' => [
                 'positive' => 'seamless tileable texture, swamp ground, murky water, mud, dark green, top-down view, game texture',

@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="24" viewBox="0 0 32 24">
-  <!-- Pine tree 1x1 tile -->
-  <rect x="14" y="18" width="4" height="6" fill="#5d4037"/>
-  <polygon points="16,2 6,18 26,18" fill="#2e7d32"/>
-  <polygon points="16,6 8,16 24,16" fill="#388e3c"/>
-  <polygon points="16,10 10,18 22,18" fill="#43a047"/>
-</svg>
