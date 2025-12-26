@@ -504,7 +504,7 @@ class LandingTransitionGenerator
     private function getLandings()
     {
         return Yii::$app->db->createCommand(
-            'SELECT landing_id, name, image_url, variations_count FROM {{%landing}} ORDER BY landing_id'
+            'SELECT landing_id, name, folder, variations_count FROM {{%landing}} ORDER BY landing_id'
         )->queryAll();
     }
 
@@ -514,7 +514,7 @@ class LandingTransitionGenerator
     private function getLandingById($id)
     {
         return Yii::$app->db->createCommand(
-            'SELECT landing_id, image_url FROM {{%landing}} WHERE landing_id = :id'
+            'SELECT landing_id, folder FROM {{%landing}} WHERE landing_id = :id'
         )->bindValue(':id', $id)->queryOne();
     }
 

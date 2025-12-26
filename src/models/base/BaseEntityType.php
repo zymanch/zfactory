@@ -19,6 +19,7 @@ namespace models\base;
  * @property integer $power
  * @property integer $parent_entity_type_id
  * @property string $orientation
+ * @property string $animation_fps
  *
  * @property \models\EntityTypeRecipe[] $entityTypeRecipes
  * @property \models\BaseRecipe[] $recipes
@@ -42,6 +43,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::IMAGE_URL], 'required'],
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID], 'integer'],
             [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION], 'string'],
+            [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
             [[BaseEntityTypePeer::IMAGE_URL, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
             [[BaseEntityTypePeer::EXTENSION], 'string', 'max' => 4],
@@ -66,6 +68,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::POWER => 'Power',
             BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID => 'Parent Entity Type ID',
             BaseEntityTypePeer::ORIENTATION => 'Orientation',
+            BaseEntityTypePeer::ANIMATION_FPS => 'Animation Fps',
         ];
     }
     /**
@@ -110,6 +113,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'power' => BaseEntityTypePeer::POWER,
             'parent_entity_type_id' => BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID,
             'orientation' => BaseEntityTypePeer::ORIENTATION,
+            'animation_fps' => BaseEntityTypePeer::ANIMATION_FPS,
         ];
     }
     

@@ -210,11 +210,11 @@ camera.y = centerY - (screenHeight / 2) / newZoom;
 ### Sprite States (5 per entity type)
 ```
 {entity_folder}/
-├── normal.svg           # state='built', durability >= 50%
-├── damaged.svg          # state='built', durability < 50%
-├── blueprint.svg        # state='blueprint'
-├── normal_selected.svg  # normal + mouse hover
-└── damaged_selected.svg # damaged + mouse hover
+├── normal.png           # state='built', durability >= 50% (also used as icon)
+├── damaged.png          # state='built', durability < 50%
+├── blueprint.png        # state='blueprint'
+├── normal_selected.png  # normal + mouse hover
+└── damaged_selected.png # damaged + mouse hover
 ```
 
 ### Selection Logic
@@ -289,7 +289,7 @@ Load game configuration with all reference data. Called once on init.
         "1": {"landing_id": 1, "name": "Grass", "folder": "grass", ...}
     },
     "entityTypes": {
-        "100": {"entity_type_id": 100, "name": "Conveyor", "extension": "svg", "max_durability": 100, "width": 1, "height": 1, "icon_url": "conveyor/icon.svg", ...}
+        "100": {"entity_type_id": 100, "name": "Conveyor", "extension": "png", "max_durability": 100, "width": 1, "height": 1, "icon_url": "conveyor/normal.png", ...}
     },
     "buildPanel": [101, null, 102, 103, null, null, null, null, null, 105],
     "config": {

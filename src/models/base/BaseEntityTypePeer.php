@@ -16,5 +16,6 @@ class BaseEntityTypePeer  {
     const POWER = "power";
     const PARENT_ENTITY_TYPE_ID = "parent_entity_type_id";
     const ORIENTATION = "orientation";
+    const ANIMATION_FPS = "animation_fps";
 
 }

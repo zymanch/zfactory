@@ -76,6 +76,11 @@ export class EntityTooltip {
         // Build tooltip content
         let html = `<div class="tooltip-header" style="font-weight:bold;margin-bottom:6px;border-bottom:1px solid #4a4a5a;padding-bottom:4px;">${entityType.name}</div>`;
 
+        // Coordinates
+        const tileX = parseInt(entity.x);
+        const tileY = parseInt(entity.y);
+        html += `<div style="font-size:10px;color:#888;margin-bottom:6px;">Position: ${tileX}, ${tileY}</div>`;
+
         // Durability bar
         const durability = parseInt(entity.durability) || 0;
         const maxDurability = parseInt(entityType.max_durability) || 100;

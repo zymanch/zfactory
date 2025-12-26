@@ -85,49 +85,50 @@ CREATE TABLE IF NOT EXISTS `entity_type` (
   `icon_url` varchar(256) DEFAULT NULL,
   `power` int(10) unsigned NOT NULL DEFAULT 1,
   `parent_entity_type_id` int(10) unsigned DEFAULT NULL,
-  `orientation` enum('none','up','right','down','left') NOT NULL DEFAULT 'none'
+  `orientation` enum('none','up','right','down','left') NOT NULL DEFAULT 'none',
+  `animation_fps` decimal(5,2) DEFAULT NULL COMMENT 'Animation speed in frames per second. NULL = no animation'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`) VALUES
+INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`, `animation_fps`) VALUES
     -- Trees
-    (1, 'tree', 'Pine Tree', 'tree_pine', 'svg', 50, 1, 1, NULL, 1, NULL, 'none'),
-    (2, 'tree', 'Oak Tree', 'tree_oak', 'svg', 60, 1, 1, NULL, 1, NULL, 'none'),
-    (3, 'tree', 'Dead Tree', 'tree_dead', 'svg', 20, 1, 1, NULL, 1, NULL, 'none'),
+    (1, 'tree', 'Pine Tree', 'tree_pine', 'png', 50, 1, 1, NULL, 1, NULL, 'none', NULL),
+    (2, 'tree', 'Oak Tree', 'tree_oak', 'png', 60, 1, 1, NULL, 1, NULL, 'none', NULL),
+    (3, 'tree', 'Dead Tree', 'tree_dead', 'png', 20, 1, 1, NULL, 1, NULL, 'none', NULL),
     -- Relief
-    (10, 'relief', 'Small Rock', 'rock_small', 'svg', 100, 1, 1, NULL, 1, NULL, 'none'),
-    (11, 'relief', 'Medium Rock', 'rock_medium', 'svg', 200, 1, 1, NULL, 1, NULL, 'none'),
-    (12, 'relief', 'Large Rock', 'rock_large', 'svg', 300, 1, 1, NULL, 1, NULL, 'none'),
-    -- Transporters (with orientation variants) - power=100 means 1 tile per 60 ticks (1 second)
-    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'svg', 100, 1, 1, 'conveyor/icon.svg', 100, NULL, 'right'),
-    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'svg', 100, 1, 1, 'conveyor_up/icon.svg', 100, 100, 'up'),
-    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'svg', 100, 1, 1, 'conveyor_down/icon.svg', 100, 100, 'down'),
-    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'svg', 100, 1, 1, 'conveyor_left/icon.svg', 100, 100, 'left'),
+    (10, 'relief', 'Small Rock', 'rock_small', 'png', 100, 1, 1, NULL, 1, NULL, 'none', NULL),
+    (11, 'relief', 'Medium Rock', 'rock_medium', 'png', 200, 1, 1, NULL, 1, NULL, 'none', NULL),
+    (12, 'relief', 'Large Rock', 'rock_large', 'png', 300, 1, 1, NULL, 1, NULL, 'none', NULL),
+    -- Transporters (with orientation variants) - animation: 4 FPS = 8 frames / 2 sec (resource travel time per tile)
+    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'png', 100, 1, 1, 'conveyor/normal.png', 100, NULL, 'right', 4.00),
+    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'png', 100, 1, 1, 'conveyor_up/normal.png', 100, 100, 'up', 4.00),
+    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'png', 100, 1, 1, 'conveyor_down/normal.png', 100, 100, 'down', 4.00),
+    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'png', 100, 1, 1, 'conveyor_left/normal.png', 100, 100, 'left', 4.00),
     -- Buildings - power=100 means baseline crafting speed
-    (101, 'building', 'Small Furnace', 'furnace', 'svg', 200, 2, 2, 'furnace/icon.svg', 100, NULL, 'none'),
-    (103, 'building', 'Assembly Machine', 'assembler', 'svg', 400, 3, 3, 'assembler/icon.svg', 100, NULL, 'none'),
-    (104, 'storage', 'Storage Chest', 'chest', 'svg', 150, 1, 1, 'chest/icon.svg', 1, NULL, 'none'),
-    (105, 'building', 'Power Pole', 'power_pole', 'svg', 100, 1, 1, 'power_pole/icon.svg', 1, NULL, 'none'),
-    (106, 'building', 'Steam Engine', 'steam_engine', 'svg', 350, 2, 3, 'steam_engine/icon.svg', 1, NULL, 'none'),
-    (107, 'building', 'Boiler', 'boiler', 'svg', 250, 2, 2, 'boiler/icon.svg', 100, NULL, 'none'),
+    (101, 'building', 'Small Furnace', 'furnace', 'png', 200, 2, 2, 'furnace/normal.png', 100, NULL, 'none', NULL),
+    (103, 'building', 'Assembly Machine', 'assembler', 'png', 400, 3, 3, 'assembler/normal.png', 100, NULL, 'none', NULL),
+    (104, 'storage', 'Storage Chest', 'chest', 'png', 150, 1, 1, 'chest/normal.png', 1, NULL, 'none', NULL),
+    (105, 'building', 'Power Pole', 'power_pole', 'png', 100, 1, 1, 'power_pole/normal.png', 1, NULL, 'none', NULL),
+    (106, 'building', 'Steam Engine', 'steam_engine', 'png', 350, 2, 3, 'steam_engine/normal.png', 1, NULL, 'none', NULL),
+    (107, 'building', 'Boiler', 'boiler', 'png', 250, 2, 2, 'boiler/normal.png', 100, NULL, 'none', NULL),
     -- Mining (requires resource entity to place on) - power=100 means baseline mining speed
-    (102, 'mining', 'Mining Drill', 'drill', 'svg', 300, 1, 1, 'drill/icon.svg', 100, NULL, 'none'),
-    (108, 'mining', 'Fast Mining Drill', 'drill_fast', 'svg', 250, 1, 1, 'drill_fast/icon.svg', 150, NULL, 'none'),
+    (102, 'mining', 'Mining Drill', 'drill', 'png', 300, 1, 1, 'drill/normal.png', 100, NULL, 'none', NULL),
+    (108, 'mining', 'Fast Mining Drill', 'drill_fast', 'png', 250, 1, 1, 'drill_fast/normal.png', 150, NULL, 'none', NULL),
     -- Manipulators (with orientation variants) - power=100 means full swing in 30 ticks
-    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'svg', 80, 1, 1, 'manipulator_short/icon.svg', 100, NULL, 'right'),
-    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'svg', 80, 1, 1, 'manipulator_short_up/icon.svg', 100, 200, 'up'),
-    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'svg', 80, 1, 1, 'manipulator_short_down/icon.svg', 100, 200, 'down'),
-    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'svg', 80, 1, 1, 'manipulator_short_left/icon.svg', 100, 200, 'left'),
-    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'svg', 80, 1, 1, 'manipulator_long/icon.svg', 100, NULL, 'right'),
-    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'svg', 80, 1, 1, 'manipulator_long_up/icon.svg', 100, 201, 'up'),
-    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'svg', 80, 1, 1, 'manipulator_long_down/icon.svg', 100, 201, 'down'),
-    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'svg', 80, 1, 1, 'manipulator_long_left/icon.svg', 100, 201, 'left'),
+    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'png', 80, 1, 1, 'manipulator_short/normal.png', 100, NULL, 'right', NULL),
+    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'png', 80, 1, 1, 'manipulator_short_up/normal.png', 100, 200, 'up', NULL),
+    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'png', 80, 1, 1, 'manipulator_short_down/normal.png', 100, 200, 'down', NULL),
+    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'png', 80, 1, 1, 'manipulator_short_left/normal.png', 100, 200, 'left', NULL),
+    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'png', 80, 1, 1, 'manipulator_long/normal.png', 100, NULL, 'right', NULL),
+    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'png', 80, 1, 1, 'manipulator_long_up/normal.png', 100, 201, 'up', NULL),
+    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'png', 80, 1, 1, 'manipulator_long_down/normal.png', 100, 201, 'down', NULL),
+    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'png', 80, 1, 1, 'manipulator_long_left/normal.png', 100, 201, 'left', NULL),
     -- Resources
-    (300, 'resource', 'Iron Ore', 'ore_iron', 'svg', 9999, 1, 1, 'ore_iron/icon.svg', 1, NULL, 'none'),
-    (301, 'resource', 'Copper Ore', 'ore_copper', 'svg', 9999, 1, 1, 'ore_copper/icon.svg', 1, NULL, 'none'),
+    (300, 'resource', 'Iron Ore', 'ore_iron', 'png', 9999, 1, 1, 'ore_iron/normal.png', 1, NULL, 'none', NULL),
+    (301, 'resource', 'Copper Ore', 'ore_copper', 'png', 9999, 1, 1, 'ore_copper/normal.png', 1, NULL, 'none', NULL),
     -- Crystal Towers (eye type - visibility radius = power)
-    (400, 'eye', 'Small Crystal Tower', 'tower_crystal_small', 'svg', 100, 1, 1, 'tower_crystal_small/icon.svg', 7, NULL, 'none'),
-    (401, 'eye', 'Medium Crystal Tower', 'tower_crystal_medium', 'svg', 200, 1, 2, 'tower_crystal_medium/icon.svg', 15, NULL, 'none'),
-    (402, 'eye', 'Large Crystal Tower', 'tower_crystal_large', 'svg', 300, 2, 3, 'tower_crystal_large/icon.svg', 30, NULL, 'none');
+    (400, 'eye', 'Small Crystal Tower', 'tower_crystal_small', 'png', 100, 1, 1, 'tower_crystal_small/normal.png', 7, NULL, 'none', NULL),
+    (401, 'eye', 'Medium Crystal Tower', 'tower_crystal_medium', 'png', 200, 1, 2, 'tower_crystal_medium/normal.png', 15, NULL, 'none', NULL),
+    (402, 'eye', 'Large Crystal Tower', 'tower_crystal_large', 'png', 300, 2, 3, 'tower_crystal_large/normal.png', 30, NULL, 'none', NULL);
 
 -- --------------------------------------------------------
 -- Table structure: entity (entity instances)

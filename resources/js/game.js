@@ -13,6 +13,7 @@ import { ResourceRenderer } from './modules/resourceTransport/ResourceRenderer.j
 import { LandingWindow } from './modules/landingWindow.js';
 import { LandingEditMode } from './modules/landingEditMode.js';
 import { CloudManager } from './modules/cloudManager.js';
+import { ConveyorManager } from './modules/conveyorManager.js';
 import { SPRITE_STATES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 
 /**
@@ -63,6 +64,7 @@ class ZFactoryGame {
         this.landingWindow = null;
         this.landingEditMode = null;
         this.cloudManager = null;
+        this.conveyorManager = null;
     }
 
     /**
@@ -98,6 +100,7 @@ class ZFactoryGame {
         this.landingWindow = new LandingWindow(this);
         this.landingEditMode = new LandingEditMode(this);
         this.cloudManager = new CloudManager(this);
+        this.conveyorManager = new ConveyorManager(this);
     }
 
     /**
@@ -235,6 +238,7 @@ class ZFactoryGame {
         await this.loadLandingTextures();
         await this.loadTransitionTextures();
         await this.loadEntityTextures();
+        await this.conveyorManager.loadAtlases();
     }
 
     /**
@@ -428,13 +432,27 @@ class ZFactoryGame {
             if (this.loadedEntities.has(key)) continue;
 
             const isVisible = !this.fogOfWar || this.fogOfWar.isEntityVisible(entity);
-            const textureKey = this.getEntityTextureKey(entity, false);
-            const texture = this.textures[textureKey];
+            const entityType = this.entityTypes[entity.entity_type_id];
 
-            if (texture) {
-                const sprite = this.createEntitySprite(entity, texture, isVisible);
-                this.entityLayer.addChild(sprite);
-                this.loadedEntities.set(key, sprite);
+            // Handle conveyors separately
+            if (entityType && entityType.type === 'transporter') {
+                const texture = this.conveyorManager.getConveyorTexture(entity, false, 0);
+                if (texture) {
+                    const sprite = this.createEntitySprite(entity, texture, isVisible);
+                    this.entityLayer.addChild(sprite);
+                    this.loadedEntities.set(key, sprite);
+                    this.conveyorManager.registerConveyor(entity.entity_id, sprite);
+                }
+            } else {
+                // Handle other entities normally
+                const textureKey = this.getEntityTextureKey(entity, false);
+                const texture = this.textures[textureKey];
+
+                if (texture) {
+                    const sprite = this.createEntitySprite(entity, texture, isVisible);
+                    this.entityLayer.addChild(sprite);
+                    this.loadedEntities.set(key, sprite);
+                }
             }
         }
 
@@ -497,11 +515,19 @@ class ZFactoryGame {
         if (!entity || entity.state === 'blueprint') return;
 
         this.hoveredEntity = isHovering ? key : null;
-        const textureKey = this.getEntityTextureKey(entity, isHovering);
-        const texture = this.textures[textureKey];
+        const entityType = this.entityTypes[entity.entity_type_id];
 
-        if (texture) {
-            sprite.texture = texture;
+        // Handle conveyors separately
+        if (entityType && entityType.type === 'transporter') {
+            this.conveyorManager.updateConveyorTexture(entity.entity_id, isHovering);
+        } else {
+            // Handle other entities normally
+            const textureKey = this.getEntityTextureKey(entity, isHovering);
+            const texture = this.textures[textureKey];
+
+            if (texture) {
+                sprite.texture = texture;
+            }
         }
 
         // Show/hide tooltip
@@ -554,6 +580,11 @@ class ZFactoryGame {
         // Update cloud positions
         if (this.cloudManager) {
             this.cloudManager.update();
+        }
+
+        // Update conveyor animations
+        if (this.conveyorManager) {
+            this.conveyorManager.update();
         }
 
         this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);

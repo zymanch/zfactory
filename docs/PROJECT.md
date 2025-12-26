@@ -73,9 +73,9 @@ zfactory.local/
 │   └── sql/               # SQL scripts for data
 ├── public/                 # Web root
 │   ├── assets/tiles/      # Game sprites
-│   │   ├── landing/       # Terrain tiles (*.svg)
+│   │   ├── landing/       # Terrain tiles (texture atlases)
 │   │   └── entities/      # Entity sprite folders
-│   │       ├── conveyor/  # 5 state files each
+│   │       ├── conveyor/  # 5 state PNG files each
 │   │       ├── drill/
 │   │       └── ...
 │   ├── css/               # Compiled CSS
@@ -180,27 +180,28 @@ public function actions()
 
 ## Entity Sprite System
 
-Each entity type has a folder with 5 sprite states + 1 icon:
+Each entity type has a folder with 5 sprite state PNG files:
 
 ```
 public/assets/tiles/entities/{entity_name}/
-├── normal.svg           # Default built state
-├── damaged.svg          # Durability < 50% max
-├── blueprint.svg        # Construction outline
-├── normal_selected.svg  # Normal + hover highlight
-├── damaged_selected.svg # Damaged + hover highlight
-└── icon.svg             # 64x64 icon for UI panels
+├── normal.png           # Default built state (also used as icon)
+├── damaged.png          # Durability < 50% max
+├── blueprint.png        # Construction outline
+├── normal_selected.png  # Normal + hover highlight
+└── damaged_selected.png # Damaged + hover highlight
 ```
+
+**Note**: The `normal.png` file serves dual purpose - both as the default sprite and as the 64×64 icon for UI panels.
 
 ### Sprite Selection Logic
 
 | state     | durability   | hover | Sprite Used         |
 |-----------|--------------|-------|---------------------|
-| blueprint | —            | —     | blueprint.svg       |
-| built     | ≥ 50% max    | no    | normal.svg          |
-| built     | ≥ 50% max    | yes   | normal_selected.svg |
-| built     | < 50% max    | no    | damaged.svg         |
-| built     | < 50% max    | yes   | damaged_selected.svg|
+| blueprint | —            | —     | blueprint.png       |
+| built     | ≥ 50% max    | no    | normal.png          |
+| built     | ≥ 50% max    | yes   | normal_selected.png |
+| built     | < 50% max    | no    | damaged.png         |
+| built     | < 50% max    | yes   | damaged_selected.png|
 
 **Note:** Blueprint state does not respond to hover.
 
@@ -227,10 +228,11 @@ public/assets/tiles/entities/{entity_name}/
 - `type` - enum('building','transporter','manipulator','tree','relief','resource','eye','mining')
 - `name` - display name
 - `image_url` - **folder name** for sprite states
+- `extension` - 'png' (file extension for sprites)
 - `max_durability` - maximum health points
 - `width` - entity width in tiles (default 1)
 - `height` - entity height in tiles (default 1)
-- `icon_url` - 64x64 icon for UI panels
+- `icon_url` - path to icon (typically '{folder}/normal.png')
 - `power` - visibility radius for eye type entities
 
 ### Entity (entity instances)
