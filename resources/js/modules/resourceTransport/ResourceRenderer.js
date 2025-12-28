@@ -95,7 +95,7 @@ export class ResourceRenderer {
         if (!sprite) {
             sprite = new PIXI.Sprite(texture);
             sprite.anchor.set(0.5, 0.5);
-            sprite.scale.set(0.5, 0.5);  // Scale down resource icon
+            sprite.scale.set(1, 1);  // Full size resource icon
             this.container.addChild(sprite);
             this.resourceSprites.set(entityId, sprite);
         } else if (sprite.texture !== texture) {
@@ -153,7 +153,7 @@ export class ResourceRenderer {
         if (!sprite) {
             sprite = new PIXI.Sprite(texture);
             sprite.anchor.set(0.5, 0.5);
-            sprite.scale.set(0.5, 0.5);  // Scale down resource icon
+            sprite.scale.set(1, 1);  // Full size resource icon
             this.container.addChild(sprite);
             this.resourceSprites.set(entityId, sprite);
         } else if (sprite.texture !== texture) {

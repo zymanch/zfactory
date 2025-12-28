@@ -15,7 +15,6 @@ namespace models\base;
  *
  * @property \models\EntityResource[] $entityResources
  * @property \models\BaseEntity[] $entities
- * @property \models\EntityTransport[] $entityTransports
  * @property \models\Recipe[] $recipes
  * @property \models\Recipe[] $recipes0
  * @property \models\Recipe[] $recipes1
@@ -69,12 +68,6 @@ class BaseResource extends \yii\db\ActiveRecord
      */
     public function getEntities() {
         return $this->hasMany(BaseEntity::className(), [BaseEntityPeer::ENTITY_ID => BaseEntityResourcePeer::ENTITY_ID])->viaTable('entity_resource', [BaseEntityResourcePeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]);
-    }
-        /**
-     * @return \models\EntityTransportQuery
-     */
-    public function getEntityTransports() {
-        return $this->hasMany(\models\EntityTransport::className(), [BaseEntityTransportPeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID])->inverseOf('resource');
     }
         /**
      * @return \models\RecipeQuery
@@ -136,7 +129,6 @@ class BaseResource extends \yii\db\ActiveRecord
         return [
             'entityResources' => 'entityResources',
             'entities' => 'entities',
-            'entityTransports' => 'entityTransports',
             'recipes' => 'recipes',
             'recipes0' => 'recipes0',
             'recipes1' => 'recipes1',

@@ -13,11 +13,11 @@ namespace models\base;
  * @property integer $durability
  * @property integer $x
  * @property integer $y
+ * @property integer $construction_progress
  *
  * @property \models\EntityCrafting $entityCrafting
  * @property \models\EntityResource[] $entityResources
  * @property \models\BaseResource[] $resources
- * @property \models\EntityTransport $entityTransport
  */
 class BaseEntity extends \yii\db\ActiveRecord
 {
@@ -36,7 +36,7 @@ class BaseEntity extends \yii\db\ActiveRecord
     {
         return [
             [[BaseEntityPeer::ENTITY_TYPE_ID, BaseEntityPeer::X, BaseEntityPeer::Y], 'required'],
-            [[BaseEntityPeer::ENTITY_TYPE_ID, BaseEntityPeer::DURABILITY, BaseEntityPeer::X, BaseEntityPeer::Y], 'integer'],
+            [[BaseEntityPeer::ENTITY_TYPE_ID, BaseEntityPeer::DURABILITY, BaseEntityPeer::X, BaseEntityPeer::Y, BaseEntityPeer::CONSTRUCTION_PROGRESS], 'integer'],
             [[BaseEntityPeer::STATE], 'string'],
         ];
     }
@@ -53,6 +53,7 @@ class BaseEntity extends \yii\db\ActiveRecord
             BaseEntityPeer::DURABILITY => 'Durability',
             BaseEntityPeer::X => 'X',
             BaseEntityPeer::Y => 'Y',
+            BaseEntityPeer::CONSTRUCTION_PROGRESS => 'Construction Progress',
         ];
     }
     /**
@@ -72,12 +73,6 @@ class BaseEntity extends \yii\db\ActiveRecord
      */
     public function getResources() {
         return $this->hasMany(BaseResource::className(), [BaseResourcePeer::RESOURCE_ID => BaseEntityResourcePeer::RESOURCE_ID])->viaTable('entity_resource', [BaseEntityResourcePeer::ENTITY_ID => BaseEntityPeer::ENTITY_ID]);
-    }
-        /**
-     * @return \models\EntityTransportQuery
-     */
-    public function getEntityTransport() {
-        return $this->hasOne(\models\EntityTransport::className(), [BaseEntityTransportPeer::ENTITY_ID => BaseEntityPeer::ENTITY_ID])->inverseOf('entity');
     }
     
     /**
@@ -103,6 +98,7 @@ class BaseEntity extends \yii\db\ActiveRecord
             'durability' => BaseEntityPeer::DURABILITY,
             'x' => BaseEntityPeer::X,
             'y' => BaseEntityPeer::Y,
+            'construction_progress' => BaseEntityPeer::CONSTRUCTION_PROGRESS,
         ];
     }
     
@@ -117,7 +113,6 @@ class BaseEntity extends \yii\db\ActiveRecord
             'entityCrafting' => 'entityCrafting',
             'entityResources' => 'entityResources',
             'resources' => 'resources',
-            'entityTransport' => 'entityTransport',
         ];
         */
     }

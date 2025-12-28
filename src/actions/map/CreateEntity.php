@@ -65,6 +65,7 @@ class CreateEntity extends JsonAction
             $entity->y = $tileY;
             $entity->state = $state;
             $entity->durability = $state === 'built' ? $entityType->max_durability : 0;
+            $entity->construction_progress = $state === 'built' ? 100 : 0;
 
             if (!$entity->save()) {
                 throw new \Exception('Failed to save entity: ' . json_encode($entity->errors));

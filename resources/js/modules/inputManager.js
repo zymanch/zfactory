@@ -1,4 +1,5 @@
 import { screenToWorld, worldToTile } from './utils.js';
+import { GameMode } from './modes/gameModeManager.js';
 
 /**
  * InputManager - handles keyboard and mouse input
@@ -51,36 +52,70 @@ export class InputManager {
      * Handle hotkey actions
      */
     handleHotkeys(key) {
-        // Number keys 1-0 for build panel slots
+        const mode = this.game.gameModeManager;
+
+        // Number keys 1-0 for build panel slots (only in NORMAL or BUILD mode)
         if (/^[0-9]$/.test(key)) {
-            const slot = key === '0' ? 9 : parseInt(key) - 1;
-            this.game.buildPanel?.activateSlot(slot);
+            if (mode.isMode(GameMode.NORMAL) || mode.isMode(GameMode.BUILD)) {
+                const slot = key === '0' ? 9 : parseInt(key) - 1;
+                this.game.buildPanel?.activateSlot(slot);
+            }
         }
 
-        // B key - toggle building window (EN/RU)
+        // B/И key - toggle building window
         if (key === 'b' || key === 'и') {
-            this.game.buildingWindow?.toggle();
+            if (mode.isMode(GameMode.ENTITY_SELECTION_WINDOW)) {
+                // Close window, return to normal mode
+                mode.returnToNormalMode();
+            } else if (mode.isMode(GameMode.NORMAL)) {
+                // Open window
+                mode.switchMode(GameMode.ENTITY_SELECTION_WINDOW);
+            }
         }
 
-        // L key - toggle landing window (EN/RU)
+        // L/Д key - toggle landing window (admin tool)
         if (key === 'l' || key === 'д') {
-            this.game.landingWindow?.toggle();
+            if (mode.isMode(GameMode.LANDING_SELECTION_WINDOW)) {
+                // Close window, return to normal mode
+                mode.returnToNormalMode();
+            } else if (mode.isMode(GameMode.NORMAL)) {
+                // Open window
+                mode.switchMode(GameMode.LANDING_SELECTION_WINDOW);
+            }
+        }
+
+        // Delete key - toggle DELETE mode
+        if (key === 'delete') {
+            if (mode.isMode(GameMode.DELETE)) {
+                // Exit delete mode, return to normal
+                mode.returnToNormalMode();
+            } else if (mode.isMode(GameMode.NORMAL)) {
+                // Enter delete mode
+                mode.switchMode(GameMode.DELETE);
+            }
         }
 
         // Escape - close windows / cancel modes
         if (key === 'escape') {
-            if (this.game.landingWindow?.isOpen) {
-                this.game.landingWindow.close();
-            } else if (this.game.landingEditMode?.isActive) {
-                this.game.landingEditMode.deactivate();
-            } else if (this.game.buildingWindow?.isOpen) {
-                this.game.buildingWindow.close();
-            } else if (this.game.buildMode?.isActive) {
-                this.game.buildMode.deactivate();
+            // Return to normal mode or previous mode
+            if (!mode.isMode(GameMode.NORMAL)) {
+                if (mode.isMode(GameMode.ENTITY_INFO)) {
+                    // Close entity info, return to normal
+                    mode.returnToNormalMode();
+                } else if (mode.isMode(GameMode.BUILD)) {
+                    // Cancel build mode, return to normal
+                    mode.returnToNormalMode();
+                } else if (mode.isMode(GameMode.DELETE)) {
+                    // Cancel delete mode, return to normal
+                    mode.returnToNormalMode();
+                } else {
+                    // For windows and other modes, return to previous mode or normal
+                    mode.returnToPreviousMode();
+                }
             }
         }
 
-        // F key - toggle fog of war (EN/RU)
+        // F key - toggle fog of war (EN/RU) - works in any mode
         if (key === 'f' || key === 'а') {
             this.game.fogOfWar?.toggle();
         }

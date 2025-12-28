@@ -25,8 +25,6 @@ use models\ResourceQuery;
   * @method ResourceQuery joinWithEntityResources($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withEntities($params = [])
   * @method ResourceQuery joinWithEntities($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
-  * @method ResourceQuery withEntityTransports($params = [])
-  * @method ResourceQuery joinWithEntityTransports($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withRecipes($params = [])
   * @method ResourceQuery joinWithRecipes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withRecipes0($params = [])

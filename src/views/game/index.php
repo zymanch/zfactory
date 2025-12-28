@@ -27,6 +27,7 @@ $this->registerJsFile('/js/game.js', ['position' => \yii\web\View::POS_END]);
 <div id="loading">Loading ZFactory...</div>
 
 <div id="debug-info">
+    Mode: <span id="debug-mode">Normal</span><br>
     Camera: <span id="debug-camera">0, 0</span><br>
     Tiles: <span id="debug-tiles">0</span><br>
     Entities: <span id="debug-entities">0</span><br>

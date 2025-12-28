@@ -13,13 +13,28 @@ class EntityAtlasGenerator
     private $tileWidth = 64;
     private $tileHeight = 64;
 
-    // States to include in atlas
+    // States to include in atlas (row 1: 7 sprites)
     private $states = [
         'normal',
         'damaged',
         'blueprint',
         'normal_selected',
-        'damaged_selected'
+        'damaged_selected',
+        'deleting',
+        'crafting'
+    ];
+
+    // Construction frames (row 2: 9 frames)
+    private $constructionFrames = [
+        'construction_10',
+        'construction_20',
+        'construction_30',
+        'construction_40',
+        'construction_50',
+        'construction_60',
+        'construction_70',
+        'construction_80',
+        'construction_90'
     ];
 
     public function __construct($basePath)
@@ -58,9 +73,12 @@ class EntityAtlasGenerator
         $pixelWidth = $widthTiles * $this->tileWidth;
         $pixelHeight = $heightTiles * $this->tileHeight;
 
-        // Atlas will have all states in one row: [normal][damaged][blueprint][normal_selected][damaged_selected]
-        $atlasWidth = $pixelWidth * count($this->states);
-        $atlasHeight = $pixelHeight;
+        // Atlas will have 2 rows:
+        // Row 1: 7 sprites (normal, damaged, blueprint, normal_selected, damaged_selected, deleting, crafting)
+        // Row 2: 9 construction frames (construction_10 ... construction_90)
+        $maxSpritesPerRow = max(count($this->states), count($this->constructionFrames));
+        $atlasWidth = $pixelWidth * $maxSpritesPerRow;
+        $atlasHeight = $pixelHeight * 2; // 2 rows
 
         // Create atlas image
         $atlas = imagecreatetruecolor($atlasWidth, $atlasHeight);
@@ -68,7 +86,7 @@ class EntityAtlasGenerator
         $transparent = imagecolorallocatealpha($atlas, 0, 0, 0, 127);
         imagefill($atlas, 0, 0, $transparent);
 
-        // Place each state sprite in atlas
+        // Row 1: Place each state sprite
         $xOffset = 0;
         foreach ($this->states as $state) {
             $spritePath = $entityPath . '/' . $state . '.png';
@@ -82,6 +100,26 @@ class EntityAtlasGenerator
             } else {
                 // If state doesn't exist, fill with transparent
                 echo "Warning: Missing {$state}.png for {$folder}\n";
+            }
+
+            $xOffset += $pixelWidth;
+        }
+
+        // Row 2: Place construction frames
+        $xOffset = 0;
+        $yOffset = $pixelHeight; // Second row
+        foreach ($this->constructionFrames as $frame) {
+            $framePath = $entityPath . '/' . $frame . '.png';
+
+            if (file_exists($framePath)) {
+                $sprite = imagecreatefrompng($framePath);
+                imagesavealpha($sprite, true);
+
+                imagecopy($atlas, $sprite, $xOffset, $yOffset, 0, 0, $pixelWidth, $pixelHeight);
+                imagedestroy($sprite);
+            } else {
+                // If frame doesn't exist, fill with transparent
+                echo "Warning: Missing {$frame}.png for {$folder}\n";
             }
 
             $xOffset += $pixelWidth;

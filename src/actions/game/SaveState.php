@@ -5,7 +5,6 @@ namespace actions\game;
 use actions\JsonAction;
 use models\EntityResource;
 use models\EntityCrafting;
-use models\EntityTransport;
 use Yii;
 use yii\db\Expression;
 
@@ -54,6 +53,7 @@ class SaveState extends JsonAction
 
     /**
      * Save entity resources (buildings, storage)
+     * Only for entities without transport state (position IS NULL)
      */
     private function saveEntityResources(array $resources)
     {
@@ -62,8 +62,12 @@ class SaveState extends JsonAction
         // Group by entity_id for efficient processing
         $entityIds = array_unique(array_column($resources, 'entity_id'));
 
-        // Delete existing resources for these entities
-        EntityResource::deleteAll(['entity_id' => $entityIds]);
+        // Delete existing non-transport resources for these entities
+        EntityResource::deleteAll([
+            'and',
+            ['entity_id' => $entityIds],
+            ['position' => null]
+        ]);
 
         // Insert new resources
         $rows = [];
@@ -72,7 +76,11 @@ class SaveState extends JsonAction
                 $rows[] = [
                     $r['entity_id'],
                     $r['resource_id'],
-                    $r['amount']
+                    $r['amount'],
+                    null,  // position
+                    null,  // lateral_offset
+                    null,  // arm_position
+                    null   // status
                 ];
             }
         }
@@ -80,7 +88,7 @@ class SaveState extends JsonAction
         if (!empty($rows)) {
             Yii::$app->db->createCommand()->batchInsert(
                 EntityResource::tableName(),
-                ['entity_id', 'resource_id', 'amount'],
+                ['entity_id', 'resource_id', 'amount', 'position', 'lateral_offset', 'arm_position', 'status'],
                 $rows
             )->execute();
         }
@@ -121,6 +129,7 @@ class SaveState extends JsonAction
 
     /**
      * Save transport states (conveyors and manipulators)
+     * Stored in entity_resource with transport fields populated
      */
     private function saveTransportStates(array $states)
     {
@@ -129,8 +138,11 @@ class SaveState extends JsonAction
         foreach ($states as $s) {
             $entityId = $s['entity_id'];
 
-            // Use REPLACE INTO for upsert behavior
-            $existing = EntityTransport::findOne($entityId);
+            // Find existing transport state (position IS NOT NULL)
+            $existing = EntityResource::find()
+                ->where(['entity_id' => $entityId])
+                ->andWhere(['not', ['position' => null]])
+                ->one();
 
             if ($existing) {
                 $existing->resource_id = $s['resource_id'] ?? null;
@@ -141,7 +153,7 @@ class SaveState extends JsonAction
                 $existing->status = $s['status'] ?? 'empty';
                 $existing->save(false);
             } else {
-                $model = new EntityTransport();
+                $model = new EntityResource();
                 $model->entity_id = $entityId;
                 $model->resource_id = $s['resource_id'] ?? null;
                 $model->amount = $s['amount'] ?? 0;

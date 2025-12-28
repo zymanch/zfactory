@@ -86,7 +86,9 @@ CREATE TABLE IF NOT EXISTS `entity_type` (
   `power` int(10) unsigned NOT NULL DEFAULT 1,
   `parent_entity_type_id` int(10) unsigned DEFAULT NULL,
   `orientation` enum('none','up','right','down','left') NOT NULL DEFAULT 'none',
-  `animation_fps` decimal(5,2) DEFAULT NULL COMMENT 'Animation speed in frames per second. NULL = no animation'
+  `animation_fps` decimal(5,2) DEFAULT NULL COMMENT 'Animation speed in frames per second. NULL = no animation',
+  `description` text DEFAULT NULL COMMENT 'Описание entity на русском языке',
+  `construction_ticks` int(11) NOT NULL DEFAULT 60 COMMENT 'Количество тиков для строительства'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`, `animation_fps`) VALUES
@@ -140,6 +142,7 @@ CREATE TABLE IF NOT EXISTS `entity` (
   `durability` int(11) unsigned NOT NULL DEFAULT 100,
   `x` int(10) unsigned NOT NULL,
   `y` int(10) unsigned NOT NULL,
+  `construction_progress` tinyint(3) unsigned NOT NULL DEFAULT 100 COMMENT 'Прогресс строительства 0-100%',
   PRIMARY KEY (`entity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

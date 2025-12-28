@@ -87,11 +87,23 @@ zfactory.local/
 │   └── js/                # JS source
 │       ├── game.js        # Main game class
 │       └── modules/       # Game modules
+│           ├── modes/                  # Game mode management
+│           │   ├── gameModeManager.js
+│           │   ├── buildMode.js
+│           │   └── landingEditMode.js
+│           ├── windows/                # UI windows
+│           │   ├── buildingWindow.js
+│           │   ├── landingWindow.js
+│           │   └── entityInfoWindow.js
+│           ├── ui/                     # UI components
+│           │   ├── CameraInfo.js
+│           │   ├── ControlsHint.js
+│           │   └── BuildPanel.js
 │           ├── camera.js
 │           ├── inputManager.js
-│           ├── buildPanel.js
-│           ├── buildingWindow.js
-│           └── buildMode.js
+│           ├── entityTooltip.js
+│           ├── fogOfWar.js
+│           └── ...
 ├── src/                    # PHP source code
 │   ├── actions/           # Standalone action classes
 │   │   ├── Base.php              # Base action class (web)
@@ -180,30 +192,38 @@ public function actions()
 
 ## Entity Sprite System
 
-Each entity type has a folder with 5 sprite state PNG files:
+Each entity type has a folder with **7 sprite states** + **9 construction frames**:
 
 ```
 public/assets/tiles/entities/{entity_name}/
-├── normal.png           # Default built state (also used as icon)
-├── damaged.png          # Durability < 50% max
-├── blueprint.png        # Construction outline
-├── normal_selected.png  # Normal + hover highlight
-└── damaged_selected.png # Damaged + hover highlight
+├── normal.png              # Default built state (also used as icon)
+├── damaged.png             # Durability < 50% max
+├── blueprint.png           # Construction outline
+├── normal_selected.png     # Normal + hover highlight
+├── damaged_selected.png    # Damaged + hover highlight
+├── deleting.png            # Delete mode hover (red outline)
+├── crafting.png            # Crafting/production animation
+└── construction/           # Construction animation frames
+    ├── frame_0.png         # 0% - 11% progress
+    ├── frame_1.png         # 11% - 22% progress
+    ├── ...
+    └── frame_8.png         # 89% - 100% progress
 ```
 
 **Note**: The `normal.png` file serves dual purpose - both as the default sprite and as the 64×64 icon for UI panels.
 
 ### Sprite Selection Logic
 
-| state     | durability   | hover | Sprite Used         |
-|-----------|--------------|-------|---------------------|
-| blueprint | —            | —     | blueprint.png       |
-| built     | ≥ 50% max    | no    | normal.png          |
-| built     | ≥ 50% max    | yes   | normal_selected.png |
-| built     | < 50% max    | no    | damaged.png         |
-| built     | < 50% max    | yes   | damaged_selected.png|
+| state     | durability   | mode   | hover | Sprite Used              |
+|-----------|--------------|--------|-------|--------------------------|
+| blueprint | —            | —      | —     | construction/frame_X.png |
+| built     | ≥ 50% max    | NORMAL | no    | normal.png               |
+| built     | ≥ 50% max    | NORMAL | yes   | normal_selected.png      |
+| built     | < 50% max    | NORMAL | no    | damaged.png              |
+| built     | < 50% max    | NORMAL | yes   | damaged_selected.png     |
+| built     | —            | DELETE | yes   | deleting.png             |
 
-**Note:** Blueprint state does not respond to hover.
+**Construction Progress**: Blueprint entities show animated construction frames based on `construction_progress` percentage (0-100%).
 
 ## Models
 
@@ -227,6 +247,7 @@ public/assets/tiles/entities/{entity_name}/
 - `entity_type_id` - primary key
 - `type` - enum('building','transporter','manipulator','tree','relief','resource','eye','mining')
 - `name` - display name
+- `description` - detailed description shown in entity info window
 - `image_url` - **folder name** for sprite states
 - `extension` - 'png' (file extension for sprites)
 - `max_durability` - maximum health points
@@ -234,12 +255,14 @@ public/assets/tiles/entities/{entity_name}/
 - `height` - entity height in tiles (default 1)
 - `icon_url` - path to icon (typically '{folder}/normal.png')
 - `power` - visibility radius for eye type entities
+- `construction_ticks` - ticks required to complete construction (60 ticks = 1 second)
 
 ### Entity (entity instances)
 - `entity_id` - primary key
 - `entity_type_id` - foreign key to entity_type
 - `state` - enum('built', 'blueprint')
 - `durability` - current health (0-max_durability)
+- `construction_progress` - construction completion (0-100%), only for blueprints
 - `x`, `y` - pixel coordinates
 
 ### User (user accounts)
@@ -262,19 +285,52 @@ public/assets/tiles/entities/{entity_name}/
 - Map starts at **top-left corner** of the screen
 - Camera position (0, 0) shows tile (0, 0) at top-left
 
-## Build Panel & Building Mode
+## Game Modes
 
-### Controls
-- **B** - open building window
+The game uses **GameModeManager** to ensure only one mode is active at a time:
+
+| Mode                         | Description                           | Activate                  |
+|------------------------------|---------------------------------------|---------------------------|
+| NORMAL                       | Default gameplay                      | Esc / close windows       |
+| BUILD                        | Building placement                    | 1-0 keys or B window      |
+| DELETE                       | Entity deletion                       | Delete key                |
+| ENTITY_INFO                  | Entity information window             | Click entity in NORMAL    |
+| ENTITY_SELECTION_WINDOW      | Building selection window             | B key                     |
+| LANDING_SELECTION_WINDOW     | Landing selection window              | L key                     |
+| LANDING_EDIT                 | Landing editing                       | Edit mode activation      |
+
+### Mode-Specific Controls
+
+**NORMAL Mode:**
+- **B** - open buildings window
+- **L** - open landing window
 - **1-9, 0** - activate build panel slot
-- **Esc** - cancel building mode
-- **Right-click slot** - clear slot
+- **Delete** - enter delete mode
+- **Click entity** - open entity info window
 
-### Building Placement
-- Click on map to place building
+**BUILD Mode:**
+- **Click** - place building
+- **R** - rotate building (if rotatable)
+- **Esc** - cancel and return to NORMAL
 - Green preview = valid placement
 - Red preview = collision detected
-- Multi-tile entities check all occupied tiles
+
+**DELETE Mode:**
+- **Click entity** - delete entity
+- **Delete** or **Esc** - exit delete mode
+- Red outline on hover indicates target
+
+**ENTITY_INFO Mode:**
+- **Esc** - close window and return to NORMAL
+
+## Build Panel
+
+### Features
+- 10-slot hotbar at bottom center
+- Drag & drop from building window
+- Number keys **1-0** activation
+- **Right-click slot** - clear slot
+- Auto-saved to database (debounced)
 
 ## Asset Versioning
 

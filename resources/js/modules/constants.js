@@ -2,8 +2,14 @@
  * Game constants
  */
 
-// Sprite state suffixes for entities
-export const SPRITE_STATES = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
+// Sprite state suffixes for entities (7 states for first row of atlas)
+export const SPRITE_STATES = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected', 'deleting', 'crafting'];
+
+// Original 5 states (backward compatibility)
+export const SPRITE_STATES_ORIGINAL = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
+
+// Construction frames (9 frames for second row of atlas)
+export const CONSTRUCTION_FRAMES = [10, 20, 30, 40, 50, 60, 70, 80, 90];
 
 // Special landing type IDs
 export const LANDING_SKY_ID = 9;
@@ -38,6 +44,8 @@ export const BUILD_INVALID_ALPHA = 0.5;
 
 export default {
     SPRITE_STATES,
+    SPRITE_STATES_ORIGINAL,
+    CONSTRUCTION_FRAMES,
     LANDING_SKY_ID,
     LANDING_ISLAND_EDGE_ID,
     Z_INDEX,

@@ -10,5 +10,6 @@ class BaseEntityPeer  {
     const DURABILITY = "durability";
     const X = "x";
     const Y = "y";
+    const CONSTRUCTION_PROGRESS = "construction_progress";
 
 }

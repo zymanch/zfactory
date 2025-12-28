@@ -12,7 +12,6 @@ use models\Recipe;
 use models\EntityTypeRecipe;
 use models\EntityResource;
 use models\EntityCrafting;
-use models\EntityTransport;
 use services\BuildingRules;
 use Yii;
 
@@ -88,8 +87,9 @@ class Config extends JsonAction
         }
 
         // Get all entity resources (for buildings, mining, storage)
+        // Only records without transport state (position IS NULL)
         $entityResources = $this->castNumericFieldsArray(
-            EntityResource::find()->asArray()->all(),
+            EntityResource::find()->where(['position' => null])->asArray()->all(),
             ['entity_id', 'resource_id', 'amount']
         );
 
@@ -100,8 +100,9 @@ class Config extends JsonAction
         );
 
         // Get all transport states (conveyors, manipulators)
+        // Only records with transport state (position IS NOT NULL)
         $transportStates = $this->castNumericFieldsArray(
-            EntityTransport::find()->asArray()->all(),
+            EntityResource::find()->where(['not', ['position' => null]])->asArray()->all(),
             ['entity_id', 'resource_id', 'amount'],
             ['position', 'lateral_offset', 'arm_position']  // floats
         );
@@ -140,10 +141,12 @@ class Config extends JsonAction
                 'mapUrl' => \yii\helpers\Url::to(['map/tiles'], true),
                 'entitiesUrl' => \yii\helpers\Url::to(['game/entities'], true),
                 'createEntityUrl' => \yii\helpers\Url::to(['map/create-entity'], true),
+                'deleteEntityUrl' => \yii\helpers\Url::to(['map/delete-entity'], true),
                 'updateLandingUrl' => \yii\helpers\Url::to(['map/update-landing'], true),
                 'saveBuildPanelUrl' => \yii\helpers\Url::to(['user/save-build-panel'], true),
                 'savePositionUrl' => \yii\helpers\Url::to(['user/save-position'], true),
                 'saveStateUrl' => \yii\helpers\Url::to(['game/save-state'], true),
+                'finishConstructionUrl' => \yii\helpers\Url::to(['game/finish-construction'], true),
                 'tilesPath' => '/assets/tiles/',
                 'tileWidth' => Yii::$app->params['tile_width'],
                 'tileHeight' => Yii::$app->params['tile_height'],

@@ -20,6 +20,8 @@ namespace models\base;
  * @property integer $parent_entity_type_id
  * @property string $orientation
  * @property string $animation_fps
+ * @property string $description
+ * @property integer $construction_ticks
  *
  * @property \models\EntityTypeRecipe[] $entityTypeRecipes
  * @property \models\BaseRecipe[] $recipes
@@ -41,8 +43,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         return [
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::IMAGE_URL], 'required'],
-            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID], 'integer'],
-            [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION], 'string'],
+            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS], 'integer'],
+            [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION], 'string'],
             [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
             [[BaseEntityTypePeer::IMAGE_URL, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
@@ -69,6 +71,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID => 'Parent Entity Type ID',
             BaseEntityTypePeer::ORIENTATION => 'Orientation',
             BaseEntityTypePeer::ANIMATION_FPS => 'Animation Fps',
+            BaseEntityTypePeer::DESCRIPTION => 'Description',
+            BaseEntityTypePeer::CONSTRUCTION_TICKS => 'Construction Ticks',
         ];
     }
     /**
@@ -114,6 +118,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'parent_entity_type_id' => BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID,
             'orientation' => BaseEntityTypePeer::ORIENTATION,
             'animation_fps' => BaseEntityTypePeer::ANIMATION_FPS,
+            'description' => BaseEntityTypePeer::DESCRIPTION,
+            'construction_ticks' => BaseEntityTypePeer::CONSTRUCTION_TICKS,
         ];
     }
     

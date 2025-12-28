@@ -11,6 +11,10 @@ namespace models\base;
  * @property integer $entity_id
  * @property integer $resource_id
  * @property integer $amount
+ * @property string $position
+ * @property string $lateral_offset
+ * @property string $arm_position
+ * @property string $status
  *
  * @property \models\Entity $entity
  * @property \models\Resource $resource
@@ -33,6 +37,8 @@ class BaseEntityResource extends \yii\db\ActiveRecord
         return [
             [[BaseEntityResourcePeer::ENTITY_ID, BaseEntityResourcePeer::RESOURCE_ID], 'required'],
             [[BaseEntityResourcePeer::ENTITY_ID, BaseEntityResourcePeer::RESOURCE_ID, BaseEntityResourcePeer::AMOUNT], 'integer'],
+            [[BaseEntityResourcePeer::POSITION, BaseEntityResourcePeer::LATERAL_OFFSET, BaseEntityResourcePeer::ARM_POSITION], 'number'],
+            [[BaseEntityResourcePeer::STATUS], 'string'],
             [[BaseEntityResourcePeer::ENTITY_ID, BaseEntityResourcePeer::RESOURCE_ID], 'unique', 'targetAttribute' => [BaseEntityResourcePeer::ENTITY_ID, BaseEntityResourcePeer::RESOURCE_ID]],
             [[BaseEntityResourcePeer::ENTITY_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseEntity::className(), 'targetAttribute' => [BaseEntityResourcePeer::ENTITY_ID => BaseEntityPeer::ENTITY_ID]],
             [[BaseEntityResourcePeer::RESOURCE_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseResource::className(), 'targetAttribute' => [BaseEntityResourcePeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]],
@@ -49,6 +55,10 @@ class BaseEntityResource extends \yii\db\ActiveRecord
             BaseEntityResourcePeer::ENTITY_ID => 'Entity ID',
             BaseEntityResourcePeer::RESOURCE_ID => 'Resource ID',
             BaseEntityResourcePeer::AMOUNT => 'Amount',
+            BaseEntityResourcePeer::POSITION => 'Position',
+            BaseEntityResourcePeer::LATERAL_OFFSET => 'Lateral Offset',
+            BaseEntityResourcePeer::ARM_POSITION => 'Arm Position',
+            BaseEntityResourcePeer::STATUS => 'Status',
         ];
     }
     /**
@@ -85,6 +95,10 @@ class BaseEntityResource extends \yii\db\ActiveRecord
             'entity_id' => BaseEntityResourcePeer::ENTITY_ID,
             'resource_id' => BaseEntityResourcePeer::RESOURCE_ID,
             'amount' => BaseEntityResourcePeer::AMOUNT,
+            'position' => BaseEntityResourcePeer::POSITION,
+            'lateral_offset' => BaseEntityResourcePeer::LATERAL_OFFSET,
+            'arm_position' => BaseEntityResourcePeer::ARM_POSITION,
+            'status' => BaseEntityResourcePeer::STATUS,
         ];
     }
     

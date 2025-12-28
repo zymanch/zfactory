@@ -205,25 +205,44 @@ camera.y = centerY - (screenHeight / 2) / newZoom;
 ### Database Fields
 - `entity.state`: ENUM('built', 'blueprint')
 - `entity.durability`: INT (0 to max_durability)
+- `entity.construction_progress`: INT (0-100, construction completion %)
 - `entity_type.max_durability`: INT
+- `entity_type.description`: VARCHAR (entity description for info window)
+- `entity_type.construction_ticks`: INT (ticks to complete construction, 60 = 1 second)
 
-### Sprite States (5 per entity type)
+### Sprite States (7 states + 9 construction frames)
 ```
 {entity_folder}/
-├── normal.png           # state='built', durability >= 50% (also used as icon)
-├── damaged.png          # state='built', durability < 50%
-├── blueprint.png        # state='blueprint'
-├── normal_selected.png  # normal + mouse hover
-└── damaged_selected.png # damaged + mouse hover
+├── normal.png              # state='built', durability >= 50% (also used as icon)
+├── damaged.png             # state='built', durability < 50%
+├── blueprint.png           # state='blueprint' (legacy, not used)
+├── normal_selected.png     # normal + hover in NORMAL mode
+├── damaged_selected.png    # damaged + hover in NORMAL mode
+├── deleting.png            # hover in DELETE mode (red outline)
+├── crafting.png            # production animation sprite
+└── construction/           # Construction animation frames
+    ├── frame_0.png         # 0% - 11% progress
+    ├── frame_1.png         # 11% - 22% progress
+    ├── ...
+    └── frame_8.png         # 89% - 100% progress
 ```
 
 ### Selection Logic
 ```javascript
-getEntityTextureKey(entity, isSelected) {
+getEntityTextureKey(entity, gameMode, isSelected) {
+    // Blueprint state - show construction progress animation
     if (entity.state === 'blueprint') {
-        return `entity_${typeId}_blueprint`;
+        const progress = entity.construction_progress || 0;
+        const frameIndex = Math.min(8, Math.floor(progress / 11.11));
+        return `entity_${typeId}_construction_${frameIndex}`;
     }
 
+    // DELETE mode - show red outline on hover
+    if (gameMode === GameMode.DELETE && isSelected) {
+        return `entity_${typeId}_deleting`;
+    }
+
+    // Built state
     const isDamaged = durability < (maxDurability * 0.5);
 
     if (isDamaged) {
@@ -236,9 +255,10 @@ getEntityTextureKey(entity, isSelected) {
 ```
 
 ### Hover Effect
-- Entities have `eventMode = 'static'` for interactivity
+- Entities have `eventMode = 'static'` for interactivity in NORMAL and DELETE modes
+- `eventMode = 'none'` in other modes (BUILD, windows open)
 - `pointerover` / `pointerout` events swap texture
-- Blueprint entities do not respond to hover
+- Hover sprite depends on current game mode (selected or deleting)
 
 ## Asset Loading
 
@@ -289,13 +309,25 @@ Load game configuration with all reference data. Called once on init.
         "1": {"landing_id": 1, "name": "Grass", "folder": "grass", ...}
     },
     "entityTypes": {
-        "100": {"entity_type_id": 100, "name": "Conveyor", "extension": "png", "max_durability": 100, "width": 1, "height": 1, "icon_url": "conveyor/normal.png", ...}
+        "100": {
+            "entity_type_id": 100,
+            "name": "Conveyor",
+            "description": "Transports resources between buildings",
+            "extension": "png",
+            "max_durability": 100,
+            "construction_ticks": 60,
+            "width": 1,
+            "height": 1,
+            "icon_url": "conveyor/normal.png",
+            ...
+        }
     },
     "buildPanel": [101, null, 102, 103, null, null, null, null, null, 105],
     "config": {
         "mapUrl": "http://zfactory.local/map/tiles",
         "entitiesUrl": "http://zfactory.local/game/entities",
         "createEntityUrl": "http://zfactory.local/map/create-entity",
+        "deleteEntityUrl": "http://zfactory.local/game/delete-entity",
         "saveBuildPanelUrl": "http://zfactory.local/user/save-build-panel",
         "tilesPath": "/assets/tiles/",
         "tileWidth": 32,
@@ -335,7 +367,15 @@ Load entities for viewport.
 {
     "result": "ok",
     "entities": [
-        {"entity_id": 1, "entity_type_id": 100, "state": "built", "durability": 100, "x": 320, "y": 240}
+        {
+            "entity_id": 1,
+            "entity_type_id": 100,
+            "state": "built",
+            "durability": 100,
+            "construction_progress": 0,
+            "x": 320,
+            "y": 240
+        }
     ]
 }
 ```
@@ -390,6 +430,27 @@ Save user's build panel configuration.
 }
 ```
 
+### DELETE /game/delete-entity
+Delete an entity from the map.
+
+**Body (JSON):**
+```json
+{
+    "entity_id": 123
+}
+```
+
+**Response:**
+```json
+{
+    "result": "ok"
+}
+```
+
+**Errors:**
+- `entity_id required` - missing entity ID
+- `Entity not found` - unknown entity ID
+
 ## Performance Optimizations
 
 1. **Viewport culling**: Only load/render visible tiles + buffer
@@ -415,27 +476,42 @@ const pixelY = tileY * TILE_HEIGHT;
 
 ## Debug Info
 
-On-screen debug panel shows:
-- Camera position (pixels)
+On-screen debug panel (top-left corner) shows:
+- Current game mode (NORMAL, BUILD, DELETE, etc.)
+- Camera position (pixels) and zoom level
 - Loaded tiles count
 - Loaded entities count
-- FPS
+- FPS (smoothed calculation)
 
 ## File Structure
 
 ```
 resources/js/
-├── game.js                    # Main game class
+├── game.js                        # Main game class
 └── modules/
-    ├── camera.js              # Camera movement and zoom
-    ├── inputManager.js        # Keyboard and mouse handling
-    ├── buildPanel.js          # 10-slot hotbar for buildings
-    ├── buildingWindow.js      # Modal window with building list
-    ├── buildMode.js           # Building placement logic
-    └── fogOfWar.js            # Fog of war visibility system
+    ├── modes/                     # Game mode management
+    │   ├── gameModeManager.js     # Centralized mode controller
+    │   ├── buildMode.js           # Building placement mode
+    │   └── landingEditMode.js     # Landing editing mode
+    ├── windows/                   # UI windows
+    │   ├── buildingWindow.js      # Building selection window
+    │   ├── landingWindow.js       # Landing selection window
+    │   └── entityInfoWindow.js    # Entity information window
+    ├── ui/                        # UI components
+    │   ├── CameraInfo.js          # Top-left debug info panel
+    │   ├── ControlsHint.js        # Bottom-left keyboard hints
+    │   └── BuildPanel.js          # Bottom-center 10-slot hotbar
+    ├── camera.js                  # Camera movement and zoom
+    ├── inputManager.js            # Keyboard and mouse handling
+    ├── entityTooltip.js           # Entity hover tooltip
+    ├── fogOfWar.js                # Fog of war visibility system
+    ├── tileLayerManager.js        # Terrain rendering
+    ├── entityLayerManager.js      # Entity rendering
+    ├── resourceTransport/         # Resource transport system
+    └── ...
 
-public/js/game.js              # Compiled (webpack)
-public/js/*.js                 # Code-split chunks
+public/js/game.js                  # Compiled (webpack)
+public/js/*.js                     # Code-split chunks
 ```
 
 ### EntityTooltip (`entityTooltip.js`)
@@ -466,6 +542,21 @@ time_seconds = (ticks / 60) * (100 / power)
 
 ## Module Descriptions
 
+### GameModeManager (`modes/gameModeManager.js`)
+Centralized game mode controller - ensures only one mode is active at a time:
+- **7 game modes**: NORMAL, BUILD, DELETE, ENTITY_INFO, ENTITY_SELECTION_WINDOW, LANDING_SELECTION_WINDOW, LANDING_EDIT
+- Mode switching with deactivation/activation lifecycle
+- Entity interactivity control (enable/disable hover based on mode)
+- Mode-specific visual indicators (delete mode red banner)
+- Triggers UI updates (hints panel, camera info)
+
+**Key Methods:**
+- `switchMode(newMode, data)` - switch to new mode with context data
+- `returnToPreviousMode()` - go back to previous mode
+- `returnToNormalMode()` - always return to NORMAL
+- `isMode(mode)` - check if specific mode is active
+- `setEntityInteractivity(enabled)` - enable/disable entity hover globally
+
 ### Camera (`camera.js`)
 Handles camera movement and zoom:
 - WASD/Arrow movement with RU layout support
@@ -480,28 +571,70 @@ Centralized input handling:
 - Screen-to-world/tile coordinate conversion
 - Key bindings:
   - **B** - open buildings window
+  - **L** - open landing window
   - **1-0** - select build panel slot
+  - **Delete** - enter delete mode
   - **R/К** - rotate building (in build mode)
-  - **Esc** - cancel build mode
+  - **Esc** - cancel current mode
   - **F** - toggle fog of war (debug)
 
-### BuildPanel (`buildPanel.js`)
+### CameraInfo (`ui/CameraInfo.js`)
+Top-left debug information panel:
+- Current game mode display (NORMAL, BUILD, DELETE, etc.)
+- Camera position (x, y) and zoom level
+- Loaded tiles count
+- Loaded entities count
+- FPS with smoothed calculation (0.9 weight to previous frame)
+- Updates every frame in game loop
+
+### ControlsHint (`ui/ControlsHint.js`)
+Bottom-left keyboard hints panel:
+- Dynamic hints based on current game mode
+- Mode-specific control lists
+- Updates when mode changes (triggered by GameModeManager)
+
+**Mode-Specific Hints:**
+- **NORMAL**: WASD, Wheel, B, L, 1-0, Delete, Click entity
+- **BUILD**: WASD, Wheel, R rotate, Click place, Esc cancel
+- **DELETE**: WASD, Wheel, Click delete, Delete/Esc exit
+- **ENTITY_INFO**: WASD, Wheel, Esc close
+- **Windows**: Esc close
+
+### BuildPanel (`ui/BuildPanel.js`)
 10-slot hotbar at bottom center:
 - Drag & drop from BuildingWindow
 - Number keys 1-0 activation
 - Server persistence via AJAX (user.build_panel)
 - Right-click to clear slot
 - Debounced save (500ms)
+- Active slot highlight during build mode
 
-### BuildingWindow (`buildingWindow.js`)
+### BuildingWindow (`windows/buildingWindow.js`)
 Modal window for building selection:
 - Opens with B key
 - Shows entities grouped by type (tabs)
 - **Filters out orientation variants** (entities with `parent_entity_type_id`)
 - Drag items to BuildPanel
 - Click to add to first empty slot
+- Opens in ENTITY_SELECTION_WINDOW mode
 
-### BuildMode (`buildMode.js`)
+### EntityInfoWindow (`windows/entityInfoWindow.js`)
+Entity information modal window:
+- Opens when clicking entity in NORMAL mode
+- Shows entity name, description, durability bar
+- Displays construction progress for blueprints
+- Shows contained resources
+- Available recipes for production buildings
+- Esc to close and return to NORMAL mode
+
+### LandingWindow (`windows/landingWindow.js`)
+Landing selection modal window:
+- Opens with L key
+- Grid of all landing types
+- Click to select and enter LANDING_EDIT mode
+- Esc to close and return to NORMAL mode
+
+### BuildMode (`modes/buildMode.js`)
 Building placement on map:
 - Preview sprite follows mouse
 - Green/red tint for valid/invalid placement
@@ -512,6 +645,13 @@ Building placement on map:
   - Works for entities with orientation variants (conveyors, manipulators)
   - Cycles through: right → down → left → up
   - Groups variants by `parent_entity_type_id`
+
+### LandingEditMode (`modes/landingEditMode.js`)
+Landing tile editing mode:
+- Select landing type from LandingWindow
+- Click tiles to change their type
+- Visual preview of selected landing
+- Esc to exit mode
 
 ### FogOfWar (`fogOfWar.js`)
 Visibility system based on Crystal Towers (type='eye'):
@@ -568,6 +708,7 @@ Implements Yii2 `IdentityInterface`:
 | `/game`                 | `actions\game\Index`          | Game page                |
 | `/game/config`          | `actions\game\Config`         | Game configuration       |
 | `/game/entities`        | `actions\game\Entities`       | Load entities            |
+| `/game/delete-entity`   | `actions\game\DeleteEntity`   | Delete entity            |
 | `/map/tiles`            | `actions\map\Tiles`           | Load terrain tiles       |
 | `/map/create-entity`    | `actions\map\CreateEntity`    | Place building           |
 | `/user/save-build-panel`| `actions\user\SaveBuildPanel` | Save build panel slots   |

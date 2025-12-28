@@ -255,7 +255,7 @@ Defines types of resources in the game (ores, ingots, crafted items).
 | 113 | Fuel Cell     | crafted | Топливный элемент        |
 
 ### entity_resource (entity-resource links)
-Links entities to their contained resources.
+Links entities to their contained resources and transport state.
 
 | Column            | Type                 | Description                              |
 |-------------------|----------------------|------------------------------------------|
@@ -263,13 +263,27 @@ Links entities to their contained resources.
 | entity_id         | INT UNSIGNED         | FK to entity.entity_id (CASCADE)         |
 | resource_id       | INT UNSIGNED         | FK to resource.resource_id (CASCADE)     |
 | amount            | INT UNSIGNED         | Amount of resource                       |
+| position          | DECIMAL(5,4) NULL    | Resource position on conveyor (0-1)      |
+| lateral_offset    | DECIMAL(5,4) NULL    | Lateral offset on conveyor               |
+| arm_position      | DECIMAL(5,4) NULL    | Arm position for manipulators (0-1)      |
+| status            | ENUM NULL            | Transport status (empty, carrying, etc.) |
 
 **Unique constraint:** (entity_id, resource_id) — одна entity может иметь только одну запись для каждого ресурса.
 
 **Использование:**
+
+**For buildings, storage, mining (position IS NULL):**
 - Resource entities (Iron Ore, Copper Ore) содержат Iron Deposit / Copper Deposit
 - Mining Drill добывает из залежей руду через рецепты
-- Здания могут хранить и обрабатывать ресурсы
+- Здания могут хранить и обрабатывать ресурсы (несколько записей на entity)
+
+**For conveyors, manipulators (position IS NOT NULL):**
+- Транспортное состояние ресурса на конвейере/манипуляторе
+- Только одна запись на entity (текущий переносимый ресурс)
+- `position`: положение ресурса на конвейере (0-1)
+- `lateral_offset`: боковое смещение для визуального разнообразия
+- `arm_position`: положение руки манипулятора (0 = источник, 0.5 = центр, 1 = цель)
+- `status`: состояние транспорта (empty, carrying, waiting_transfer, idle, picking, placing)
 
 ### recipe (crafting recipes)
 Defines crafting/processing recipes for buildings.
@@ -404,6 +418,9 @@ Stores user accounts and their settings.
 | m251220_240000_create_recipe_system.php         | Create recipe system with deposit resources    |
 | m251220_250000_add_deposit_resource_type.php    | Add 'deposit' type for abstract resources      |
 | m251220_260000_add_storage_entity_type.php      | Add 'storage' type for chests/containers       |
+| m251221_000200_create_entity_transport.php      | Create entity_transport table (deprecated)     |
+| m251227_140644_add_transport_fields_to_entity_resource.php | Add transport fields to entity_resource |
+| m251227_140759_drop_entity_transport_table.php  | Drop entity_transport table                    |
 
 ## Future Considerations
 

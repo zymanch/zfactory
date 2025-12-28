@@ -116,6 +116,12 @@ export class EntityTooltip {
             html += `</div>`;
         }
 
+        // Construction progress (if building)
+        const constructionHtml = this.getConstructionProgressHtml(entity, entityType);
+        if (constructionHtml) {
+            html += constructionHtml;
+        }
+
         // Active crafting (if any)
         const craftingHtml = this.getCraftingProgressHtml(entity.entity_id);
         if (craftingHtml) {
@@ -225,6 +231,34 @@ export class EntityTooltip {
         }
 
         return [];
+    }
+
+    /**
+     * Get construction progress HTML for entity
+     */
+    getConstructionProgressHtml(entity, entityType) {
+        const constructionProgress = parseInt(entity.construction_progress) || 100;
+        if (constructionProgress >= 100) {
+            return null; // Fully built
+        }
+
+        const constructionTicks = parseInt(entityType.construction_ticks) || 60;
+        const ticksPerSecond = 60;
+        const totalSeconds = constructionTicks / ticksPerSecond;
+        const remainingSeconds = Math.ceil((constructionTicks * (100 - constructionProgress) / 100) / ticksPerSecond);
+
+        let html = `<div style="border-top:1px solid #4a4a5a;padding-top:6px;margin-top:6px;">`;
+        html += `<div style="margin-bottom:4px;font-weight:bold;color:#4682b4;">Construction:</div>`;
+        html += `<div style="display:flex;align-items:center;margin-bottom:4px;">`;
+        html += `<span>Building...</span>`;
+        html += `<span style="margin-left:auto;color:#aaa;">${remainingSeconds}s</span>`;
+        html += `</div>`;
+        html += `<div style="background:#333;height:8px;border-radius:4px;overflow:hidden;">`;
+        html += `<div style="width:${constructionProgress}%;height:100%;background:linear-gradient(90deg,#4682b4,#6ca0dc);transition:width 0.1s;"></div>`;
+        html += `</div>`;
+        html += `</div>`;
+
+        return html;
     }
 
     /**

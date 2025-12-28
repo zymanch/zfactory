@@ -28,7 +28,6 @@ class ArController extends \yii\console\Controller
                 'entity',
                 'entity_crafting',
                 'entity_resource',
-                'entity_transport',
                 'entity_type',
                 'entity_type_recipe',
                 'landing',

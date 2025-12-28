@@ -1,20 +1,26 @@
 import * as PIXI from 'pixi.js';
 import { Camera } from './modules/camera.js';
 import { InputManager } from './modules/inputManager.js';
-import { BuildPanel } from './modules/buildPanel.js';
-import { BuildingWindow } from './modules/buildingWindow.js';
-import { BuildMode } from './modules/buildMode.js';
+import { BuildPanel } from './modules/ui/BuildPanel.js';
+import { CameraInfo } from './modules/ui/CameraInfo.js';
+import { ControlsHint } from './modules/ui/ControlsHint.js';
+import { BuildingWindow } from './modules/windows/buildingWindow.js';
+import { BuildMode } from './modules/modes/buildMode.js';
 import { FogOfWar } from './modules/fogOfWar.js';
 import { TileLayerManager } from './modules/tileLayerManager.js';
 import { EntityTooltip } from './modules/entityTooltip.js';
 import { BuildingRules } from './modules/buildingRules.js';
 import { ResourceTransportManager } from './modules/resourceTransport/ResourceTransportManager.js';
 import { ResourceRenderer } from './modules/resourceTransport/ResourceRenderer.js';
-import { LandingWindow } from './modules/landingWindow.js';
-import { LandingEditMode } from './modules/landingEditMode.js';
+import { LandingWindow } from './modules/windows/landingWindow.js';
+import { LandingEditMode } from './modules/modes/landingEditMode.js';
 import { CloudManager } from './modules/cloudManager.js';
 import { ConveyorManager } from './modules/conveyorManager.js';
-import { SPRITE_STATES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
+import { GameModeManager, GameMode } from './modules/modes/gameModeManager.js';
+import { EntityInfoWindow } from './modules/windows/entityInfoWindow.js';
+import { ConstructionManager } from './modules/constructionManager.js';
+import { SPRITE_STATES, SPRITE_STATES_ORIGINAL, CONSTRUCTION_FRAMES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
+import { getCSRFToken } from './modules/utils.js';
 
 /**
  * ZFactory Game Engine
@@ -52,7 +58,12 @@ class ZFactoryGame {
         // Modules (initialized after config load)
         this.camera = null;
         this.input = null;
+
+        // UI modules
         this.buildPanel = null;
+        this.cameraInfo = null;
+        this.controlsHint = null;
+
         this.buildingWindow = null;
         this.buildMode = null;
         this.fogOfWar = null;
@@ -65,6 +76,8 @@ class ZFactoryGame {
         this.landingEditMode = null;
         this.cloudManager = null;
         this.conveyorManager = null;
+        this.gameModeManager = null;
+        this.entityInfoWindow = null;
     }
 
     /**
@@ -86,9 +99,15 @@ class ZFactoryGame {
      * Initialize all game modules
      */
     initModules() {
+        this.gameModeManager = new GameModeManager(this);
         this.camera = new Camera(this);
         this.input = new InputManager(this);
+
+        // UI modules
         this.buildPanel = new BuildPanel(this);
+        this.cameraInfo = new CameraInfo(this);
+        this.controlsHint = new ControlsHint(this);
+
         this.buildingWindow = new BuildingWindow(this);
         this.buildMode = new BuildMode(this);
         this.fogOfWar = new FogOfWar(this);
@@ -101,6 +120,8 @@ class ZFactoryGame {
         this.landingEditMode = new LandingEditMode(this);
         this.cloudManager = new CloudManager(this);
         this.conveyorManager = new ConveyorManager(this);
+        this.entityInfoWindow = new EntityInfoWindow(this);
+        this.constructionManager = new ConstructionManager(this);
     }
 
     /**
@@ -163,13 +184,19 @@ class ZFactoryGame {
      */
     async initModulesPost() {
         this.input.init();
+
+        // UI modules
         this.buildPanel.init();
+        this.cameraInfo.init();
+        this.controlsHint.init();
+
         this.buildingWindow.init();
         this.buildMode.init();
         this.fogOfWar.init();
         this.entityTooltip.init();
         this.landingWindow.init();
         this.landingEditMode.init();
+        this.entityInfoWindow.init();
 
         if (this.cloudManager) {
             await this.cloudManager.init();
@@ -307,13 +334,31 @@ class ZFactoryGame {
                 const atlasTexture = await PIXI.Assets.load(atlasUrl);
 
                 // Create textures for each state from atlas
-                // Atlas format: [normal][damaged][blueprint][normal_selected][damaged_selected]
+                // Atlas row 1: [normal][damaged][blueprint][normal_selected][damaged_selected][deleting][crafting]
+                // Atlas row 2: [construction_10][construction_20]...[construction_90]
+
+                // Load all 7 sprites from row 1
                 let xOffset = 0;
                 for (const state of SPRITE_STATES) {
                     const textureKey = `entity_${typeId}_${state}`;
 
                     // Create texture from atlas region
                     const rect = new PIXI.Rectangle(xOffset, 0, pixelWidth, pixelHeight);
+                    this.textures[textureKey] = new PIXI.Texture({
+                        source: atlasTexture.source,
+                        frame: rect
+                    });
+
+                    xOffset += pixelWidth;
+                }
+
+                // Load 9 construction frames from row 2
+                xOffset = 0;
+                const yOffset = pixelHeight; // Second row
+                for (const progress of CONSTRUCTION_FRAMES) {
+                    const textureKey = `entity_${typeId}_construction_${progress}`;
+
+                    const rect = new PIXI.Rectangle(xOffset, yOffset, pixelWidth, pixelHeight);
                     this.textures[textureKey] = new PIXI.Texture({
                         source: atlasTexture.source,
                         frame: rect
@@ -328,11 +373,25 @@ class ZFactoryGame {
     }
 
     /**
-     * Get texture key based on entity state and durability
+     * Get texture key based on entity state, durability, and hover type
+     * @param {object} entity - Entity data
+     * @param {boolean} isSelected - Is entity selected/hovered
+     * @param {string} hoverType - Type of hover sprite ('selected' or 'deleting')
      */
-    getEntityTextureKey(entity, isSelected = false) {
+    getEntityTextureKey(entity, isSelected = false, hoverType = 'selected') {
         const typeId = entity.entity_type_id;
         const entityType = this.entityTypes[typeId];
+
+        // Check if entity is under construction
+        const constructionProgress = parseInt(entity.construction_progress) || 100;
+        if (constructionProgress < 100) {
+            // Show construction frame based on progress
+            // 0-9% -> construction_10, 10-19% -> construction_10, 20-29% -> construction_20, etc.
+            // Round progress to nearest 10 (ceiling)
+            const frameProgress = Math.ceil(constructionProgress / 10) * 10;
+            const clampedProgress = Math.max(10, Math.min(90, frameProgress)); // Clamp to 10-90
+            return `entity_${typeId}_construction_${clampedProgress}`;
+        }
 
         if (entity.state === 'blueprint') {
             return `entity_${typeId}_blueprint`;
@@ -342,11 +401,19 @@ class ZFactoryGame {
         const durability = entity.durability || maxDurability;
         const isDamaged = durability < (maxDurability * 0.5);
 
-        if (isDamaged) {
-            return isSelected ? `entity_${typeId}_damaged_selected` : `entity_${typeId}_damaged`;
+        // If selected/hovered, use hover sprite type (selected or deleting)
+        if (isSelected) {
+            if (hoverType === 'deleting') {
+                // Use deleting sprite with red outline
+                return `entity_${typeId}_deleting`;
+            } else {
+                // Use selected sprite (yellow outline)
+                return isDamaged ? `entity_${typeId}_damaged_selected` : `entity_${typeId}_normal_selected`;
+            }
         }
 
-        return isSelected ? `entity_${typeId}_normal_selected` : `entity_${typeId}_normal`;
+        // Not selected - use normal or damaged
+        return isDamaged ? `entity_${typeId}_damaged` : `entity_${typeId}_normal`;
     }
 
     /**
@@ -484,6 +551,7 @@ class ZFactoryGame {
             sprite.on('pointerover', (e) => this.onEntityHover(sprite, true, e));
             sprite.on('pointerout', (e) => this.onEntityHover(sprite, false, e));
             sprite.on('pointermove', (e) => this.onEntityMove(e));
+            sprite.on('click', (e) => this.onEntityClick(sprite, e));
         }
 
         return sprite;
@@ -517,21 +585,38 @@ class ZFactoryGame {
         this.hoveredEntity = isHovering ? key : null;
         const entityType = this.entityTypes[entity.entity_type_id];
 
-        // Handle conveyors separately
-        if (entityType && entityType.type === 'transporter') {
-            this.conveyorManager.updateConveyorTexture(entity.entity_id, isHovering);
-        } else {
-            // Handle other entities normally
-            const textureKey = this.getEntityTextureKey(entity, isHovering);
-            const texture = this.textures[textureKey];
+        // Get hover sprite type based on current game mode
+        const hoverSpriteType = this.gameModeManager.getHoverSpriteType();
 
-            if (texture) {
-                sprite.texture = texture;
+        if (isHovering && hoverSpriteType) {
+            // Handle conveyors separately
+            if (entityType && entityType.type === 'transporter') {
+                this.conveyorManager.updateConveyorTexture(entity.entity_id, true);
+            } else {
+                // Handle other entities normally
+                const textureKey = this.getEntityTextureKey(entity, true, hoverSpriteType);
+                const texture = this.textures[textureKey];
+
+                if (texture) {
+                    sprite.texture = texture;
+                }
+            }
+        } else {
+            // Reset to normal texture
+            if (entityType && entityType.type === 'transporter') {
+                this.conveyorManager.updateConveyorTexture(entity.entity_id, false);
+            } else {
+                const textureKey = this.getEntityTextureKey(entity, false);
+                const texture = this.textures[textureKey];
+
+                if (texture) {
+                    sprite.texture = texture;
+                }
             }
         }
 
-        // Show/hide tooltip
-        if (isHovering && this.entityTooltip) {
+        // Show/hide tooltip based on game mode
+        if (isHovering && this.entityTooltip && this.gameModeManager.shouldShowTooltip()) {
             const screenX = event.global.x;
             const screenY = event.global.y;
             this.entityTooltip.show(key, screenX, screenY);
@@ -546,6 +631,76 @@ class ZFactoryGame {
     onEntityMove(event) {
         if (this.entityTooltip && this.hoveredEntity) {
             this.entityTooltip.updatePosition(event.global.x, event.global.y);
+        }
+    }
+
+    /**
+     * Handle entity click
+     */
+    onEntityClick(sprite, event) {
+        const key = sprite.entityKey;
+        const entity = this.entityData.get(key);
+
+        if (!entity) return;
+
+        const mode = this.gameModeManager;
+
+        // Handle different game modes
+        if (mode.isMode(GameMode.DELETE)) {
+            // Delete mode - delete entity
+            this.deleteEntity(entity);
+        } else if (mode.isMode(GameMode.NORMAL)) {
+            // Normal mode - open entity info window
+            mode.switchMode(GameMode.ENTITY_INFO, { entityId: entity.entity_id });
+        }
+    }
+
+    /**
+     * Delete entity (for DELETE mode)
+     */
+    async deleteEntity(entity) {
+        const deleteUrl = this.config.deleteEntityUrl;
+        if (!deleteUrl) {
+            console.error('deleteEntityUrl not configured');
+            return;
+        }
+
+        try {
+            const response = await fetch(deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
+                body: JSON.stringify({ entity_id: entity.entity_id })
+            });
+
+            const data = await response.json();
+
+            if (data.result === 'ok') {
+                // Remove entity from client
+                const key = `entity_${entity.entity_id}`;
+                this.entityData.delete(key);
+                const sprite = this.loadedEntities.get(key);
+                if (sprite) {
+                    this.entityLayer.removeChild(sprite);
+                    sprite.destroy();
+                    this.loadedEntities.delete(key);
+                }
+
+                // Update fog of war if it was an eye entity
+                if (this.fogOfWar) {
+                    const entityType = this.entityTypes[entity.entity_type_id];
+                    if (entityType && entityType.type === 'eye') {
+                        this.fogOfWar.removeEyeEntity(entity.entity_id);
+                        this.loadViewport();
+                    }
+                }
+            } else {
+                console.error('Failed to delete entity:', data.error);
+            }
+        } catch (e) {
+            console.error('Error deleting entity:', e);
         }
     }
 
@@ -571,6 +726,9 @@ class ZFactoryGame {
             this.lastReloadTime = now;
         }
 
+        // Update UI
+        this.cameraInfo.update();
+
         // Tick resource transport system
         this.resourceTransport.tick();
 
@@ -585,6 +743,11 @@ class ZFactoryGame {
         // Update conveyor animations
         if (this.conveyorManager) {
             this.conveyorManager.update();
+        }
+
+        // Update construction progress
+        if (this.constructionManager) {
+            this.constructionManager.update();
         }
 
         this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);
