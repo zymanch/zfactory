@@ -13,6 +13,7 @@ export class BuildMode {
         this.isActive = false;
         this.entityTypeId = null;
         this.previewSprite = null;
+        this.errorText = null;
         this.canPlace = false;
         this.currentTile = { x: -1, y: -1 };
         this.targetEntity = null;
@@ -160,6 +161,21 @@ export class BuildMode {
         this.previewSprite.alpha = BUILD_VALID_ALPHA;
         this.previewSprite.visible = false;
         this.game.entityLayer.addChild(this.previewSprite);
+
+        // Create error text
+        this.errorText = new PIXI.Text('', {
+            fontSize: 14,
+            fill: 0xFF0000,
+            fontWeight: 'bold',
+            dropShadow: true,
+            dropShadowColor: 0x000000,
+            dropShadowBlur: 4,
+            dropShadowDistance: 2,
+            align: 'center'
+        });
+        this.errorText.anchor.set(0.5, 1); // Center horizontally, bottom vertically
+        this.errorText.visible = false;
+        this.game.entityLayer.addChild(this.errorText);
     }
 
     /**
@@ -170,6 +186,12 @@ export class BuildMode {
             this.game.entityLayer.removeChild(this.previewSprite);
             this.previewSprite.destroy();
             this.previewSprite = null;
+        }
+
+        if (this.errorText) {
+            this.game.entityLayer.removeChild(this.errorText);
+            this.errorText.destroy();
+            this.errorText = null;
         }
     }
 
@@ -202,12 +224,30 @@ export class BuildMode {
      * Update preview visual based on placement validity
      */
     updatePreviewVisual() {
+        if (!this.previewSprite) return;
+
         if (this.canPlace) {
             this.previewSprite.tint = BUILD_VALID_COLOR;
             this.previewSprite.alpha = BUILD_VALID_ALPHA;
+
+            // Hide error text
+            if (this.errorText) {
+                this.errorText.visible = false;
+            }
         } else {
             this.previewSprite.tint = BUILD_INVALID_COLOR;
             this.previewSprite.alpha = BUILD_INVALID_ALPHA;
+
+            // Show error text with message
+            if (this.errorText && this.placementError) {
+                this.errorText.text = this.placementError;
+                this.errorText.visible = true;
+
+                // Position above preview sprite (centered)
+                this.errorText.x = this.previewSprite.x + (this.previewSprite.width / 2);
+                this.errorText.y = this.previewSprite.y - 10; // 10px above sprite
+                this.errorText.zIndex = this.previewSprite.zIndex + 1;
+            }
         }
     }
 
@@ -286,6 +326,12 @@ export class BuildMode {
                         targetSprite.destroy();
                         this.game.loadedEntities.delete(targetKey);
                     }
+                }
+
+                // Remove deposits from client if they were removed by building placement
+                if (data.depositsRemoved && data.depositsRemoved.length > 0) {
+                    const depositIds = data.depositsRemoved.map(d => d.deposit_id);
+                    this.game.depositManager.removeDeposits(depositIds);
                 }
 
                 this.game.renderEntities([data.entity]);

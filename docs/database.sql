@@ -91,46 +91,105 @@ CREATE TABLE IF NOT EXISTS `entity_type` (
   `construction_ticks` int(11) NOT NULL DEFAULT 60 COMMENT 'Количество тиков для строительства'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`, `animation_fps`) VALUES
-    -- Trees
-    (1, 'tree', 'Pine Tree', 'tree_pine', 'png', 50, 1, 1, NULL, 1, NULL, 'none', NULL),
-    (2, 'tree', 'Oak Tree', 'tree_oak', 'png', 60, 1, 1, NULL, 1, NULL, 'none', NULL),
-    (3, 'tree', 'Dead Tree', 'tree_dead', 'png', 20, 1, 1, NULL, 1, NULL, 'none', NULL),
-    -- Relief
-    (10, 'relief', 'Small Rock', 'rock_small', 'png', 100, 1, 1, NULL, 1, NULL, 'none', NULL),
-    (11, 'relief', 'Medium Rock', 'rock_medium', 'png', 200, 1, 1, NULL, 1, NULL, 'none', NULL),
-    (12, 'relief', 'Large Rock', 'rock_large', 'png', 300, 1, 1, NULL, 1, NULL, 'none', NULL),
+INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`, `animation_fps`, `description`) VALUES
     -- Transporters (with orientation variants) - animation: 4 FPS = 8 frames / 2 sec (resource travel time per tile)
-    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'png', 100, 1, 1, 'conveyor/normal.png', 100, NULL, 'right', 4.00),
-    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'png', 100, 1, 1, 'conveyor_up/normal.png', 100, 100, 'up', 4.00),
-    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'png', 100, 1, 1, 'conveyor_down/normal.png', 100, 100, 'down', 4.00),
-    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'png', 100, 1, 1, 'conveyor_left/normal.png', 100, 100, 'left', 4.00),
+    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'png', 100, 1, 1, 'conveyor/normal.png', 100, NULL, 'right', 4.00, 'Транспортная лента для перемещения ресурсов'),
+    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'png', 100, 1, 1, 'conveyor_up/normal.png', 100, 100, 'up', 4.00, 'Транспортная лента (вверх)'),
+    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'png', 100, 1, 1, 'conveyor_down/normal.png', 100, 100, 'down', 4.00, 'Транспортная лента (вниз)'),
+    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'png', 100, 1, 1, 'conveyor_left/normal.png', 100, 100, 'left', 4.00, 'Транспортная лента (влево)'),
     -- Buildings - power=100 means baseline crafting speed
-    (101, 'building', 'Small Furnace', 'furnace', 'png', 200, 2, 2, 'furnace/normal.png', 100, NULL, 'none', NULL),
-    (103, 'building', 'Assembly Machine', 'assembler', 'png', 400, 3, 3, 'assembler/normal.png', 100, NULL, 'none', NULL),
-    (104, 'storage', 'Storage Chest', 'chest', 'png', 150, 1, 1, 'chest/normal.png', 1, NULL, 'none', NULL),
-    (105, 'building', 'Power Pole', 'power_pole', 'png', 100, 1, 1, 'power_pole/normal.png', 1, NULL, 'none', NULL),
-    (106, 'building', 'Steam Engine', 'steam_engine', 'png', 350, 2, 3, 'steam_engine/normal.png', 1, NULL, 'none', NULL),
-    (107, 'building', 'Boiler', 'boiler', 'png', 250, 2, 2, 'boiler/normal.png', 100, NULL, 'none', NULL),
-    -- Mining (requires resource entity to place on) - power=100 means baseline mining speed
-    (102, 'mining', 'Mining Drill', 'drill', 'png', 300, 1, 1, 'drill/normal.png', 100, NULL, 'none', NULL),
-    (108, 'mining', 'Fast Mining Drill', 'drill_fast', 'png', 250, 1, 1, 'drill_fast/normal.png', 150, NULL, 'none', NULL),
+    (101, 'building', 'Small Furnace', 'furnace', 'png', 200, 2, 2, 'furnace/normal.png', 100, NULL, 'none', NULL, 'Небольшая печь для переплавки руды'),
+    (103, 'building', 'Assembly Machine', 'assembler', 'png', 400, 3, 3, 'assembler/normal.png', 100, NULL, 'none', NULL, 'Сборочная машина для создания деталей'),
+    (104, 'storage', 'Storage Chest', 'chest', 'png', 150, 1, 1, 'chest/normal.png', 1, NULL, 'none', NULL, 'Хранилище для ресурсов'),
+    (105, 'building', 'Power Pole', 'power_pole', 'png', 100, 1, 1, 'power_pole/normal.png', 1, NULL, 'none', NULL, 'Электрический столб'),
+    (106, 'building', 'Steam Engine', 'steam_engine', 'png', 350, 2, 3, 'steam_engine/normal.png', 1, NULL, 'none', NULL, 'Паровой генератор'),
+    (107, 'building', 'Boiler', 'boiler', 'png', 250, 2, 2, 'boiler/normal.png', 100, NULL, 'none', NULL, 'Котел для переработки нефти'),
+    -- Ore Drills (requires iron/copper deposits) - power=100 means baseline mining speed
+    (102, 'mining', 'Small Ore Drill', 'drill', 'png', 300, 1, 1, 'drill/normal.png', 100, NULL, 'none', NULL, 'Небольшая буровая установка для добычи железа и меди'),
+    (108, 'mining', 'Medium Ore Drill', 'drill_fast', 'png', 250, 2, 2, 'drill_fast/normal.png', 150, NULL, 'none', NULL, 'Средняя буровая установка для добычи железа и меди'),
+    (506, 'mining', 'Large Ore Drill', 'drill_large', 'png', 400, 3, 3, 'drill_large/normal.png', 200, NULL, 'none', NULL, 'Большая буровая установка для добычи железа и меди'),
     -- Manipulators (with orientation variants) - power=100 means full swing in 30 ticks
-    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'png', 80, 1, 1, 'manipulator_short/normal.png', 100, NULL, 'right', NULL),
-    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'png', 80, 1, 1, 'manipulator_short_up/normal.png', 100, 200, 'up', NULL),
-    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'png', 80, 1, 1, 'manipulator_short_down/normal.png', 100, 200, 'down', NULL),
-    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'png', 80, 1, 1, 'manipulator_short_left/normal.png', 100, 200, 'left', NULL),
-    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'png', 80, 1, 1, 'manipulator_long/normal.png', 100, NULL, 'right', NULL),
-    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'png', 80, 1, 1, 'manipulator_long_up/normal.png', 100, 201, 'up', NULL),
-    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'png', 80, 1, 1, 'manipulator_long_down/normal.png', 100, 201, 'down', NULL),
-    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'png', 80, 1, 1, 'manipulator_long_left/normal.png', 100, 201, 'left', NULL),
-    -- Resources
-    (300, 'resource', 'Iron Ore', 'ore_iron', 'png', 9999, 1, 1, 'ore_iron/normal.png', 1, NULL, 'none', NULL),
-    (301, 'resource', 'Copper Ore', 'ore_copper', 'png', 9999, 1, 1, 'ore_copper/normal.png', 1, NULL, 'none', NULL),
+    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'png', 80, 1, 1, 'manipulator_short/normal.png', 100, NULL, 'right', NULL, 'Манипулятор с коротким захватом'),
+    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'png', 80, 1, 1, 'manipulator_short_up/normal.png', 100, 200, 'up', NULL, 'Манипулятор с коротким захватом (вверх)'),
+    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'png', 80, 1, 1, 'manipulator_short_down/normal.png', 100, 200, 'down', NULL, 'Манипулятор с коротким захватом (вниз)'),
+    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'png', 80, 1, 1, 'manipulator_short_left/normal.png', 100, 200, 'left', NULL, 'Манипулятор с коротким захватом (влево)'),
+    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'png', 80, 1, 1, 'manipulator_long/normal.png', 100, NULL, 'right', NULL, 'Манипулятор с длинным захватом'),
+    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'png', 80, 1, 1, 'manipulator_long_up/normal.png', 100, 201, 'up', NULL, 'Манипулятор с длинным захватом (вверх)'),
+    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'png', 80, 1, 1, 'manipulator_long_down/normal.png', 100, 201, 'down', NULL, 'Манипулятор с длинным захватом (вниз)'),
+    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'png', 80, 1, 1, 'manipulator_long_left/normal.png', 100, 201, 'left', NULL, 'Манипулятор с длинным захватом (влево)'),
     -- Crystal Towers (eye type - visibility radius = power)
-    (400, 'eye', 'Small Crystal Tower', 'tower_crystal_small', 'png', 100, 1, 1, 'tower_crystal_small/normal.png', 7, NULL, 'none', NULL),
-    (401, 'eye', 'Medium Crystal Tower', 'tower_crystal_medium', 'png', 200, 1, 2, 'tower_crystal_medium/normal.png', 15, NULL, 'none', NULL),
-    (402, 'eye', 'Large Crystal Tower', 'tower_crystal_large', 'png', 300, 2, 3, 'tower_crystal_large/normal.png', 30, NULL, 'none', NULL);
+    (400, 'eye', 'Small Crystal Tower', 'tower_crystal_small', 'png', 100, 1, 1, 'tower_crystal_small/normal.png', 7, NULL, 'none', NULL, 'Небольшая кристальная башня (радиус обзора: 7)'),
+    (401, 'eye', 'Medium Crystal Tower', 'tower_crystal_medium', 'png', 200, 1, 2, 'tower_crystal_medium/normal.png', 15, NULL, 'none', NULL, 'Средняя кристальная башня (радиус обзора: 15)'),
+    (402, 'eye', 'Large Crystal Tower', 'tower_crystal_large', 'png', 300, 2, 3, 'tower_crystal_large/normal.png', 30, NULL, 'none', NULL, 'Большая кристальная башня (радиус обзора: 30)'),
+    -- Sawmills (requires trees)
+    (500, 'mining', 'Small Sawmill', 'sawmill_small', 'png', 200, 1, 1, 'sawmill_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая лесопилка для переработки древесины'),
+    (501, 'mining', 'Medium Sawmill', 'sawmill_medium', 'png', 400, 3, 3, 'sawmill_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя лесопилка для переработки древесины'),
+    (502, 'mining', 'Large Sawmill', 'sawmill_large', 'png', 600, 5, 5, 'sawmill_large/normal.png', 200, NULL, 'none', NULL, 'Большая лесопилка для переработки древесины'),
+    -- Stone Quarries (requires rocks)
+    (503, 'mining', 'Small Stone Quarry', 'quarry_stone_small', 'png', 250, 1, 1, 'quarry_stone_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая каменоломня для добычи камня'),
+    (504, 'mining', 'Medium Stone Quarry', 'quarry_stone_medium', 'png', 500, 3, 3, 'quarry_stone_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя каменоломня для добычи камня'),
+    (505, 'mining', 'Large Stone Quarry', 'quarry_stone_large', 'png', 750, 5, 5, 'quarry_stone_large/normal.png', 200, NULL, 'none', NULL, 'Большая каменоломня для добычи камня'),
+    -- Mines (requires silver/gold deposits)
+    (507, 'mining', 'Small Mine', 'mine_small', 'png', 300, 1, 1, 'mine_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая шахта для добычи серебра и золота'),
+    (508, 'mining', 'Medium Mine', 'mine_medium', 'png', 600, 2, 2, 'mine_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя шахта для добычи серебра и золота'),
+    (509, 'mining', 'Large Mine', 'mine_large', 'png', 900, 3, 3, 'mine_large/normal.png', 200, NULL, 'none', NULL, 'Большая шахта для добычи серебра и золота'),
+    -- Quarries (requires aluminum/titanium deposits)
+    (510, 'mining', 'Small Quarry', 'quarry_small', 'png', 350, 1, 1, 'quarry_small/normal.png', 100, NULL, 'none', NULL, 'Небольшой карьер для добычи алюминия и титана'),
+    (511, 'mining', 'Medium Quarry', 'quarry_medium', 'png', 700, 2, 2, 'quarry_medium/normal.png', 150, NULL, 'none', NULL, 'Средний карьер для добычи алюминия и титана'),
+    (512, 'mining', 'Large Quarry', 'quarry_large', 'png', 1050, 3, 3, 'quarry_large/normal.png', 200, NULL, 'none', NULL, 'Большой карьер для добычи алюминия и титана');
+
+-- --------------------------------------------------------
+-- Table structure: deposit_type (natural resource types)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `deposit_type` (
+  `deposit_type_id` int(10) unsigned NOT NULL PRIMARY KEY,
+  `type` enum('tree','rock','ore') NOT NULL,
+  `name` varchar(128) NOT NULL,
+  `image_url` varchar(256) NOT NULL COMMENT 'Folder name for sprites',
+  `resource_id` int(10) unsigned NOT NULL COMMENT 'Which resource this deposit contains',
+  `resource_amount` int(10) unsigned NOT NULL DEFAULT 100,
+  `width` tinyint(3) unsigned NOT NULL DEFAULT 1 COMMENT 'Visual sprite width in tiles',
+  `height` tinyint(3) unsigned NOT NULL DEFAULT 1 COMMENT 'Visual sprite height in tiles',
+  CONSTRAINT `fk_deposit_type_resource` FOREIGN KEY (`resource_id`) REFERENCES `resource` (`resource_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `deposit_type` (`deposit_type_id`, `type`, `name`, `image_url`, `resource_id`, `resource_amount`, `width`, `height`) VALUES
+    -- Trees (deposit_type_id matches old entity_type_id for migration)
+    (1, 'tree', 'Pine Tree', 'tree_pine', 1, 100, 1, 2),
+    (2, 'tree', 'Oak Tree', 'tree_oak', 1, 120, 1, 2),
+    (3, 'tree', 'Dead Tree', 'tree_dead', 1, 50, 1, 2),
+    (4, 'tree', 'Birch Tree', 'tree_birch', 1, 110, 1, 2),
+    (5, 'tree', 'Spruce Tree', 'tree_spruce', 1, 105, 1, 2),
+    (6, 'tree', 'Maple Tree', 'tree_maple', 1, 115, 1, 2),
+    (7, 'tree', 'Willow Tree', 'tree_willow', 1, 95, 1, 2),
+    (8, 'tree', 'Ash Tree', 'tree_ash', 1, 130, 1, 2),
+    -- Rocks (deposit_type_id matches old entity_type_id for migration)
+    (10, 'rock', 'Small Rock', 'rock_small', 5, 100, 1, 1),
+    (11, 'rock', 'Medium Rock', 'rock_medium', 5, 200, 1, 1),
+    (12, 'rock', 'Large Rock', 'rock_large', 5, 300, 1, 1),
+    -- Ores (deposit_type_id matches old entity_type_id for migration)
+    (300, 'ore', 'Iron Ore Deposit', 'ore_iron', 2, 500, 1, 1),
+    (301, 'ore', 'Copper Ore Deposit', 'ore_copper', 3, 500, 1, 1),
+    (302, 'ore', 'Aluminum Ore Deposit', 'ore_aluminum', 14, 400, 1, 1),
+    (303, 'ore', 'Titanium Ore Deposit', 'ore_titanium', 15, 400, 1, 1),
+    (304, 'ore', 'Silver Ore Deposit', 'ore_silver', 16, 600, 1, 1),
+    (305, 'ore', 'Gold Ore Deposit', 'ore_gold', 17, 700, 1, 1);
+
+
+-- --------------------------------------------------------
+-- Table structure: deposit (deposit instances on map)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `deposit` (
+  `deposit_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `deposit_type_id` int(10) unsigned NOT NULL,
+  `x` int(10) unsigned NOT NULL COMMENT 'Tile X coordinate (always 1x1 for calculations)',
+  `y` int(10) unsigned NOT NULL COMMENT 'Tile Y coordinate (always 1x1 for calculations)',
+  `resource_amount` int(10) unsigned NOT NULL COMMENT 'Current amount of resources',
+  PRIMARY KEY (`deposit_id`),
+  KEY `idx_deposit_position` (`x`, `y`),
+  CONSTRAINT `fk_deposit_type` FOREIGN KEY (`deposit_type_id`) REFERENCES `deposit_type` (`deposit_type_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 
 -- --------------------------------------------------------
 -- Table structure: entity (entity instances)
@@ -180,9 +239,16 @@ INSERT INTO `resource` (`resource_id`, `name`, `icon_url`, `type`) VALUES
     (5, 'Stone', 'stone.svg', 'raw'),
     (6, 'Raw Crystal', 'raw_crystal.svg', 'raw'),
     (7, 'Crude Oil', 'crude_oil.svg', 'raw'),
-    -- Deposit resources (abstract, inside resource entities)
-    (8, 'Iron Deposit', 'iron_deposit.svg', 'deposit'),
-    (9, 'Copper Deposit', 'copper_deposit.svg', 'deposit'),
+    -- Deposit resources (for deposits in nature before extraction)
+    (10, 'Aluminum Deposit', 'aluminum_deposit.svg', 'deposit'),
+    (11, 'Titanium Deposit', 'titanium_deposit.svg', 'deposit'),
+    (12, 'Silver Deposit', 'silver_deposit.svg', 'deposit'),
+    (13, 'Gold Deposit', 'gold_deposit.svg', 'deposit'),
+    -- New ores (extracted from deposits)
+    (14, 'Aluminum Ore', 'aluminum_ore.svg', 'raw'),
+    (15, 'Titanium Ore', 'titanium_ore.svg', 'raw'),
+    (16, 'Silver Ore', 'silver_ore.svg', 'raw'),
+    (17, 'Gold Ore', 'gold_ore.svg', 'raw'),
     -- Liquid resources
     (20, 'Refined Fuel', 'refined_fuel.svg', 'liquid'),
     (21, 'Lubricant', 'lubricant.svg', 'liquid'),
@@ -245,14 +311,18 @@ CREATE TABLE IF NOT EXISTS `recipe` (
 
 -- Note: All ticks are multiples of 30 for optimized logic tick (30 ticks = 1 logic update at 60fps)
 INSERT INTO `recipe` (`recipe_id`, `output_resource_id`, `output_amount`, `input1_resource_id`, `input1_amount`, `input2_resource_id`, `input2_amount`, `input3_resource_id`, `input3_amount`, `ticks`) VALUES
-    -- Mining recipes (30 ticks = 0.5s)
-    (1, 2, 1, 8, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Iron Deposit -> 1 Iron Ore
-    (2, 3, 1, 9, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Copper Deposit -> 1 Copper Ore
+    -- Extraction recipes (30 ticks = 0.5s) - deposits are stored in entity, extracted during crafting
+    (21, 1, 1, 1, 1, NULL, NULL, NULL, NULL, 30),      -- Wood Deposit -> Wood (Sawmill)
+    (22, 5, 1, 5, 1, NULL, NULL, NULL, NULL, 30),      -- Stone Deposit -> Stone (Stone Quarry)
+    (23, 16, 1, 12, 1, NULL, NULL, NULL, NULL, 30),    -- Silver Deposit -> Silver Ore (Mine)
+    (24, 17, 1, 13, 1, NULL, NULL, NULL, NULL, 30),    -- Gold Deposit -> Gold Ore (Mine)
+    (25, 14, 1, 10, 1, NULL, NULL, NULL, NULL, 30),    -- Aluminum Deposit -> Aluminum Ore (Quarry)
+    (26, 15, 1, 11, 1, NULL, NULL, NULL, NULL, 30),    -- Titanium Deposit -> Titanium Ore (Quarry)
     -- Furnace recipes
-    (3, 100, 1, 2, 3, 4, 1, NULL, NULL, 60),       -- 3 Iron Ore + 1 Coal -> 1 Iron Ingot (1s)
-    (4, 101, 1, 3, 3, 4, 1, NULL, NULL, 60),       -- 3 Copper Ore + 1 Coal -> 1 Copper Ingot (1s)
-    (5, 109, 1, 100, 2, 4, 1, NULL, NULL, 90),     -- 2 Iron Ingot + 1 Coal -> 1 Steel Plate (1.5s)
-    (6, 112, 1, 1, 1, NULL, NULL, NULL, NULL, 30), -- 1 Wood -> 1 Charcoal (0.5s)
+    (3, 100, 1, 2, 3, 4, 1, NULL, NULL, 60),           -- 3 Iron Ore + 1 Coal -> 1 Iron Ingot (1s)
+    (4, 101, 1, 3, 3, 4, 1, NULL, NULL, 60),           -- 3 Copper Ore + 1 Coal -> 1 Copper Ingot (1s)
+    (5, 109, 1, 100, 2, 4, 1, NULL, NULL, 90),         -- 2 Iron Ingot + 1 Coal -> 1 Steel Plate (1.5s)
+    (6, 112, 1, 1, 1, NULL, NULL, NULL, NULL, 30),     -- 1 Wood -> 1 Charcoal (0.5s)
     -- Assembly recipes
     (7, 102, 2, 100, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Iron Ingot -> 2 Iron Plate (0.5s)
     (8, 103, 2, 101, 1, NULL, NULL, NULL, NULL, 30),   -- 1 Copper Ingot -> 2 Copper Plate (0.5s)
@@ -283,16 +353,20 @@ CREATE TABLE IF NOT EXISTS `entity_type_recipe` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `entity_type_recipe` (`entity_type_id`, `recipe_id`) VALUES
-    -- Mining Drill (102)
-    (102, 1), (102, 2),
-    -- Fast Mining Drill (108)
-    (108, 1), (108, 2),
     -- Small Furnace (101)
     (101, 3), (101, 4), (101, 5), (101, 6),
     -- Assembly Machine (103)
     (103, 7), (103, 8), (103, 9), (103, 10), (103, 11), (103, 12), (103, 13), (103, 14), (103, 15), (103, 16),
     -- Boiler (107)
-    (107, 17), (107, 18), (107, 19), (107, 20);
+    (107, 17), (107, 18), (107, 19), (107, 20),
+    -- Sawmills (500-502) - Wood extraction
+    (500, 21), (501, 21), (502, 21),
+    -- Stone Quarries (503-505) - Stone extraction
+    (503, 22), (504, 22), (505, 22),
+    -- Mines (507-509) - Silver/Gold extraction
+    (507, 23), (507, 24), (508, 23), (508, 24), (509, 23), (509, 24),
+    -- Quarries (510-512) - Aluminum/Titanium extraction
+    (510, 25), (510, 26), (511, 25), (511, 26), (512, 25), (512, 26);
 
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

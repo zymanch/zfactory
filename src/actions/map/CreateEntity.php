@@ -6,6 +6,8 @@ use actions\JsonAction;
 use models\Entity;
 use models\EntityType;
 use models\EntityResource;
+use models\Deposit;
+use models\DepositType;
 use services\BuildingRules;
 use Yii;
 
@@ -72,6 +74,7 @@ class CreateEntity extends JsonAction
             }
 
             $targetRemoved = false;
+            $depositsRemoved = [];
 
             // Transfer resources from target entity to new entity
             if ($targetEntity) {
@@ -97,6 +100,52 @@ class CreateEntity extends JsonAction
                 $targetRemoved = true;
             }
 
+            // Process deposits to remove (for extraction buildings: sawmill, quarry, drill, mine)
+            if (isset($ruleCheck['depositsToRemove']) && !empty($ruleCheck['depositsToRemove'])) {
+                $depositIds = $ruleCheck['depositsToRemove'];
+                $deposits = Deposit::findAll(['deposit_id' => $depositIds]);
+
+                foreach ($deposits as $deposit) {
+                    // Get deposit type to know which resource to add
+                    $depositType = DepositType::findOne($deposit->deposit_type_id);
+                    if (!$depositType) {
+                        continue;
+                    }
+
+                    // Find existing entity_resource or create new one
+                    $entityResource = EntityResource::findOne([
+                        'entity_id' => $entity->entity_id,
+                        'resource_id' => $depositType->resource_id,
+                    ]);
+
+                    if (!$entityResource) {
+                        $entityResource = new EntityResource();
+                        $entityResource->entity_id = $entity->entity_id;
+                        $entityResource->resource_id = $depositType->resource_id;
+                        $entityResource->amount = 0;
+                    }
+
+                    // Add deposit's resource amount to entity
+                    $entityResource->amount += $deposit->resource_amount;
+
+                    if (!$entityResource->save()) {
+                        throw new \Exception('Failed to transfer deposit resources');
+                    }
+
+                    // Store deposit info for response
+                    $depositsRemoved[] = [
+                        'deposit_id' => $deposit->deposit_id,
+                        'x' => $deposit->x,
+                        'y' => $deposit->y,
+                    ];
+
+                    // Delete deposit
+                    if (!$deposit->delete()) {
+                        throw new \Exception('Failed to remove deposit');
+                    }
+                }
+            }
+
             $transaction->commit();
 
             return $this->success([
@@ -109,6 +158,7 @@ class CreateEntity extends JsonAction
                     'durability' => $entity->durability,
                 ],
                 'targetRemoved' => $targetRemoved,
+                'depositsRemoved' => $depositsRemoved,
             ]);
 
         } catch (\Exception $e) {

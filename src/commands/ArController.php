@@ -25,6 +25,8 @@ class ArController extends \yii\console\Controller
 
         $tables = [
             'zfactory'             => [
+                'deposit',
+                'deposit_type',
                 'entity',
                 'entity_crafting',
                 'entity_resource',

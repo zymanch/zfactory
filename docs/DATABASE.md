@@ -31,14 +31,28 @@
                         │ y               │              │
                         └─────────────────┘              │
                                                          ▼
-                        ┌─────────────────┐     ┌─────────────────┐
-                        │    resource     │────►│ entity_resource │
-                        ├─────────────────┤     └─────────────────┘
-                        │ resource_id (PK)│
-                        │ name            │
-                        │ icon_url        │
-                        │ type (enum)     │
-                        └─────────────────┘
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  deposit_type   │     │    resource     │────►│ entity_resource │
+├─────────────────┤     ├─────────────────┤     └─────────────────┘
+│deposit_type_id  │     │ resource_id (PK)│
+│ type (enum)     │     │ name            │
+│ name            │     │ icon_url        │
+│ image_url       │     │ type (enum)     │
+│ resource_id (FK)│◄────┤ max_stack       │
+│ resource_amount │     └─────────────────┘
+│ width, height   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│     deposit     │
+├─────────────────┤
+│ deposit_id (PK) │
+│deposit_type_id  │
+│ x               │
+│ y               │
+│ resource_amount │
+└─────────────────┘
 ```
 
 ## Table Definitions
@@ -67,6 +81,60 @@ Defines types of terrain tiles for the background layer.
 | 8  | swamp       | no        | Dark green marsh (unbuildable)   |
 | 9  | sky         | no        | Sky background                   |
 | 10 | island_edge | no        | Floating island bottom edge      |
+
+### deposit_type (deposit definitions)
+Defines types of natural resources (trees, rocks, ores) that exist in the world.
+
+| Column              | Type                          | Description                              |
+|---------------------|-------------------------------|------------------------------------------|
+| deposit_type_id     | INT UNSIGNED                  | Primary key                              |
+| type                | ENUM('tree','rock','ore')     | Category of deposit                      |
+| name                | VARCHAR(128)                  | Display name                             |
+| image_url           | VARCHAR(256)                  | Folder name for sprite (only normal.png) |
+| resource_id         | INT UNSIGNED                  | FK to resource (what resource it contains)|
+| resource_amount     | INT UNSIGNED DEFAULT 100      | Default resource amount in new deposits  |
+| width               | TINYINT UNSIGNED DEFAULT 1    | Visual width in tiles                    |
+| height              | TINYINT UNSIGNED DEFAULT 1    | Visual height in tiles                   |
+
+**Note**: Unlike entities, deposits are always 1x1 for collision/placement calculations. `width` and `height` are for visual sprite dimensions only.
+
+**Deposit Types:**
+| ID  | Type | Name                | Resource    | Amount |
+|-----|------|---------------------|-------------|--------|
+| 1   | tree | Pine Tree           | Wood (1)    | 100    |
+| 2   | tree | Oak Tree            | Wood (1)    | 120    |
+| 3   | tree | Dead Tree           | Wood (1)    | 50     |
+| 4   | tree | Birch Tree          | Wood (1)    | 100    |
+| 5   | tree | Spruce Tree         | Wood (1)    | 110    |
+| 6   | tree | Maple Tree          | Wood (1)    | 100    |
+| 7   | tree | Willow Tree         | Wood (1)    | 90     |
+| 8   | tree | Ash Tree            | Wood (1)    | 105    |
+| 10  | rock | Small Rock          | Stone (5)   | 50     |
+| 11  | rock | Medium Rock         | Stone (5)   | 100    |
+| 12  | rock | Large Rock          | Stone (5)   | 150    |
+| 300 | ore  | Iron Ore            | Iron Ore (2)| 200    |
+| 301 | ore  | Copper Ore          | Copper Ore (3)| 200  |
+| 302 | ore  | Aluminum Deposit    | Aluminum Ore (14)| 150|
+| 303 | ore  | Titanium Deposit    | Titanium Ore (15)| 150|
+| 304 | ore  | Silver Deposit      | Silver Ore (16)| 100 |
+| 305 | ore  | Gold Deposit        | Gold Ore (17)| 80   |
+
+### deposit (deposit instances)
+Stores actual deposit placement on the game map.
+
+| Column          | Type         | Description                          |
+|-----------------|--------------|--------------------------------------|
+| deposit_id      | INT UNSIGNED | Primary key (AUTO_INCREMENT)         |
+| deposit_type_id | INT UNSIGNED | FK to deposit_type.deposit_type_id   |
+| x               | INT UNSIGNED | Tile X coordinate                    |
+| y               | INT UNSIGNED | Tile Y coordinate                    |
+| resource_amount | INT UNSIGNED | Current resource amount remaining    |
+
+**Key Differences from Entity:**
+- **No state field**: Deposits are always "active", cannot be blueprints
+- **No durability**: Deposits are removed entirely when extraction buildings placed
+- **Tile coordinates**: Like map table, x/y are in tiles (not pixels)
+- **Single resource**: Each deposit contains only one resource type
 
 ### map (terrain instances)
 Stores actual terrain placement on the game map.
@@ -232,10 +300,18 @@ Defines types of resources in the game (ores, ingots, crafted items).
 | 4   | Coal          | raw     | Уголь                    |
 | 5   | Stone         | raw     | Камень                   |
 | 6   | Raw Crystal   | raw     | Необработанный кристалл  |
-| 7   | Crude Oil     | raw     | Сырая нефть              |
-| 8   | Iron Deposit  | deposit | Железная залежь (в руде) |
-| 9   | Copper Deposit| deposit | Медная залежь (в руде)   |
-| 20  | Refined Fuel  | liquid  | Очищенное топливо        |
+| 7   | Crude Oil        | raw     | Сырая нефть                 |
+| 8   | Iron Deposit     | deposit | Железная залежь (в руде)    |
+| 9   | Copper Deposit   | deposit | Медная залежь (в руде)      |
+| 10  | Aluminum Deposit | deposit | Алюминиевая залежь          |
+| 11  | Titanium Deposit | deposit | Титановая залежь            |
+| 12  | Silver Deposit   | deposit | Серебряная залежь           |
+| 13  | Gold Deposit     | deposit | Золотая залежь              |
+| 14  | Aluminum Ore     | raw     | Алюминиевая руда            |
+| 15  | Titanium Ore     | raw     | Титановая руда              |
+| 16  | Silver Ore       | raw     | Серебряная руда             |
+| 17  | Gold Ore         | raw     | Золотая руда                |
+| 20  | Refined Fuel     | liquid  | Очищенное топливо           |
 | 21  | Lubricant     | liquid  | Смазка                   |
 | 22  | Heavy Oil     | liquid  | Тяжёлое масло            |
 | 23  | Light Oil     | liquid  | Лёгкое масло             |
@@ -358,8 +434,11 @@ Links entity types to available recipes.
 
 - **Map coordinates**: tile-based (x=0 means tile 0, x=1 means tile 1)
 - **Entity coordinates**: tile-based (same as map coordinates)
+- **Deposit coordinates**: tile-based (same as map/entity coordinates)
 - **Tile dimensions**: 64x64 pixels
 - **Conversion (JS rendering)**: `pixel_x = tile_x * 64`, `pixel_y = tile_y * 64`
+
+**Important**: All three tables (map, entity, deposit) use the same tile-based coordinate system for consistency.
 
 ## SQL Files
 
@@ -421,6 +500,14 @@ Stores user accounts and their settings.
 | m251221_000200_create_entity_transport.php      | Create entity_transport table (deprecated)     |
 | m251227_140644_add_transport_fields_to_entity_resource.php | Add transport fields to entity_resource |
 | m251227_140759_drop_entity_transport_table.php  | Drop entity_transport table                    |
+| m251227_151600_add_entity_type_fields.php       | Add description, construction_ticks to entity_type |
+| m251227_151601_add_entity_construction_progress.php | Add construction_progress to entity        |
+| m251227_151602_fill_entity_type_descriptions.php | Fill entity_type descriptions             |
+| m251228_100000_create_deposit_system.php        | Create deposit_type and deposit tables         |
+| m251228_110000_add_new_resources.php            | Add aluminum, titanium, silver, gold resources |
+| m251228_120000_add_extraction_buildings.php     | Add sawmills, quarries, mines entity types     |
+| m251228_130000_add_extraction_recipes.php       | Add extraction building recipes                |
+| m251228_140000_migrate_entities_to_deposits.php | Migrate tree/rock/ore entities to deposits     |
 
 ## Future Considerations
 

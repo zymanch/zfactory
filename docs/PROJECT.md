@@ -19,14 +19,22 @@ ZFactory is a browser-based automation game inspired by Factorio. The game featu
 - All game elements must be multiples of this base size
 - Entities can span multiple tiles (e.g., 128x128 = 2x2 tiles)
 
-### Two-Layer Architecture
+### Three-Layer Architecture
 1. **Background Layer (landing)** - terrain tiles (grass, water, stone, etc.)
    - Always 64x64 px
    - Stored in `landing` table (types) and `map` table (instances)
+   - zIndex: 1
 
-2. **Entity Layer (entity)** - buildings, conveyors, trees, etc.
+2. **Deposit Layer (deposit)** - natural resources (trees, rocks, ores)
+   - Simplified rendering (only normal.png sprite)
+   - Stored in `deposit_type` table (types) and `deposit` table (instances)
+   - Removed when extraction buildings are placed
+   - zIndex: 1.5
+
+3. **Entity Layer (entity)** - buildings, conveyors, extraction facilities, etc.
    - Can be larger: width = N*64px, height = M*64px
    - Stored in `entity_type` table (types) and `entity` table (instances)
+   - zIndex: 2
 
 ### Map Size
 - **Max bounds**: 50x28 tiles (3200x1792 pixels)
@@ -66,6 +74,49 @@ php yii landing/generate
 npm run assets
 ```
 
+## Deposit System
+
+Natural resources (trees, rocks, ores) are managed separately from entities using a simplified system.
+
+### Deposit Types
+Deposits are categorized into three types:
+- **Trees** (deposit_type_id 1-8): Pine, Oak, Dead, Birch, Spruce, Maple, Willow, Ash
+- **Rocks** (deposit_type_id 10-12): Small, Medium, Large
+- **Ores** (deposit_type_id 300-305): Iron, Copper, Aluminum, Titanium, Silver, Gold
+
+### Key Differences from Entities
+- **Single sprite**: Only `normal.png` (no damaged, selected, blueprint states)
+- **Always 1x1 tiles**: For collision/placement calculations (visual sprite may be larger)
+- **Non-interactive**: Cannot be selected or directly destroyed
+- **Auto-removed**: Deleted when extraction buildings placed on them
+
+### Extraction Buildings
+Different building types required for different deposit types:
+
+| Building Type | Deposit Type | Examples |
+|---------------|--------------|----------|
+| Sawmill | Trees | Small/Medium/Large Sawmill (1x1, 3x3, 5x5) |
+| Stone Quarry | Rocks | Small/Medium/Large Stone Quarry (1x1, 3x3, 5x5) |
+| Ore Drill | Iron/Copper Ores | Small/Medium/Large Drill (1x1, 2x2, 3x3) |
+| Mine | Silver/Gold Ores | Small/Medium/Large Mine (1x1, 2x2, 3x3) |
+| Quarry | Aluminum/Titanium Ores | Small/Medium/Large Quarry (1x1, 2x2, 3x3) |
+
+### Placement Logic
+When placing extraction building:
+1. **Behavior checks** deposit type requirements (via DepositEntityBehavior)
+2. **All deposits** in building footprint are removed
+3. **Resources transferred** from deposits to building's storage
+4. Building begins construction as blueprint
+
+### Sprite Location
+```
+public/assets/tiles/deposits/
+├── tree_pine/normal.png
+├── rock_small/normal.png
+├── ore_iron/normal.png
+└── ...
+```
+
 ## Project Structure
 ```
 zfactory.local/
@@ -101,6 +152,9 @@ zfactory.local/
 │           │   └── BuildPanel.js
 │           ├── camera.js
 │           ├── inputManager.js
+│           ├── depositLayerManager.js  # Deposit rendering
+│           ├── depositTooltip.js       # Deposit hover info
+│           ├── depositBehaviors.js     # Deposit placement logic
 │           ├── entityTooltip.js
 │           ├── fogOfWar.js
 │           └── ...

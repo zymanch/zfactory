@@ -1,4 +1,5 @@
 import { tileKey, rectsOverlap } from './utils.js';
+import { DepositEntityBehavior } from './depositBehaviors.js';
 
 /**
  * Base class for entity behaviors
@@ -337,6 +338,16 @@ export class EntityBehaviorFactory {
             return null;
         }
 
+        // Check for deposit-based extraction buildings first
+        // Sawmills: 500-502, Stone Quarries: 503-505, Drills: 102/108/506
+        // Mines: 507-509, Quarries: 510-512
+        const typeId = parseInt(entityTypeId);
+        if ((typeId >= 500 && typeId <= 512) || [102, 108].includes(typeId)) {
+            const behavior = new DepositEntityBehavior(game, entityType);
+            this.cache.set(entityTypeId, behavior);
+            return behavior;
+        }
+
         const BehaviorClass = this.TYPE_BEHAVIORS[entityType.type] || DefaultEntityBehavior;
         const behavior = new BehaviorClass(game, entityType);
 
@@ -378,7 +389,8 @@ export {
     ResourceEntityBehavior,
     ReliefEntityBehavior,
     TreeEntityBehavior,
-    EyeEntityBehavior
+    EyeEntityBehavior,
+    DepositEntityBehavior
 };
 
 export default EntityBehaviorFactory;

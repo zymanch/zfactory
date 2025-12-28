@@ -13,6 +13,7 @@ namespace models\base;
  * @property string $type
  * @property integer $max_stack
  *
+ * @property \models\DepositType[] $depositTypes
  * @property \models\EntityResource[] $entityResources
  * @property \models\BaseEntity[] $entities
  * @property \models\Recipe[] $recipes
@@ -58,6 +59,12 @@ class BaseResource extends \yii\db\ActiveRecord
         ];
     }
     /**
+     * @return \models\DepositTypeQuery
+     */
+    public function getDepositTypes() {
+        return $this->hasMany(\models\DepositType::className(), [BaseDepositTypePeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID])->inverseOf('resource');
+    }
+        /**
      * @return \models\EntityResourceQuery
      */
     public function getEntityResources() {
@@ -127,6 +134,7 @@ class BaseResource extends \yii\db\ActiveRecord
     {
         /*
         return [
+            'depositTypes' => 'depositTypes',
             'entityResources' => 'entityResources',
             'entities' => 'entities',
             'recipes' => 'recipes',

@@ -42,7 +42,7 @@ class EntityBehaviorFactory
             return self::$cache[$typeId];
         }
 
-        $behaviorClass = self::getBehaviorClass($entityType->type);
+        $behaviorClass = self::getBehaviorClassByTypeId($typeId, $entityType->type);
         self::$cache[$typeId] = new $behaviorClass($entityType);
 
         return self::$cache[$typeId];
@@ -66,6 +66,28 @@ class EntityBehaviorFactory
         }
 
         return self::create($entityType);
+    }
+
+    /**
+     * Get behavior class by entity type ID
+     * Checks for specific IDs first, then falls back to type-based mapping
+     *
+     * @param int $typeId
+     * @param string $type
+     * @return string
+     */
+    private static function getBehaviorClassByTypeId($typeId, $type)
+    {
+        // Deposit-based extraction buildings (sawmill, stone quarry, ore drill, mine, quarry)
+        // Sawmills: 500-502, Stone Quarries: 503-505, Large Ore Drill: 506
+        // Mines: 507-509, Quarries: 510-512
+        // Also Ore Drills: 102, 108 (updated to use deposits)
+        if (($typeId >= 500 && $typeId <= 512) || in_array($typeId, [102, 108, 506])) {
+            return DepositEntityBehavior::class;
+        }
+
+        // Fall back to type-based mapping
+        return self::getBehaviorClass($type);
     }
 
     /**

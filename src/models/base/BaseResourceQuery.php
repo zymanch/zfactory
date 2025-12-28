@@ -21,6 +21,8 @@ use models\ResourceQuery;
   * @method ResourceQuery orderByIconUrl($order = Criteria::ASC)
   * @method ResourceQuery orderByType($order = Criteria::ASC)
   * @method ResourceQuery orderByMaxStack($order = Criteria::ASC)
+  * @method ResourceQuery withDepositTypes($params = [])
+  * @method ResourceQuery joinWithDepositTypes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withEntityResources($params = [])
   * @method ResourceQuery joinWithEntityResources($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withEntities($params = [])

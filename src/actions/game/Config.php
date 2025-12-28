@@ -12,6 +12,7 @@ use models\Recipe;
 use models\EntityTypeRecipe;
 use models\EntityResource;
 use models\EntityCrafting;
+use models\DepositType;
 use services\BuildingRules;
 use Yii;
 
@@ -35,6 +36,12 @@ class Config extends JsonAction
         $entityTypes = $this->castNumericFieldsIndexed(
             EntityType::find()->indexBy('entity_type_id')->asArray()->all(),
             ['entity_type_id', 'power', 'max_durability', 'width', 'height']
+        );
+
+        // Get deposit types
+        $depositTypes = $this->castNumericFieldsIndexed(
+            DepositType::find()->indexBy('deposit_type_id')->asArray()->all(),
+            ['deposit_type_id', 'resource_id', 'resource_amount', 'width', 'height']
         );
 
         // Get all eye entity type IDs
@@ -107,6 +114,12 @@ class Config extends JsonAction
             ['position', 'lateral_offset', 'arm_position']  // floats
         );
 
+        // Get all deposits (trees, rocks, ores)
+        $deposits = $this->castNumericFieldsArray(
+            \models\Deposit::find()->asArray()->all(),
+            ['deposit_id', 'deposit_type_id', 'x', 'y', 'resource_amount']
+        );
+
         // Get user's build panel and camera position
         $buildPanel = array_fill(0, 10, null);
         $cameraX = 0;
@@ -124,7 +137,9 @@ class Config extends JsonAction
         return $this->success([
             'landing' => $landingTypes,
             'entityTypes' => $entityTypes,
+            'depositTypes' => $depositTypes,
             'eyeEntities' => $eyeEntities,
+            'deposits' => $deposits,
             'resources' => $resources,
             'recipes' => $recipes,
             'entityTypeRecipes' => $entityTypeRecipes,
@@ -140,6 +155,7 @@ class Config extends JsonAction
             'config' => [
                 'mapUrl' => \yii\helpers\Url::to(['map/tiles'], true),
                 'entitiesUrl' => \yii\helpers\Url::to(['game/entities'], true),
+                'depositsUrl' => \yii\helpers\Url::to(['game/deposits'], true),
                 'createEntityUrl' => \yii\helpers\Url::to(['map/create-entity'], true),
                 'deleteEntityUrl' => \yii\helpers\Url::to(['map/delete-entity'], true),
                 'updateLandingUrl' => \yii\helpers\Url::to(['map/update-landing'], true),

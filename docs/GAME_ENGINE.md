@@ -15,10 +15,17 @@
 ```
 Stage
 └── worldContainer (scaled & positioned by camera)
-    ├── landingLayer (terrain tiles)
-    ├── entityLayer (buildings, trees, etc.)
+    ├── landingLayer (terrain tiles, zIndex: 1)
+    ├── depositLayer (natural resources, zIndex: 1.5)
+    ├── entityLayer (buildings, zIndex: 2)
     └── fogLayer (fog of war overlay, zIndex: 9999)
 ```
+
+**Layer Purpose:**
+- **landingLayer**: Background terrain (grass, water, stone, etc.)
+- **depositLayer**: Natural resources (trees, rocks, ores) - simplified rendering
+- **entityLayer**: Player-built structures and machines
+- **fogLayer**: Visibility mask based on Crystal Tower positions
 
 ### Rendering Pipeline
 1. Camera position updated based on input
@@ -308,6 +315,20 @@ Load game configuration with all reference data. Called once on init.
     "landing": {
         "1": {"landing_id": 1, "name": "Grass", "folder": "grass", ...}
     },
+    "depositTypes": {
+        "1": {
+            "deposit_type_id": 1,
+            "type": "tree",
+            "name": "Pine Tree",
+            "image_url": "tree_pine",
+            "resource_id": 1,
+            "resource_amount": 100,
+            ...
+        }
+    },
+    "deposits": [
+        {"deposit_id": 1, "deposit_type_id": 1, "x": 10, "y": 20, "resource_amount": 100}
+    ],
     "entityTypes": {
         "100": {
             "entity_type_id": 100,
@@ -634,13 +655,35 @@ Landing selection modal window:
 - Click to select and enter LANDING_EDIT mode
 - Esc to close and return to NORMAL mode
 
+### DepositLayerManager (`depositLayerManager.js`)
+Manages rendering of natural resources (trees, rocks, ores):
+- **Single sprite**: Only `normal.png` (no damaged/selected states)
+- **Z-index**: 1.5 (between landing and entity layers)
+- **Tile coordinates**: Uses same coordinate system as map/entity
+- **Viewport loading**: Loads deposits visible in current camera view
+- **Auto-removal**: Deposits removed when extraction buildings placed
+- **Simplified tooltip**: Shows resource name, icon, amount
+
+**Key Methods:**
+- `loadDeposits(deposits)` - load initial deposits from config
+- `addDeposit(depositData)` - add single deposit sprite
+- `removeDeposits(depositIds)` - remove multiple deposits
+- `getDepositsInArea(tileX, tileY, width, height)` - find deposits in rectangle
+
+### DepositTooltip (`depositTooltip.js`)
+Simplified tooltip for deposits on hover:
+- Resource name and deposit type
+- Resource icon and amount
+- No durability or construction progress
+
 ### BuildMode (`modes/buildMode.js`)
 Building placement on map:
 - Preview sprite follows mouse
 - Green/red tint for valid/invalid placement
-- Collision detection with existing entities
+- Collision detection with existing entities and deposits
 - Multi-tile entity support (width/height)
 - AJAX POST to create entity
+- **Deposit validation**: Extraction buildings check required deposit type
 - **Rotation support**: Press **R** (or **К** on Russian layout) to rotate
   - Works for entities with orientation variants (conveyors, manipulators)
   - Cycles through: right → down → left → up

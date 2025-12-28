@@ -19,6 +19,8 @@ import { ConveyorManager } from './modules/conveyorManager.js';
 import { GameModeManager, GameMode } from './modules/modes/gameModeManager.js';
 import { EntityInfoWindow } from './modules/windows/entityInfoWindow.js';
 import { ConstructionManager } from './modules/constructionManager.js';
+import { DepositLayerManager } from './modules/depositLayerManager.js';
+import { DepositTooltip } from './modules/depositTooltip.js';
 import { SPRITE_STATES, SPRITE_STATES_ORIGINAL, CONSTRUCTION_FRAMES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 import { getCSRFToken } from './modules/utils.js';
 
@@ -36,6 +38,7 @@ class ZFactoryGame {
         this.landingTypes = {};
         this.landingAdjacencies = [];
         this.entityTypes = {};
+        this.depositTypes = {};
         this.resources = {};
         this.recipes = {};
         this.entityTypeRecipes = {};
@@ -49,6 +52,7 @@ class ZFactoryGame {
         this.needsReload = false;
         this.lastReloadTime = 0;
         this.tilesLoaded = false;
+        this.depositsLoaded = false;
         this.entitiesLoaded = false;
 
         // FPS tracking
@@ -68,7 +72,9 @@ class ZFactoryGame {
         this.buildMode = null;
         this.fogOfWar = null;
         this.tileManager = null;
+        this.depositManager = null;
         this.entityTooltip = null;
+        this.depositTooltip = null;
         this.buildingRules = null;
         this.resourceTransport = null;
         this.resourceRenderer = null;
@@ -112,7 +118,9 @@ class ZFactoryGame {
         this.buildMode = new BuildMode(this);
         this.fogOfWar = new FogOfWar(this);
         this.tileManager = new TileLayerManager(this);
+        this.depositManager = new DepositLayerManager(this);
         this.entityTooltip = new EntityTooltip(this);
+        this.depositTooltip = new DepositTooltip(this);
         this.buildingRules = new BuildingRules(this);
         this.resourceTransport = new ResourceTransportManager(this);
         this.resourceRenderer = new ResourceRenderer(this);
@@ -162,8 +170,13 @@ class ZFactoryGame {
         this.app.stage.addChild(this.worldContainer);
 
         this.landingLayer.sortableChildren = true;
+        this.landingLayer.zIndex = 1;
+
         this.entityLayer.sortableChildren = true;
         this.entityLayer.eventMode = 'static';
+        this.entityLayer.zIndex = 2;
+
+        // depositLayer will be added by depositManager.init() with z-index 1.5
     }
 
     /**
@@ -193,7 +206,9 @@ class ZFactoryGame {
         this.buildingWindow.init();
         this.buildMode.init();
         this.fogOfWar.init();
+        this.depositManager.init();
         this.entityTooltip.init();
+        this.depositTooltip.init();
         this.landingWindow.init();
         this.landingEditMode.init();
         this.entityInfoWindow.init();
@@ -228,11 +243,13 @@ class ZFactoryGame {
         this.landingTypes = data.landing;
         this.landingAdjacencies = data.landingAdjacencies || [];
         this.entityTypes = data.entityTypes;
+        this.depositTypes = data.depositTypes || {};
         this.resources = data.resources || {};
         this.recipes = data.recipes || {};
         this.entityTypeRecipes = data.entityTypeRecipes || {};
         this.initialBuildPanel = data.buildPanel || [];
         this.initialEyeEntities = data.eyeEntities || [];
+        this.initialDeposits = data.deposits || [];
         this.initialCameraPosition = data.cameraPosition || { x: 0, y: 0, zoom: 1 };
         this.initialEntityResources = data.entityResources || [];
         this.initialCraftingStates = data.craftingStates || [];
@@ -265,6 +282,7 @@ class ZFactoryGame {
         await this.loadLandingTextures();
         await this.loadTransitionTextures();
         await this.loadEntityTextures();
+        await this.loadDepositTextures();
         await this.conveyorManager.loadAtlases();
     }
 
@@ -310,6 +328,26 @@ class ZFactoryGame {
     hasLandingAdjacency(landingId1, landingId2) {
         if (!this.adjacencySet) return false;
         return this.adjacencySet.has(`${landingId1}_${landingId2}`);
+    }
+
+    /**
+     * Load deposit textures (only normal.png for each deposit type)
+     */
+    async loadDepositTextures() {
+        for (const depositTypeId in this.depositTypes) {
+            const depositType = this.depositTypes[depositTypeId];
+            const folder = depositType.image_url;
+
+            // Only load normal.png for deposits (no damaged, blueprint, etc.)
+            const normalUrl = this.assetUrl(`${this.config.tilesPath}deposits/${folder}/normal.png`);
+
+            try {
+                const texture = await PIXI.Assets.load(normalUrl);
+                this.textures[`deposit_${depositTypeId}_normal`] = texture;
+            } catch (e) {
+                console.warn('Failed to load deposit texture:', normalUrl, e);
+            }
+        }
     }
 
     /**
@@ -425,6 +463,12 @@ class ZFactoryGame {
         if (!this.tilesLoaded) {
             await this.loadMapTiles();
             this.tilesLoaded = true;
+        }
+
+        // Load deposits after tiles (deposits need to be above landing layer)
+        if (!this.depositsLoaded) {
+            this.depositManager.loadDeposits(this.initialDeposits);
+            this.depositsLoaded = true;
         }
 
         if (!this.entitiesLoaded) {

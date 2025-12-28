@@ -13,6 +13,7 @@ class GameController extends Controller
         return [
             'index' => \actions\game\Index::class,
             'entities' => \actions\game\Entities::class,
+            'deposits' => \actions\game\Deposits::class,
             'config' => \actions\game\Config::class,
             'entity-resources' => \actions\game\EntityResources::class,
             'save-state' => \actions\game\SaveState::class,
