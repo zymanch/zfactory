@@ -7,28 +7,62 @@ export class SpatialIndex {
     }
 
     /**
-     * Add entity to index
+     * Add entity to index (supports multi-tile entities)
+     * @param {Object} entity - Entity object with x, y, entity_id
+     * @param {number} width - Entity width in tiles (default 1)
+     * @param {number} height - Entity height in tiles (default 1)
      */
-    add(entity) {
-        const key = `${entity.x}_${entity.y}`;
-        this.grid.set(key, entity.entity_id);
+    add(entity, width = 1, height = 1) {
+        const x = parseInt(entity.x);
+        const y = parseInt(entity.y);
+
+        // Add all tiles occupied by this entity
+        for (let dy = 0; dy < height; dy++) {
+            for (let dx = 0; dx < width; dx++) {
+                const key = `${x + dx}_${y + dy}`;
+                this.grid.set(key, entity.entity_id);
+            }
+        }
     }
 
     /**
-     * Remove entity from index
+     * Remove entity from index (supports multi-tile entities)
+     * @param {Object} entity - Entity object with x, y, entity_id
+     * @param {number} width - Entity width in tiles (default 1)
+     * @param {number} height - Entity height in tiles (default 1)
      */
-    remove(entity) {
-        const key = `${entity.x}_${entity.y}`;
-        this.grid.delete(key);
+    remove(entity, width = 1, height = 1) {
+        const x = parseInt(entity.x);
+        const y = parseInt(entity.y);
+
+        // Remove all tiles occupied by this entity
+        for (let dy = 0; dy < height; dy++) {
+            for (let dx = 0; dx < width; dx++) {
+                const key = `${x + dx}_${y + dy}`;
+                this.grid.delete(key);
+            }
+        }
     }
 
     /**
-     * Update entity position
+     * Update entity position (supports multi-tile entities)
+     * @param {Object} entity - Entity object with new x, y
+     * @param {number} oldX - Old X position
+     * @param {number} oldY - Old Y position
+     * @param {number} width - Entity width in tiles (default 1)
+     * @param {number} height - Entity height in tiles (default 1)
      */
-    update(entity, oldX, oldY) {
-        const oldKey = `${oldX}_${oldY}`;
-        this.grid.delete(oldKey);
-        this.add(entity);
+    update(entity, oldX, oldY, width = 1, height = 1) {
+        // Remove from old position
+        for (let dy = 0; dy < height; dy++) {
+            for (let dx = 0; dx < width; dx++) {
+                const key = `${oldX + dx}_${oldY + dy}`;
+                this.grid.delete(key);
+            }
+        }
+
+        // Add at new position
+        this.add(entity, width, height);
     }
 
     /**

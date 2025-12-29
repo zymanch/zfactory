@@ -38,7 +38,7 @@ return [
         'replicate_ai_api_key' => $secure['replicate']['token'],
         'tile_width' => 64,
         'tile_height' => 64,
-        'asset_version' => 26,
+        'asset_version' => 27,
         'auto_save_interval' => 60, // seconds between auto-saves
     ],
 

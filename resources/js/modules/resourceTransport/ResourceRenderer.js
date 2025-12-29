@@ -18,6 +18,9 @@ export class ResourceRenderer {
     async init() {
         this.container = new PIXI.Container();
         this.container.sortableChildren = true;
+        this.container.visible = true;
+        this.container.alpha = 1.0;
+        this.container.zIndex = 3;  // Above entity layer (entityLayer.zIndex = 2)
 
         // Insert after entity layer
         const entityLayerIndex = this.game.worldContainer.getChildIndex(this.game.entityLayer);
@@ -42,7 +45,7 @@ export class ResourceRenderer {
                 const texture = await PIXI.Assets.load(url);
                 this.resourceTextures.set(parseInt(resourceId), texture);
             } catch (e) {
-                console.warn('Failed to load resource texture:', url);
+                // Silently skip missing textures
             }
         }
     }
@@ -95,7 +98,7 @@ export class ResourceRenderer {
         if (!sprite) {
             sprite = new PIXI.Sprite(texture);
             sprite.anchor.set(0.5, 0.5);
-            sprite.scale.set(1, 1);  // Full size resource icon
+            sprite.scale.set(0.75, 0.75);  // Slightly smaller than tile (64 * 0.75 = 48px)
             this.container.addChild(sprite);
             this.resourceSprites.set(entityId, sprite);
         } else if (sprite.texture !== texture) {

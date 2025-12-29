@@ -85,7 +85,10 @@ export class ResourceTransportManager {
             const entityType = this.game.entityTypes[entity.entity_type_id];
             if (!entityType) continue;
 
-            this.spatialIndex.add(entity);
+            // Add to spatial index with entity dimensions
+            const width = parseInt(entityType.width) || 1;
+            const height = parseInt(entityType.height) || 1;
+            this.spatialIndex.add(entity, width, height);
 
             switch (entityType.type) {
                 case 'transporter':
@@ -99,6 +102,7 @@ export class ResourceTransportManager {
                 case 'building':
                 case 'mining':
                 case 'storage':
+                case 'special':
                     this.buildings.set(entity.entity_id, new BuildingState(entity, entityType, this.game));
                     break;
             }
@@ -506,7 +510,7 @@ export class ResourceTransportManager {
      */
     tryPickupResource(state) {
         if (!state.sourceEntityId) return;
-        if (!state.targetEntityId) return;
+        // Note: targetEntityId can be null - manipulator can pick up even without target
 
         const canGive = this.canEntityGive(state.sourceEntityId, 'manipulator');
         if (canGive) {
@@ -878,7 +882,10 @@ export class ResourceTransportManager {
         const entityType = this.game.entityTypes[entity.entity_type_id];
         if (!entityType) return;
 
-        this.spatialIndex.add(entity);
+        // Add to spatial index with entity dimensions
+        const width = parseInt(entityType.width) || 1;
+        const height = parseInt(entityType.height) || 1;
+        this.spatialIndex.add(entity, width, height);
 
         switch (entityType.type) {
             case 'transporter':
@@ -890,6 +897,7 @@ export class ResourceTransportManager {
             case 'building':
             case 'mining':
             case 'storage':
+            case 'special':
                 this.buildings.set(entity.entity_id, new BuildingState(entity, entityType, this.game));
                 break;
         }
@@ -906,7 +914,12 @@ export class ResourceTransportManager {
         const entity = this.game.entityData.get(`entity_${entityId}`);
 
         if (entity) {
-            this.spatialIndex.remove(entity);
+            const entityType = this.game.entityTypes[entity.entity_type_id];
+            if (entityType) {
+                const width = parseInt(entityType.width) || 1;
+                const height = parseInt(entityType.height) || 1;
+                this.spatialIndex.remove(entity, width, height);
+            }
         }
 
         // Remove from state maps

@@ -117,7 +117,9 @@ export class BuildingState {
                 return 'no';
 
             case 'storage':
+            case 'special':
                 // Accept any resource if there's space
+                // 'special' buildings like HQ work like storage
                 const maxStack = parseInt(resource.max_stack) || 100;
                 const current = this.getResourceAmount(resourceId);
 
@@ -165,7 +167,9 @@ export class BuildingState {
                 return null;
 
             case 'storage':
+            case 'special':
                 // Give any resource
+                // 'special' buildings like HQ work like storage
                 for (const [resourceId, amount] of this.resources) {
                     if (amount > 0) {
                         return { resourceId, amount: 1 };

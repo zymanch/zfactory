@@ -162,6 +162,8 @@ class ZFactoryGame {
      */
     initLayers() {
         this.worldContainer = new PIXI.Container();
+        this.worldContainer.sortableChildren = true;  // Enable z-index sorting for all layers
+
         this.landingLayer = new PIXI.Container();
         this.entityLayer = new PIXI.Container();
 
