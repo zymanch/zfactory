@@ -4,6 +4,7 @@ namespace generators;
 
 use generators\base\BaseSpriteGenerator;
 use models\EntityType;
+use Yii;
 
 /**
  * Генератор спрайтов для манипуляторов (всасывающие трубы)
@@ -43,8 +44,8 @@ class ManipulatorGenerator extends BaseSpriteGenerator
         }
 
         $prompt = $prompts[$imageUrl];
-        $pixelWidth = $entity->width * self::TILE_WIDTH;
-        $pixelHeight = $entity->height * self::TILE_HEIGHT;
+        $pixelWidth = $entity->width * Yii::$app->params['tile_width'];
+        $pixelHeight = $entity->height * Yii::$app->params['tile_height'];
         $genWidth = $pixelWidth * 4;
         $genHeight = $pixelHeight * 4;
 

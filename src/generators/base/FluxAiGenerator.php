@@ -74,8 +74,8 @@ class FluxAiGenerator
 
         // Node 6: KSampler (seed, steps, cfg)
         $workflow['6']['inputs']['seed'] = $seed ?: rand(0, 2147483647);
-        $workflow['6']['inputs']['steps'] = 45;  // Высокое качество
-        $workflow['6']['inputs']['cfg'] = 6.0;   // Сильное следование промпту
+        $workflow['6']['inputs']['steps'] = 30;  // Оптимальное качество для FLUX
+        $workflow['6']['inputs']['cfg'] = 1.5;   // Оптимальный CFG для FLUX (1-3)
 
         // Отправляем workflow в ComfyUI
         $promptId = $this->submitWorkflow($workflow);

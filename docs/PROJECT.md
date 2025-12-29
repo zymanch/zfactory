@@ -48,17 +48,28 @@ Terrain uses texture atlases with 5 procedural variations per landing type:
 - **Location**: `public/assets/tiles/landing/atlases/`
 - **Naming**: `{name}_atlas.png` (e.g., `grass_atlas.png`)
 
-### AI Sprite Generation
-Sprites can be generated using local Stable Diffusion WebUI:
-- **Setup**: See `ai/README.md` for installation instructions
-- **Model**: Realistic Vision v6.0 (4.59 GB) recommended
-- **Features**: Seamless tiling, img2img variations, automatic transparency for island edges
+### AI Sprite Generation (FLUX.1 Dev via ComfyUI)
 
-Workflow:
+**Current System**: FLUX.1 Dev model via ComfyUI API (local)
+- **Model**: FLUX.1 Dev (12GB VRAM recommended)
+- **API**: ComfyUI running on http://localhost:8188
+- **Features**: High-quality photorealistic sprites, automatic background removal, state generation
+- **Optimal Parameters**: CFG=1.5, steps=30
+
+**Tile Size Configuration**:
+All sprite dimensions use centralized config from `static_config.php`:
+```php
+'params' => [
+    'tile_width' => 64,   // pixels per tile width
+    'tile_height' => 64,  // pixels per tile height
+]
+```
+
+#### Landing Sprite Workflow
 ```bash
-# 1. Start WebUI (separate terminal)
+# 1. Start ComfyUI (separate terminal)
 cd ai
-start.bat
+start_comfyui.bat
 
 # 2. Generate AI sprites with variations
 php yii landing/generate-ai all        # All landings
@@ -73,6 +84,42 @@ php yii landing/generate
 # 5. Compile assets
 npm run assets
 ```
+
+#### Entity Sprite Workflow
+```bash
+# 1. Start ComfyUI (if not running)
+cd ai
+start_comfyui.bat
+
+# 2. Generate entity sprites (all 5 states)
+php yii entity/generate-ai-flux all              # All entities
+php yii entity/generate-ai-flux furnace          # Single entity
+php yii entity/generate-ai-flux furnace 1        # Test mode (only normal.png)
+php yii entity/generate-ai-flux furnace 0 1      # States only (regenerate states from existing normal.png)
+
+# 3. Generate construction/blueprint frames
+php yii entity/generate-states                   # Generates blueprint.png and construction_*.png for all entities
+
+# 4. Generate texture atlases
+php yii entity/generate                          # Creates texture atlases from sprite folders
+
+# 5. Compile assets
+npm run assets
+```
+
+#### Deposit Sprite Workflow
+```bash
+# 1. Generate deposit sprites (only normal.png)
+php yii deposit/generate-ai-flux all             # All deposits
+php yii deposit/generate-ai-flux ore_iron        # Single deposit
+
+# 2. Compile assets
+npm run assets
+```
+
+**Stopping ComfyUI**:
+- Ctrl+C in terminal window, or:
+- `netstat -ano | findstr ":8188"` to find PID, then `taskkill //PID <pid> //F`
 
 ## Deposit System
 
@@ -429,7 +476,7 @@ composer run ar
 php yii landing/generate-ai all      # All landings
 php yii landing/generate-ai grass    # Single landing
 
-# Scale original files to 32×24
+# Scale original files to 64×64
 php yii landing/scale-original
 
 # Generate texture atlases

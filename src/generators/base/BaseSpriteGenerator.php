@@ -15,10 +15,6 @@ abstract class BaseSpriteGenerator
     protected $basePath;
     protected $testMode = false;
 
-    // Размеры тайлов
-    const TILE_WIDTH = 32;   // пикселей на 1 тайл ширины
-    const TILE_HEIGHT = 24;  // пикселей на 1 тайл высоты
-
     public function __construct(FluxAiGenerator $fluxAi, $basePath = null)
     {
         $this->fluxAi = $fluxAi;

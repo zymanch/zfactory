@@ -351,8 +351,8 @@ Load game configuration with all reference data. Called once on init.
         "deleteEntityUrl": "http://zfactory.local/game/delete-entity",
         "saveBuildPanelUrl": "http://zfactory.local/user/save-build-panel",
         "tilesPath": "/assets/tiles/",
-        "tileWidth": 32,
-        "tileHeight": 24,
+        "tileWidth": 64,
+        "tileHeight": 64,
         "assetVersion": 1,
         "cameraSpeed": 8
     }
@@ -483,8 +483,8 @@ Delete an entity from the map.
 ## Tile Dimensions
 
 ```javascript
-const TILE_WIDTH = 32;
-const TILE_HEIGHT = 24;
+const TILE_WIDTH = 64;
+const TILE_HEIGHT = 64;
 
 // Convert pixel coords to tile coords
 const tileX = Math.floor(pixelX / TILE_WIDTH);
@@ -838,10 +838,10 @@ if ($landingId == 10 && $rightId == 9) {
 ```javascript
 const inset = 0.5;  // Prevent texture bleeding
 const rect = new PIXI.Rectangle(
-    col * 32 + inset,
-    row * 24 + inset,
-    32 - inset * 2,
-    24 - inset * 2
+    col * 64 + inset,
+    row * 64 + inset,
+    64 - inset * 2,
+    64 - inset * 2
 );
 
 const texture = new PIXI.Texture({

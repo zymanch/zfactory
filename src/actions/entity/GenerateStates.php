@@ -12,8 +12,6 @@ use Yii;
  */
 class GenerateStates extends ConsoleAction
 {
-    private $tileWidth = 64;
-    private $tileHeight = 64;
 
     public function run()
     {
@@ -52,8 +50,8 @@ class GenerateStates extends ConsoleAction
             return;
         }
 
-        $pixelWidth = $widthTiles * $this->tileWidth;
-        $pixelHeight = $heightTiles * $this->tileHeight;
+        $pixelWidth = $widthTiles * Yii::$app->params['tile_width'];
+        $pixelHeight = $heightTiles * Yii::$app->params['tile_height'];
 
         // Load normal sprite
         $normal = imagecreatefrompng($normalPath);

@@ -43,6 +43,7 @@ class GenerateAiFlux extends ConsoleAction
         $this->generators = [
             'building' => new BuildingGenerator($this->fluxAi, $this->basePath),
             'mining' => new BuildingGenerator($this->fluxAi, $this->basePath), // drills use building generator
+            'special' => new BuildingGenerator($this->fluxAi, $this->basePath), // headquarters, special buildings
             'tree' => new TreeGenerator($this->fluxAi, $this->basePath),
             'transporter' => new ConveyorGenerator($this->fluxAi, $this->basePath),
             'manipulator' => new ManipulatorGenerator($this->fluxAi, $this->basePath),
