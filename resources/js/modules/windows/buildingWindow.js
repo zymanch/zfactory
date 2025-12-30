@@ -13,6 +13,7 @@ export class BuildingWindow {
 
         this.tabConfig = {
             'building': 'Здания',
+            'ship': 'Корабль',
             'mining': 'Добыча',
             'manipulator': 'Манипуляторы',
             'transporter': 'Транспорт',

@@ -8,16 +8,19 @@ namespace models\base;
  * This is the model class for table "zfactory.landing".
  *
  * @property integer $landing_id
+ * @property string $type
  * @property string $name
  * @property string $is_buildable
  * @property string $folder
  * @property integer $variations_count
  * @property integer $ai_seed
  *
+ * @property \models\EntityType[] $entityTypes
  * @property \models\LandingAdjacency[] $landingAdjacencies
  * @property \models\LandingAdjacency[] $landingAdjacencies0
  * @property \models\BaseLanding[] $landingId2s
  * @property \models\BaseLanding[] $landingId1s
+ * @property \models\ShipLanding[] $shipLandings
  */
 class BaseLanding extends \yii\db\ActiveRecord
 {
@@ -35,8 +38,8 @@ class BaseLanding extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [[BaseLandingPeer::TYPE, BaseLandingPeer::IS_BUILDABLE], 'string'],
             [[BaseLandingPeer::NAME, BaseLandingPeer::FOLDER], 'required'],
-            [[BaseLandingPeer::IS_BUILDABLE], 'string'],
             [[BaseLandingPeer::VARIATIONS_COUNT, BaseLandingPeer::AI_SEED], 'integer'],
             [[BaseLandingPeer::NAME], 'string', 'max' => 64],
             [[BaseLandingPeer::FOLDER], 'string', 'max' => 256],
@@ -50,6 +53,7 @@ class BaseLanding extends \yii\db\ActiveRecord
     {
         return [
             BaseLandingPeer::LANDING_ID => 'Landing ID',
+            BaseLandingPeer::TYPE => 'Type',
             BaseLandingPeer::NAME => 'Name',
             BaseLandingPeer::IS_BUILDABLE => 'Is Buildable',
             BaseLandingPeer::FOLDER => 'Folder',
@@ -58,6 +62,12 @@ class BaseLanding extends \yii\db\ActiveRecord
         ];
     }
     /**
+     * @return \models\EntityTypeQuery
+     */
+    public function getEntityTypes() {
+        return $this->hasMany(\models\EntityType::className(), [BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => BaseLandingPeer::LANDING_ID])->inverseOf('convertsToLanding');
+    }
+        /**
      * @return \models\LandingAdjacencyQuery
      */
     public function getLandingAdjacencies() {
@@ -81,6 +91,12 @@ class BaseLanding extends \yii\db\ActiveRecord
     public function getLandingId1s() {
         return $this->hasMany(BaseLanding::className(), [BaseLandingPeer::LANDING_ID => BaseLandingAdjacencyPeer::LANDING_ID_1])->viaTable('landing_adjacency', [BaseLandingAdjacencyPeer::LANDING_ID_2 => BaseLandingPeer::LANDING_ID]);
     }
+        /**
+     * @return \models\ShipLandingQuery
+     */
+    public function getShipLandings() {
+        return $this->hasMany(\models\ShipLanding::className(), [BaseShipLandingPeer::LANDING_ID => BaseLandingPeer::LANDING_ID])->inverseOf('landing');
+    }
     
     /**
      * @inheritdoc
@@ -100,6 +116,7 @@ class BaseLanding extends \yii\db\ActiveRecord
     {
         return [
             'landing_id' => BaseLandingPeer::LANDING_ID,
+            'type' => BaseLandingPeer::TYPE,
             'name' => BaseLandingPeer::NAME,
             'is_buildable' => BaseLandingPeer::IS_BUILDABLE,
             'folder' => BaseLandingPeer::FOLDER,
@@ -116,10 +133,12 @@ class BaseLanding extends \yii\db\ActiveRecord
     {
         /*
         return [
+            'entityTypes' => 'entityTypes',
             'landingAdjacencies' => 'landingAdjacencies',
             'landingAdjacencies0' => 'landingAdjacencies0',
             'landingId2s' => 'landingId2s',
             'landingId1s' => 'landingId1s',
+            'shipLandings' => 'shipLandings',
         ];
         */
     }

@@ -251,7 +251,7 @@ class GenerateAiFlux extends ConsoleAction
      */
     private function waitForCompletion($apiUrl, $promptId)
     {
-        $maxAttempts = 120; // 2 minutes max (with 1 sec intervals)
+        $maxAttempts = 300; // 5 minutes max (with 1 sec intervals)
         $attempt = 0;
 
         while ($attempt < $maxAttempts) {
@@ -417,6 +417,30 @@ class GenerateAiFlux extends ConsoleAction
                 'positive' => 'seamless tileable texture, rocky cliff edge, stalactites hanging down, stone formations, bottom edge, game texture, dramatic',
                 'negative' => 'blurry, low quality, grass, sky, text, watermark'
             ],
+            'ship_edge' => [
+                'positive' => 'seamless tileable texture, dark metal ship hull side, industrial panels with rivets, sci-fi starship exterior, side view, metallic surface, game texture',
+                'negative' => 'blurry, low quality, top-down view, windows, interior, grass, text, watermark'
+            ],
+            'ship_floor_wood' => [
+                'positive' => 'seamless tileable texture, wooden deck planks, brown wood floor, ship deck, top-down orthographic view, game texture, natural wood grain',
+                'negative' => 'blurry, low quality, side view, perspective, 3d, text, watermark'
+            ],
+            'ship_floor_iron' => [
+                'positive' => 'seamless tileable texture, dark gray iron metal plates, industrial floor panels with rivets, heavy duty metal surface, top-down orthographic view, game texture',
+                'negative' => 'blurry, low quality, side view, perspective, rust, damaged, text, watermark'
+            ],
+            'ship_floor_steel' => [
+                'positive' => 'seamless tileable texture, light gray polished steel plates, clean industrial metal floor, smooth metallic surface, top-down orthographic view, game texture',
+                'negative' => 'blurry, low quality, side view, perspective, dirty, rust, text, watermark'
+            ],
+            'ship_floor_titanium' => [
+                'positive' => 'seamless tileable texture, blue-gray titanium alloy plates, futuristic sci-fi floor, advanced metal surface, top-down orthographic view, game texture',
+                'negative' => 'blurry, low quality, side view, perspective, damaged, text, watermark'
+            ],
+            'ship_floor_crystal' => [
+                'positive' => 'seamless tileable texture, purple glowing crystals embedded in metal floor, magical energy floor, sci-fi mystical surface, luminescent crystals, top-down orthographic view, game texture',
+                'negative' => 'blurry, low quality, side view, perspective, rocks, dirt, text, watermark'
+            ],
         ];
     }
 
@@ -435,6 +459,12 @@ class GenerateAiFlux extends ConsoleAction
             'snow' => ['fresh powder', 'icy patches', 'slight footprints', 'pristine'],
             'swamp' => ['more mud', 'darker water', 'algae', 'murky'],
             'island_edge' => ['longer stalactites', 'shorter formations', 'rougher texture', 'smoother edge'],
+            'ship_edge' => ['more rivets', 'darker metal', 'lighter panels', 'weathered surface'],
+            'ship_floor_wood' => ['lighter wood', 'darker wood', 'worn planks', 'polished finish'],
+            'ship_floor_iron' => ['more rivets', 'darker plates', 'lighter gray', 'heavy industrial'],
+            'ship_floor_steel' => ['polished shine', 'brushed finish', 'light scratches', 'pristine clean'],
+            'ship_floor_titanium' => ['blue tint', 'purple tint', 'futuristic glow', 'advanced alloy'],
+            'ship_floor_crystal' => ['bright glow', 'dim crystals', 'large crystals', 'small crystals'],
         ];
     }
 }

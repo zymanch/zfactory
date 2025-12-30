@@ -108,38 +108,106 @@ export class ConstructionManager {
                 // Remove from finishing set
                 this.finishingEntities.delete(entityId);
 
-                // Update local entity data
-                for (const [key, entityData] of this.game.entityData.entries()) {
-                    if (entityData.entity_id === entityId) {
-                        entityData.state = 'built';
-                        entityData.construction_progress = 100;
-                        entityData.durability = data.durability;
+                // Check if entity was converted to landing (ship floors)
+                if (data.converted) {
+                    // Entity converted to landing - remove entity sprite and data
+                    let tileX, tileY;
 
-                        // Update sprite to normal (key is already entity_${entity_id})
-                        const sprite = this.game.loadedEntities.get(key);
-                        if (sprite) {
-                            const textureKey = `entity_${entityData.entity_type_id}_normal`;
-                            const texture = this.game.textures[textureKey];
-                            if (texture) {
-                                sprite.texture = texture;
+                    for (const [key, entityData] of this.game.entityData.entries()) {
+                        if (entityData.entity_id === entityId) {
+                            // Both ship and island entities already have world coordinates from Entities.php
+                            tileX = parseInt(entityData.x);
+                            tileY = parseInt(entityData.y);
+
+                            // Remove sprite
+                            const sprite = this.game.loadedEntities.get(key);
+                            if (sprite) {
+                                sprite.destroy();
+                                this.game.loadedEntities.delete(key);
                             }
 
-                            // Enable interactivity - attach event handlers
-                            sprite.eventMode = 'static';
-                            sprite.cursor = 'pointer';
-
-                            // Attach event handlers (same as in createEntitySprite)
-                            sprite.on('pointerover', (e) => this.game.onEntityHover(sprite, true, e));
-                            sprite.on('pointerout', (e) => this.game.onEntityHover(sprite, false, e));
-                            sprite.on('pointermove', (e) => this.game.onEntityMove(e));
-                            sprite.on('click', (e) => this.game.onEntityClick(sprite, e));
+                            // Remove from entity data
+                            this.game.entityData.delete(key);
+                            break;
                         }
-
-                        break;
                     }
-                }
 
-                console.log(`Construction finished for entity ${entityId}`);
+                    // Add new landing tile to tile data map
+                    if (data.converted_to_landing_id && tileX !== undefined && tileY !== undefined) {
+                        const landingId = data.converted_to_landing_id;
+                        const key = `${tileX}_${tileY}`;
+
+                        console.log(`Creating landing tile: landing_id=${landingId}, world coords=(${tileX}, ${tileY})`);
+
+                        // Add to tile data map
+                        this.game.tileDataMap.set(key, landingId);
+
+                        // Create tile sprite with transitions (uses atlas)
+                        if (this.game.tileManager) {
+                            const sprite = this.game.tileManager.createTileWithTransitions(
+                                landingId,
+                                tileX,
+                                tileY
+                            );
+
+                            if (sprite) {
+                                this.game.landingLayer.addChild(sprite);
+                                this.game.landingLayer.sortChildren(); // Sort by z-index
+                                this.game.tileManager.loadedTiles.set(key, sprite);
+                                console.log(`✓ Landing tile sprite created and added to layer at z-index ${sprite.zIndex}`);
+                                console.log(`Sprite position: (${sprite.x}, ${sprite.y}), size: ${sprite.width}x${sprite.height}`);
+
+                                // Refresh adjacent tiles to update their transitions
+                                this.game.tileManager.refreshAdjacentTiles(tileX, tileY);
+                            } else {
+                                console.error(`✗ Failed to create landing tile sprite (atlas missing?)`);
+                            }
+                        } else {
+                            console.error(`✗ tileManager not available`);
+                        }
+                    } else {
+                        console.error(`✗ Missing data for landing creation:`, {
+                            converted_to_landing_id: data.converted_to_landing_id,
+                            tileX,
+                            tileY
+                        });
+                    }
+
+                    console.log(`Entity ${entityId} converted to landing at world (${tileX}, ${tileY})`);
+                } else {
+                    // Normal construction finish - update entity to built state
+                    for (const [key, entityData] of this.game.entityData.entries()) {
+                        if (entityData.entity_id === entityId) {
+                            entityData.state = 'built';
+                            entityData.construction_progress = 100;
+                            entityData.durability = data.durability;
+
+                            // Update sprite to normal (key is already entity_${entity_id})
+                            const sprite = this.game.loadedEntities.get(key);
+                            if (sprite) {
+                                const textureKey = `entity_${entityData.entity_type_id}_normal`;
+                                const texture = this.game.textures[textureKey];
+                                if (texture) {
+                                    sprite.texture = texture;
+                                }
+
+                                // Enable interactivity - attach event handlers
+                                sprite.eventMode = 'static';
+                                sprite.cursor = 'pointer';
+
+                                // Attach event handlers (same as in createEntitySprite)
+                                sprite.on('pointerover', (e) => this.game.onEntityHover(sprite, true, e));
+                                sprite.on('pointerout', (e) => this.game.onEntityHover(sprite, false, e));
+                                sprite.on('pointermove', (e) => this.game.onEntityMove(e));
+                                sprite.on('click', (e) => this.game.onEntityClick(sprite, e));
+                            }
+
+                            break;
+                        }
+                    }
+
+                    console.log(`Construction finished for entity ${entityId}`);
+                }
             } else {
                 console.error('Failed to finish construction:', data.error);
                 // Remove from finishing set on error

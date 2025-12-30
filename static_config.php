@@ -38,8 +38,15 @@ return [
         'replicate_ai_api_key' => $secure['replicate']['token'],
         'tile_width' => 64,
         'tile_height' => 64,
-        'asset_version' => 27,
+        'asset_version' => 28,
         'auto_save_interval' => 60, // seconds between auto-saves
+        'debug' => false,
+
+        // Landing IDs constants
+        'landing_sky_id' => 11,          // Sky (moved from 9 to 11)
+        'landing_bridge_id' => 9,        // Bridge (future feature)
+        'landing_island_edge_id' => 10,  // Island Edge (auto-generated)
+        'landing_ship_edge_id' => 12,    // Ship Edge (auto-generated)
     ],
 
     'aliases' => [

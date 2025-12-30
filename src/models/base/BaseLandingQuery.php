@@ -7,23 +7,28 @@ use models\LandingQuery;
 /**
  * This is the ActiveQuery class for [[models\Landing]].
  * @method LandingQuery filterByLandingId($value, $criteria = null)
+ * @method LandingQuery filterByType($value, $criteria = null)
  * @method LandingQuery filterByName($value, $criteria = null)
  * @method LandingQuery filterByIsBuildable($value, $criteria = null)
  * @method LandingQuery filterByFolder($value, $criteria = null)
  * @method LandingQuery filterByVariationsCount($value, $criteria = null)
  * @method LandingQuery filterByAiSeed($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByLandingId($value, $criteria = null)
+  * @method LandingQuery andJoinOnConditionByType($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByName($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByIsBuildable($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByFolder($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByVariationsCount($value, $criteria = null)
   * @method LandingQuery andJoinOnConditionByAiSeed($value, $criteria = null)
   * @method LandingQuery orderByLandingId($order = Criteria::ASC)
+  * @method LandingQuery orderByType($order = Criteria::ASC)
   * @method LandingQuery orderByName($order = Criteria::ASC)
   * @method LandingQuery orderByIsBuildable($order = Criteria::ASC)
   * @method LandingQuery orderByFolder($order = Criteria::ASC)
   * @method LandingQuery orderByVariationsCount($order = Criteria::ASC)
   * @method LandingQuery orderByAiSeed($order = Criteria::ASC)
+  * @method LandingQuery withEntityTypes($params = [])
+  * @method LandingQuery joinWithEntityTypes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method LandingQuery withLandingAdjacencies($params = [])
   * @method LandingQuery joinWithLandingAdjacencies($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method LandingQuery withLandingAdjacencies0($params = [])
@@ -32,6 +37,8 @@ use models\LandingQuery;
   * @method LandingQuery joinWithLandingId2s($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method LandingQuery withLandingId1s($params = [])
   * @method LandingQuery joinWithLandingId1s($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method LandingQuery withShipLandings($params = [])
+  * @method LandingQuery joinWithShipLandings($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseLandingQuery extends \yii\db\ActiveQuery
 {

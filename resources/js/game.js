@@ -248,6 +248,13 @@ class ZFactoryGame {
         }
 
         this.config = data.config;
+
+        // Override landing ID constants from config (for ship building system)
+        this.LANDING_SKY_ID = this.config.landingSkyId;
+        this.LANDING_BRIDGE_ID = this.config.landingBridgeId;
+        this.LANDING_ISLAND_EDGE_ID = this.config.landingIslandEdgeId;
+        this.LANDING_SHIP_EDGE_ID = this.config.landingShipEdgeId;
+
         this.landingTypes = data.landing;
         this.landingAdjacencies = data.landingAdjacencies || [];
         this.entityTypes = data.entityTypes;
@@ -268,7 +275,8 @@ class ZFactoryGame {
         // Setup gameData structure for new atlas system
         this.gameData = {
             landings: this.landingTypes,
-            entityTypes: this.entityTypes
+            entityTypes: this.entityTypes,
+            region: data.region || null
         };
 
         // Initialize building rules from server config
@@ -302,7 +310,7 @@ class ZFactoryGame {
     async loadLandingTextures() {
         for (const landingId in this.landingTypes) {
             const landing = this.landingTypes[landingId];
-            const url = this.assetUrl(this.config.tilesPath + 'landing/' + landing.folder + '.png');
+            const url = this.assetUrl(this.config.tilesPath + 'landing/' + landing.folder + '/' + landing.folder + '_0.png');
             try {
                 this.textures['landing_' + landingId] = await PIXI.Assets.load(url);
             } catch (e) {

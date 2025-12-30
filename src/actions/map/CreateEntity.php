@@ -4,17 +4,21 @@ namespace actions\map;
 
 use actions\JsonAction;
 use models\Entity;
+use models\ShipEntity;
+use models\ShipLanding;
 use models\EntityType;
 use models\EntityResource;
 use models\EntityTypeCost;
 use models\Deposit;
 use models\DepositType;
+use models\Region;
 use services\BuildingRules;
 use Yii;
 
 /**
  * AJAX: Create new entity (building placement)
- * POST params: entity_type_id, x, y (tile coordinates), state, target_entity_id (optional)
+ * POST params: entity_type_id, x, y (world coordinates), state, target_entity_id (optional)
+ * Automatically detects ship vs island placement based on coordinates
  */
 class CreateEntity extends JsonAction
 {
@@ -28,8 +32,8 @@ class CreateEntity extends JsonAction
 
         // Validate required fields
         $entityTypeId = (int) ($data['entity_type_id'] ?? 0);
-        $tileX = (int) ($data['x'] ?? 0);
-        $tileY = (int) ($data['y'] ?? 0);
+        $worldX = (int) ($data['x'] ?? 0);
+        $worldY = (int) ($data['y'] ?? 0);
         $state = $data['state'] ?? 'blueprint';
         $targetEntityId = isset($data['target_entity_id']) ? (int) $data['target_entity_id'] : null;
 
@@ -43,15 +47,43 @@ class CreateEntity extends JsonAction
             return $this->error('Invalid entity_type_id');
         }
 
-        // Check if user can afford building (BEFORE placement rules)
+        // Get current region and user
         $userId = Yii::$app->user->id;
+        $currentRegionId = (int)$this->getUser()->current_region_id;
+        $region = Region::findOne($currentRegionId);
+        $shipAttachX = $region ? (int)$region->ship_attach_x : 0;
+        $shipAttachY = $region ? (int)$region->ship_attach_y : 0;
+
+        // Determine if placement is on ship or island
+        $isShipPlacement = false;
+        $shipRelativeX = $worldX - $shipAttachX;
+        $shipRelativeY = $worldY - $shipAttachY;
+
+        // Check if there's a ship landing at this position
+        $shipLanding = ShipLanding::findOne([
+            'user_id' => $userId,
+            'x' => $shipRelativeX,
+            'y' => $shipRelativeY,
+        ]);
+
+        if ($shipLanding) {
+            $isShipPlacement = true;
+        }
+
+        // For ship entity types (type='ship'), placement is on ship if coordinates are within ship bounds
+        // (Ship entities CREATE ship landings, not built ON existing landings)
+        if ($entityType->type === 'ship' && $shipRelativeX >= 0 && $shipRelativeY >= 0) {
+            $isShipPlacement = true;
+        }
+
+        // Check if user can afford building (BEFORE placement rules)
         if (!EntityTypeCost::canAfford($userId, $entityTypeId)) {
             return $this->error('Not enough resources to build this');
         }
 
-        // Check building rules using behavior system (tile coordinates)
+        // Check building rules using behavior system (world coordinates)
         // This checks: fog of war, landing buildability, entity collision, resource target
-        $ruleCheck = BuildingRules::canPlace($entityTypeId, $tileX, $tileY);
+        $ruleCheck = BuildingRules::canPlace($entityTypeId, $worldX, $worldY, null, $currentRegionId);
         $targetEntity = $ruleCheck['targetEntity'];
 
         // If building placement is not allowed
@@ -70,25 +102,49 @@ class CreateEntity extends JsonAction
             // Deduct building cost from user resources
             EntityTypeCost::deductCost($userId, $entityTypeId);
 
-            // Create new entity with tile coordinates
-            $entity = new Entity();
-            $entity->entity_type_id = $entityTypeId;
-            $entity->x = $tileX;
-            $entity->y = $tileY;
-            $entity->state = $state;
-            $entity->durability = $state === 'built' ? $entityType->max_durability : 0;
-            $entity->construction_progress = $state === 'built' ? 100 : 0;
-            $entity->region_id = (int)$this->getUser()->current_region_id;
+            // Create entity (ship or island)
+            if ($isShipPlacement) {
+                // Create ship entity
+                $entity = new ShipEntity();
+                $entity->user_id = $userId;
+                $entity->entity_type_id = $entityTypeId;
+                $entity->x = $shipRelativeX;
+                $entity->y = $shipRelativeY;
+                $entity->state = $state;
+                $entity->durability = $state === 'built' ? $entityType->max_durability : 0;
 
-            if (!$entity->save()) {
-                throw new \Exception('Failed to save entity: ' . json_encode($entity->errors));
+                if (!$entity->save()) {
+                    throw new \Exception('Failed to save ship entity: ' . json_encode($entity->errors));
+                }
+
+                // Note: ShipLanding is NOT created here
+                // It will be created in FinishConstruction.php when ship entity converts to landing
+                // (via converts_to_landing_id field in entity_type table)
+
+                $entityIdResponse = 'ship_' . $entity->ship_entity_id;
+            } else {
+                // Create island entity
+                $entity = new Entity();
+                $entity->entity_type_id = $entityTypeId;
+                $entity->x = $worldX;
+                $entity->y = $worldY;
+                $entity->state = $state;
+                $entity->durability = $state === 'built' ? $entityType->max_durability : 0;
+                $entity->construction_progress = $state === 'built' ? 100 : 0;
+                $entity->region_id = $currentRegionId;
+
+                if (!$entity->save()) {
+                    throw new \Exception('Failed to save entity: ' . json_encode($entity->errors));
+                }
+
+                $entityIdResponse = $entity->entity_id;
             }
 
             $targetRemoved = false;
             $depositsRemoved = [];
 
-            // Transfer resources from target entity to new entity
-            if ($targetEntity) {
+            // Transfer resources from target entity to new entity (only for island entities)
+            if ($targetEntity && !$isShipPlacement) {
                 // Get resources from target entity
                 $resources = EntityResource::findAll(['entity_id' => $targetEntity->entity_id]);
 
@@ -112,7 +168,8 @@ class CreateEntity extends JsonAction
             }
 
             // Process deposits to remove (for extraction buildings: sawmill, quarry, drill, mine)
-            if (isset($ruleCheck['depositsToRemove']) && !empty($ruleCheck['depositsToRemove'])) {
+            // Only for island entities
+            if (!$isShipPlacement && isset($ruleCheck['depositsToRemove']) && !empty($ruleCheck['depositsToRemove'])) {
                 $depositIds = $ruleCheck['depositsToRemove'];
                 $deposits = Deposit::findAll(['deposit_id' => $depositIds]);
 
@@ -161,15 +218,16 @@ class CreateEntity extends JsonAction
 
             return $this->success([
                 'entity' => [
-                    'entity_id' => $entity->entity_id,
-                    'entity_type_id' => $entity->entity_type_id,
-                    'x' => $entity->x,
-                    'y' => $entity->y,
-                    'state' => $entity->state,
+                    'entity_id' => $entityIdResponse,
+                    'entity_type_id' => $entityTypeId,
+                    'x' => $worldX,
+                    'y' => $worldY,
+                    'state' => $state,
                     'durability' => $entity->durability,
                 ],
                 'targetRemoved' => $targetRemoved,
                 'depositsRemoved' => $depositsRemoved,
+                'isShip' => $isShipPlacement,
             ]);
 
         } catch (\Exception $e) {

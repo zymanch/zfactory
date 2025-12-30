@@ -17,7 +17,7 @@ class TreeEntityBehavior extends EntityBehavior
     /**
      * Trees cannot be built by player
      */
-    public function canBuildAt(int $x, int $y, ?array $visibleTiles = null): array
+    public function canBuildAt(int $x, int $y, ?array $visibleTiles = null, ?int $regionId = null): array
     {
         return [
             'allowed' => false,

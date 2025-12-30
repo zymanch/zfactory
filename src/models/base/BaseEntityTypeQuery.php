@@ -12,6 +12,7 @@ use models\EntityTypeQuery;
  * @method EntityTypeQuery filterByImageUrl($value, $criteria = null)
  * @method EntityTypeQuery filterByExtension($value, $criteria = null)
  * @method EntityTypeQuery filterByMaxDurability($value, $criteria = null)
+ * @method EntityTypeQuery filterByConvertsToLandingId($value, $criteria = null)
  * @method EntityTypeQuery filterByWidth($value, $criteria = null)
  * @method EntityTypeQuery filterByHeight($value, $criteria = null)
  * @method EntityTypeQuery filterByIconUrl($value, $criteria = null)
@@ -27,6 +28,7 @@ use models\EntityTypeQuery;
   * @method EntityTypeQuery andJoinOnConditionByImageUrl($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByExtension($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByMaxDurability($value, $criteria = null)
+  * @method EntityTypeQuery andJoinOnConditionByConvertsToLandingId($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByWidth($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByHeight($value, $criteria = null)
   * @method EntityTypeQuery andJoinOnConditionByIconUrl($value, $criteria = null)
@@ -42,6 +44,7 @@ use models\EntityTypeQuery;
   * @method EntityTypeQuery orderByImageUrl($order = Criteria::ASC)
   * @method EntityTypeQuery orderByExtension($order = Criteria::ASC)
   * @method EntityTypeQuery orderByMaxDurability($order = Criteria::ASC)
+  * @method EntityTypeQuery orderByConvertsToLandingId($order = Criteria::ASC)
   * @method EntityTypeQuery orderByWidth($order = Criteria::ASC)
   * @method EntityTypeQuery orderByHeight($order = Criteria::ASC)
   * @method EntityTypeQuery orderByIconUrl($order = Criteria::ASC)
@@ -51,6 +54,8 @@ use models\EntityTypeQuery;
   * @method EntityTypeQuery orderByAnimationFps($order = Criteria::ASC)
   * @method EntityTypeQuery orderByDescription($order = Criteria::ASC)
   * @method EntityTypeQuery orderByConstructionTicks($order = Criteria::ASC)
+  * @method EntityTypeQuery withConvertsToLanding($params = [])
+  * @method EntityTypeQuery joinWithConvertsToLanding($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method EntityTypeQuery withEntityTypeCosts($params = [])
   * @method EntityTypeQuery joinWithEntityTypeCosts($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method EntityTypeQuery withResources($params = [])
@@ -59,6 +64,8 @@ use models\EntityTypeQuery;
   * @method EntityTypeQuery joinWithEntityTypeRecipes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method EntityTypeQuery withRecipes($params = [])
   * @method EntityTypeQuery joinWithRecipes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method EntityTypeQuery withShipEntities($params = [])
+  * @method EntityTypeQuery joinWithShipEntities($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseEntityTypeQuery extends \yii\db\ActiveQuery
 {

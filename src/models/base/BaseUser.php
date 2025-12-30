@@ -21,6 +21,8 @@ namespace models\base;
  * @property string $created_at
  * @property string $updated_at
  *
+ * @property \models\ShipEntity[] $shipEntities
+ * @property \models\ShipLanding[] $shipLandings
  * @property \models\Region $currentRegion
  * @property \models\UserRegionVisit[] $userRegionVisits
  * @property \models\BaseRegion[] $regions
@@ -79,6 +81,18 @@ class BaseUser extends \yii\db\ActiveRecord
         ];
     }
     /**
+     * @return \models\ShipEntityQuery
+     */
+    public function getShipEntities() {
+        return $this->hasMany(\models\ShipEntity::className(), [BaseShipEntityPeer::USER_ID => BaseUserPeer::USER_ID])->inverseOf('user');
+    }
+        /**
+     * @return \models\ShipLandingQuery
+     */
+    public function getShipLandings() {
+        return $this->hasMany(\models\ShipLanding::className(), [BaseShipLandingPeer::USER_ID => BaseUserPeer::USER_ID])->inverseOf('user');
+    }
+        /**
      * @return \models\RegionQuery
      */
     public function getCurrentRegion() {
@@ -150,6 +164,8 @@ class BaseUser extends \yii\db\ActiveRecord
     {
         /*
         return [
+            'shipEntities' => 'shipEntities',
+            'shipLandings' => 'shipLandings',
             'currentRegion' => 'currentRegion',
             'userRegionVisits' => 'userRegionVisits',
             'regions' => 'regions',

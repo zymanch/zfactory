@@ -382,8 +382,8 @@ export class BuildMode {
                 this.game.renderEntities([data.entity]);
                 this.handleEyeEntityPlacement(data.entity);
 
-                // After successful placement, return to NORMAL mode
-                this.game.gameModeManager.returnToNormalMode();
+                // Stay in build mode to allow continuous building
+                // (removed automatic return to normal mode)
             } else if (data.result !== 'ok') {
                 console.error('Failed to place building:', data.error);
             }

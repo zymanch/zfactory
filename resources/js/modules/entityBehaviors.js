@@ -309,6 +309,131 @@ class EyeEntityBehavior extends DefaultEntityBehavior {
 }
 
 /**
+ * Behavior for ship entities (ship floor types)
+ *
+ * Ship placement rules:
+ * - Can build where there's NO map tile (empty space)
+ * - Position must be >= region.ship_attach_x/ship_attach_y (within ship bounds)
+ * - At least one adjacent tile (4 directions) must have a map (attached to ship)
+ * - No entity collision
+ * - Must not be in fog of war
+ */
+class ShipEntityBehavior extends EntityBehavior {
+    canBuildAt(tileX, tileY) {
+        // 1. Check fog of war
+        if (!this.areAllTilesVisible(tileX, tileY)) {
+            return this.error('Cannot build in fog of war');
+        }
+
+        // 2. Check ship placement rules
+        if (!this.checkShipPlacement(tileX, tileY)) {
+            return this.error('Invalid ship placement');
+        }
+
+        // 3. Check entity collision
+        if (this.hasEntityCollision(tileX, tileY)) {
+            return this.error('Position is occupied');
+        }
+
+        return this.success();
+    }
+
+    /**
+     * Check ship placement rules for all tiles
+     */
+    checkShipPlacement(tileX, tileY) {
+        const width = parseInt(this.entityType.width) || 1;
+        const height = parseInt(this.entityType.height) || 1;
+
+        // Get region to check ship_attach bounds
+        const region = this.game.gameData.region;
+        if (!region) {
+            return false;
+        }
+
+        const shipAttachX = region.ship_attach_x || 0;
+        const shipAttachY = region.ship_attach_y || 0;
+
+        for (let dx = 0; dx < width; dx++) {
+            for (let dy = 0; dy < height; dy++) {
+                const checkX = tileX + dx;
+                const checkY = tileY + dy;
+
+                // Check 1: No map of CURRENT region at this position
+                // (Ship builds in empty space OR on other regions' islands)
+                const key = tileKey(checkX, checkY);
+                const landingId = this.game.tileDataMap.get(key);
+
+                // Check if this tile belongs to current region
+                if (landingId !== undefined) {
+                    // Find if this map tile belongs to current region
+                    const currentRegionId = this.game.config.currentRegionId;
+                    // Note: tileDataMap doesn't store region_id, so we need to check differently
+                    // For now, we'll allow building on any map tiles (server will validate)
+                    // TODO: Add region_id to tile data if needed for strict client validation
+                }
+
+                // Check 2: Position must be >= ship_attach (within ship bounds)
+                if (checkX < shipAttachX || checkY < shipAttachY) {
+                    return false; // Outside ship bounds
+                }
+
+                // Check 3: At least one adjacent tile must have a map (attached to ship)
+                // Exception: Allow building at ship_attach position (first tile)
+                const isShipAttachPosition = (checkX === shipAttachX && checkY === shipAttachY);
+                if (!isShipAttachPosition && !this.hasAdjacentMap(checkX, checkY)) {
+                    return false; // Not connected to any existing ship floor
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if at least one adjacent tile (4 directions) has a map or ship entity
+     */
+    hasAdjacentMap(tileX, tileY) {
+        const adjacentPositions = [
+            [tileX - 1, tileY],     // Left
+            [tileX + 1, tileY],     // Right
+            [tileX, tileY - 1],     // Top
+            [tileX, tileY + 1],     // Bottom
+        ];
+
+        for (const [x, y] of adjacentPositions) {
+            // Check for map tile
+            const key = tileKey(x, y);
+            const landingId = this.game.tileDataMap.get(key);
+
+            if (landingId !== undefined) {
+                return true; // Found adjacent map
+            }
+
+            // Check for ship entity (built or blueprint ship floor)
+            for (const [entityKey, entityData] of this.game.entityData) {
+                if (parseInt(entityData.x) === x && parseInt(entityData.y) === y) {
+                    const entityType = this.game.entityTypes[entityData.entity_type_id];
+                    if (entityType && entityType.type === 'ship') {
+                        return true; // Found adjacent ship entity
+                    }
+                }
+            }
+        }
+
+        return false; // No adjacent maps or ship entities
+    }
+
+    shouldShowHoverInfo() {
+        return true;
+    }
+
+    isIndestructible() {
+        return false;
+    }
+}
+
+/**
  * Factory for creating entity behaviors
  */
 export class EntityBehaviorFactory {
@@ -321,6 +446,7 @@ export class EntityBehaviorFactory {
         'relief': ReliefEntityBehavior,
         'resource': ResourceEntityBehavior,
         'eye': EyeEntityBehavior,
+        'ship': ShipEntityBehavior,
     };
 
     static cache = new Map();
@@ -390,6 +516,7 @@ export {
     ReliefEntityBehavior,
     TreeEntityBehavior,
     EyeEntityBehavior,
+    ShipEntityBehavior,
     DepositEntityBehavior
 };
 

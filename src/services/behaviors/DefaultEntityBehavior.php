@@ -21,9 +21,10 @@ class DefaultEntityBehavior extends EntityBehavior
      * @param int $tileX Tile X coordinate
      * @param int $tileY Tile Y coordinate
      * @param array|null $visibleTiles Array of visible tile keys
+     * @param int|null $regionId Region ID (not used by default behavior)
      * @return array ['allowed' => bool, 'error' => string|null, 'targetEntity' => null]
      */
-    public function canBuildAt(int $tileX, int $tileY, ?array $visibleTiles = null): array
+    public function canBuildAt(int $tileX, int $tileY, ?array $visibleTiles = null, ?int $regionId = null): array
     {
         // 1. Check fog of war
         if (!$this->checkFogOfWar($tileX, $tileY, $visibleTiles)) {

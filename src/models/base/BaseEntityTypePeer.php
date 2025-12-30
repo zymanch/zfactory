@@ -10,6 +10,7 @@ class BaseEntityTypePeer  {
     const IMAGE_URL = "image_url";
     const EXTENSION = "extension";
     const MAX_DURABILITY = "max_durability";
+    const CONVERTS_TO_LANDING_ID = "converts_to_landing_id";
     const WIDTH = "width";
     const HEIGHT = "height";
     const ICON_URL = "icon_url";

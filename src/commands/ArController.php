@@ -39,6 +39,8 @@ class ArController extends \yii\console\Controller
                 'recipe',
                 'region',
                 'resource',
+                'ship_entity',
+                'ship_landing',
                 'user',
                 'user_region_visit',
                 'user_resource',

@@ -17,6 +17,8 @@ namespace models\base;
  * @property integer $height
  * @property string $image_url
  * @property string $created_at
+ * @property integer $ship_attach_x
+ * @property integer $ship_attach_y
  *
  * @property \models\Deposit[] $deposits
  * @property \models\Entity[] $entities
@@ -44,7 +46,7 @@ class BaseRegion extends \yii\db\ActiveRecord
         return [
             [[BaseRegionPeer::NAME, BaseRegionPeer::X, BaseRegionPeer::Y, BaseRegionPeer::WIDTH, BaseRegionPeer::HEIGHT], 'required'],
             [[BaseRegionPeer::DESCRIPTION], 'string'],
-            [[BaseRegionPeer::DIFFICULTY, BaseRegionPeer::X, BaseRegionPeer::Y, BaseRegionPeer::WIDTH, BaseRegionPeer::HEIGHT], 'integer'],
+            [[BaseRegionPeer::DIFFICULTY, BaseRegionPeer::X, BaseRegionPeer::Y, BaseRegionPeer::WIDTH, BaseRegionPeer::HEIGHT, BaseRegionPeer::SHIP_ATTACH_X, BaseRegionPeer::SHIP_ATTACH_Y], 'integer'],
             [[BaseRegionPeer::CREATED_AT], 'safe'],
             [[BaseRegionPeer::NAME], 'string', 'max' => 100],
             [[BaseRegionPeer::IMAGE_URL], 'string', 'max' => 255],
@@ -67,6 +69,8 @@ class BaseRegion extends \yii\db\ActiveRecord
             BaseRegionPeer::HEIGHT => 'Height',
             BaseRegionPeer::IMAGE_URL => 'Image Url',
             BaseRegionPeer::CREATED_AT => 'Created At',
+            BaseRegionPeer::SHIP_ATTACH_X => 'Ship Attach X',
+            BaseRegionPeer::SHIP_ATTACH_Y => 'Ship Attach Y',
         ];
     }
     /**
@@ -139,6 +143,8 @@ class BaseRegion extends \yii\db\ActiveRecord
             'height' => BaseRegionPeer::HEIGHT,
             'image_url' => BaseRegionPeer::IMAGE_URL,
             'created_at' => BaseRegionPeer::CREATED_AT,
+            'ship_attach_x' => BaseRegionPeer::SHIP_ATTACH_X,
+            'ship_attach_y' => BaseRegionPeer::SHIP_ATTACH_Y,
         ];
     }
     

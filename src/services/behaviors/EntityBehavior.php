@@ -39,9 +39,10 @@ abstract class EntityBehavior
      * @param int $tileX Tile X coordinate
      * @param int $tileY Tile Y coordinate
      * @param array $visibleTiles Array of visible tile keys (for fog check), null if no fog
+     * @param int|null $regionId Region ID for ship placement validation
      * @return array ['allowed' => bool, 'error' => string|null, 'targetEntity' => Entity|null]
      */
-    abstract public function canBuildAt(int $tileX, int $tileY, ?array $visibleTiles = null): array;
+    abstract public function canBuildAt(int $tileX, int $tileY, ?array $visibleTiles = null, ?int $regionId = null): array;
 
     /**
      * Check if entity should show hover tooltip information

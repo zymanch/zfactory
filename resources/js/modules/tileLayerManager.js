@@ -1,9 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { tileKey } from './utils.js';
-import { Z_INDEX, LANDING_SKY_ID, LANDING_ISLAND_EDGE_ID } from './constants.js';
+import { Z_INDEX, LANDING_SKY_ID, LANDING_ISLAND_EDGE_ID, LANDING_SHIP_EDGE_ID, SHIP_LANDINGS_START_ID } from './constants.js';
 
 // Landing IDs that should not participate in transitions
-const NON_TRANSITION_LANDINGS = new Set([LANDING_SKY_ID, LANDING_ISLAND_EDGE_ID]);
+const NON_TRANSITION_LANDINGS = new Set([LANDING_SKY_ID, LANDING_ISLAND_EDGE_ID, LANDING_SHIP_EDGE_ID]);
 
 /**
  * TileLayerManager - manages terrain tile rendering
@@ -32,11 +32,13 @@ export class TileLayerManager {
             this.tileDataMap.set(key, tile.landing_id);
         }
 
-        // Second pass: auto-insert island_edge under landings with empty space below
-        const islandEdgesToInsert = [];
+        // Second pass: auto-insert island_edge or ship_edge under landings with empty space below
+        const edgesToInsert = [];
         for (const tile of tiles) {
-            // Skip sky and island_edge themselves
-            if (tile.landing_id === LANDING_SKY_ID || tile.landing_id === LANDING_ISLAND_EDGE_ID) {
+            // Skip sky, island_edge and ship_edge themselves
+            if (tile.landing_id === LANDING_SKY_ID ||
+                tile.landing_id === LANDING_ISLAND_EDGE_ID ||
+                tile.landing_id === LANDING_SHIP_EDGE_ID) {
                 continue;
             }
 
@@ -44,16 +46,20 @@ export class TileLayerManager {
             const belowKey = tileKey(tile.x, tile.y + 1);
             const belowLandingId = this.tileDataMap.get(belowKey);
 
-            // If below is empty or sky, insert island_edge
+            // If below is empty or sky, insert appropriate edge
             if (belowLandingId === undefined || belowLandingId === LANDING_SKY_ID) {
-                islandEdgesToInsert.push({ x: tile.x, y: tile.y + 1 });
+                // Use ship_edge for ship landings (id >= 11), island_edge for island landings
+                const edgeType = tile.landing_id >= SHIP_LANDINGS_START_ID
+                    ? LANDING_SHIP_EDGE_ID
+                    : LANDING_ISLAND_EDGE_ID;
+                edgesToInsert.push({ x: tile.x, y: tile.y + 1, edgeType });
             }
         }
 
-        // Insert island_edge tiles
-        for (const pos of islandEdgesToInsert) {
+        // Insert edge tiles
+        for (const pos of edgesToInsert) {
             const key = tileKey(pos.x, pos.y);
-            this.tileDataMap.set(key, LANDING_ISLAND_EDGE_ID);
+            this.tileDataMap.set(key, pos.edgeType);
         }
 
         // Third pass: auto-insert sky to the left of landings with empty space on the left
@@ -125,22 +131,46 @@ export class TileLayerManager {
 
                 const sprite = this.createTileWithTransitions(landingId, x, y);
                 if (sprite) {
+                    sprite.zIndex = 0;
                     this.game.landingLayer.addChild(sprite);
                     this.loadedTiles.set(key, sprite);
 
-                    // DEBUG: Show landing_id on tile
-                    const text = new PIXI.Text(landingId.toString(), {
-                        fontFamily: 'Arial',
-                        fontSize: 12,
-                        fill: 0xff0000,
-                        stroke: 0xffffff,
-                        strokeThickness: 2
-                    });
-                    text.x = x * tileWidth + tileWidth / 2;
-                    text.y = y * tileHeight + tileHeight / 2;
-                    text.anchor.set(0.5);
-                    this.game.landingLayer.addChild(text);
+                    // DEBUG: Show landing_id on tile (only if debug enabled)
+                    if (this.game.config.debug) {
+                        const text = new PIXI.Text(landingId.toString(), {
+                            fontFamily: 'Arial',
+                            fontSize: 12,
+                            fill: 0xff0000,
+                            stroke: 0xffffff,
+                            strokeThickness: 2
+                        });
+                        text.x = x * tileWidth + tileWidth / 2;
+                        text.y = y * tileHeight + 8; // Top part of tile
+                        text.anchor.set(0.5, 0);
+                        text.zIndex = 1000; // Always on top
+                        this.game.landingLayer.addChild(text);
+                    }
                 }
+            }
+        }
+
+        // DEBUG: Show "Ship" text at ship_attach position (only if debug enabled)
+        if (this.game.config.debug) {
+            const region = this.game.gameData.region;
+            if (region && region.ship_attach_x !== null && region.ship_attach_y !== null) {
+                const shipText = new PIXI.Text('Ship', {
+                    fontFamily: 'Arial',
+                    fontSize: 16,
+                    fill: 0xff0000,
+                    stroke: 0xffffff,
+                    strokeThickness: 2,
+                    fontWeight: 'bold'
+                });
+                shipText.x = region.ship_attach_x * tileWidth + tileWidth / 2;
+                shipText.y = region.ship_attach_y * tileHeight + tileHeight / 2;
+                shipText.anchor.set(0.5, 0.5);
+                shipText.zIndex = 2000; // Above everything
+                this.game.landingLayer.addChild(shipText);
             }
         }
 
@@ -399,6 +429,7 @@ export class TileLayerManager {
     /**
      * Вычисляет координаты в атласе на основе соседей
      * Использует landing_id напрямую вместо atlas_z
+     * Для корабельных лендингов (id >= 11) вычитает 10 из позиций
      *
      * @param {number} landingId ID текущего лендинга
      * @param {object} adjacencyInfo { top: landingId|null, right: landingId|null }
@@ -408,6 +439,10 @@ export class TileLayerManager {
         const { top, right } = adjacencyInfo;
         const landing = this.game.gameData.landings[landingId];
         const variationsCount = landing?.variations_count || 5;
+
+        // Определяем, корабельный ли это лендинг
+        const isShipLanding = landingId >= SHIP_LANDINGS_START_ID;
+        const atlasOffset = isShipLanding ? 10 : 0;
 
         // Если оба соседа совпадают с текущим лендингом - используем вариации из row 0
         if (top === landingId && right === landingId) {
@@ -421,19 +456,19 @@ export class TileLayerManager {
         let row, col;
 
         // Определяем строку по соседу сверху
-        // Формула: row = top_landing_id + 1
+        // Формула: row = (top_landing_id - atlasOffset) + 1
         if (top === null) {
-            row = LANDING_SKY_ID + 1;  // 10
+            row = (LANDING_SKY_ID - atlasOffset) + 1;
         } else {
-            row = top + 1;  // Для lava (id=5) сверху: row = 6
+            row = (top - atlasOffset) + 1;
         }
 
         // Определяем колонку по соседу справа
-        // Формула: col = right_landing_id
+        // Формула: col = right_landing_id - atlasOffset
         if (right === null) {
-            col = LANDING_SKY_ID;  // 9
+            col = LANDING_SKY_ID - atlasOffset;
         } else {
-            col = right;  // Для lava (id=5) справа: col = 5
+            col = right - atlasOffset;
         }
 
         return { row, col };

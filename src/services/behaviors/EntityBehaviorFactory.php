@@ -23,6 +23,7 @@ class EntityBehaviorFactory
         'relief'      => ReliefEntityBehavior::class,
         'resource'    => ResourceEntityBehavior::class,
         'eye'         => EyeEntityBehavior::class,
+        'ship'        => ShipEntityBehavior::class,
     ];
 
     /** @var array Cache of behavior instances by entity_type_id */

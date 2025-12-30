@@ -173,6 +173,30 @@ class GenerateAi extends ConsoleAction
             'island_edge' => [
                 'positive' => 'seamless tileable hanging stalactites, game sprite, 2D game asset, stylized, painted style, rocky earth surface at top, stone stalactites hanging downward, cave ceiling texture, side view, transparent background at bottom',
                 'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, top-down view, aerial view, birds eye, sky, clouds, ground at bottom'
+            ],
+            'ship_edge' => [
+                'positive' => 'seamless tileable ship hull edge, game sprite, 2D game asset, stylized, painted style, dark metal ship hull side view, rivets and panels, industrial sci-fi starship exterior, side view',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, top-down view, aerial view, birds eye, interior, windows'
+            ],
+            'ship_floor_wood' => [
+                'positive' => 'seamless tileable wooden planks floor, game sprite, 2D game asset, stylized, painted style, brown wood deck planks, ship floor texture, top-down view',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, side view, perspective'
+            ],
+            'ship_floor_iron' => [
+                'positive' => 'seamless tileable iron metal floor, game sprite, 2D game asset, stylized, painted style, dark gray iron plates, industrial floor panels with rivets, top-down view',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, side view, perspective, rust'
+            ],
+            'ship_floor_steel' => [
+                'positive' => 'seamless tileable steel metal floor, game sprite, 2D game asset, stylized, painted style, light gray polished steel plates, clean industrial floor, top-down view',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, side view, perspective, dirty'
+            ],
+            'ship_floor_titanium' => [
+                'positive' => 'seamless tileable titanium metal floor, game sprite, 2D game asset, stylized, painted style, blue-gray titanium alloy plates, futuristic sci-fi floor, top-down view',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, side view, perspective'
+            ],
+            'ship_floor_crystal' => [
+                'positive' => 'seamless tileable crystal floor, game sprite, 2D game asset, stylized, painted style, purple glowing crystals embedded in floor, magical energy floor, sci-fi floor, top-down view',
+                'negative' => 'photorealistic, 3d, realistic, photograph, blurry, seams, side view, perspective, rocks'
             ]
         ];
     }

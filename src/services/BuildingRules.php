@@ -19,13 +19,15 @@ class BuildingRules
      * @param int $tileX Tile X coordinate
      * @param int $tileY Tile Y coordinate
      * @param array|null $visibleTiles Array of visible tile keys (for fog check)
+     * @param int|null $regionId Region ID for ship placement validation
      * @return array ['allowed' => bool, 'targetEntity' => Entity|null, 'error' => string|null]
      */
     public static function canPlace(
         int $buildingTypeId,
         int $tileX,
         int $tileY,
-        ?array $visibleTiles = null
+        ?array $visibleTiles = null,
+        ?int $regionId = null
     ): array {
         $behavior = EntityBehaviorFactory::createById($buildingTypeId);
 
@@ -37,7 +39,7 @@ class BuildingRules
             ];
         }
 
-        return $behavior->canBuildAt($tileX, $tileY, $visibleTiles);
+        return $behavior->canBuildAt($tileX, $tileY, $visibleTiles, $regionId);
     }
 
     /**

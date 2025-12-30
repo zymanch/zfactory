@@ -60,6 +60,18 @@ class Config extends JsonAction
             $currentRegionId = (int)$this->getUser()->current_region_id;
         }
 
+        // Get region data (including ship_attach coordinates)
+        $region = \models\Region::findOne($currentRegionId);
+        $regionData = null;
+        if ($region) {
+            $regionData = [
+                'region_id' => (int)$region->region_id,
+                'name' => $region->name,
+                'ship_attach_x' => (int)$region->ship_attach_x,
+                'ship_attach_y' => (int)$region->ship_attach_y,
+            ];
+        }
+
         // Get ALL eye entities (for fog of war) - not cached, need fresh data
         // Filter by current region
         $eyeEntities = [];
@@ -182,6 +194,7 @@ class Config extends JsonAction
             'entityResources' => $entityResources,
             'craftingStates' => $craftingStates,
             'transportStates' => $transportStates,
+            'region' => $regionData,
             'buildPanel' => $buildPanel,
             'cameraPosition' => [
                 'x' => $cameraX,
@@ -207,6 +220,13 @@ class Config extends JsonAction
                 'tileHeight' => Yii::$app->params['tile_height'],
                 'assetVersion' => Yii::$app->params['asset_version'],
                 'autoSaveInterval' => Yii::$app->params['auto_save_interval'] ?? 60,
+                'debug' => Yii::$app->params['debug'] ?? false,
+
+                // Landing IDs constants
+                'landingSkyId' => Yii::$app->params['landing_sky_id'],
+                'landingBridgeId' => Yii::$app->params['landing_bridge_id'],
+                'landingIslandEdgeId' => Yii::$app->params['landing_island_edge_id'],
+                'landingShipEdgeId' => Yii::$app->params['landing_ship_edge_id'],
                 'cameraSpeed' => 8,
             ],
             'buildingRules' => BuildingRules::getClientRules(),

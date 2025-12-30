@@ -11,9 +11,14 @@ export const SPRITE_STATES_ORIGINAL = ['normal', 'damaged', 'blueprint', 'normal
 // Construction frames (9 frames for second row of atlas)
 export const CONSTRUCTION_FRAMES = [10, 20, 30, 40, 50, 60, 70, 80, 90];
 
-// Special landing type IDs
-export const LANDING_SKY_ID = 9;
-export const LANDING_ISLAND_EDGE_ID = 10;
+// Special landing type IDs (NOTE: These are overridden from config in game.js)
+export const LANDING_SKY_ID = 11;          // Sky (moved from 9 to 11)
+export const LANDING_BRIDGE_ID = 9;        // Bridge (future feature)
+export const LANDING_ISLAND_EDGE_ID = 10;  // Island Edge
+export const LANDING_SHIP_EDGE_ID = 12;    // Ship Edge
+
+// Ship landings start from ID 11 (including sky)
+export const SHIP_LANDINGS_START_ID = 11;
 
 // Z-index values for layers
 export const Z_INDEX = {
@@ -47,7 +52,9 @@ export default {
     SPRITE_STATES_ORIGINAL,
     CONSTRUCTION_FRAMES,
     LANDING_SKY_ID,
+    LANDING_BRIDGE_ID,
     LANDING_ISLAND_EDGE_ID,
+    LANDING_SHIP_EDGE_ID,
     Z_INDEX,
     PREVIEW_Z_OFFSET,
     VIEWPORT_RELOAD_INTERVAL,

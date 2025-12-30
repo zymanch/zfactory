@@ -73,8 +73,31 @@ class LandingTransitionGenerator
 
         // Получаем все типы лендингов для генерации всех комбинаций
         $allLandings = $this->getLandings();
-        $maxLandingId = 0;
+
+        // Определяем, какой тип атласа генерировать
+        $isShipLanding = $this->isShipLanding($landingId);
+
+        // Фильтруем лендинги для атласа
+        $atlasLandings = [];
         foreach ($allLandings as $l) {
+            $lId = $l['landing_id'];
+
+            if ($isShipLanding) {
+                // Ship atlas: include ship landings (11-17) + sky (11)
+                if ($lId >= 11) {
+                    $atlasLandings[] = $l;
+                }
+            } else {
+                // Island atlas: include island landings (1-10) + island_edge (10) + sky (11)
+                if ($lId <= 10 || $lId == 11) {
+                    $atlasLandings[] = $l;
+                }
+            }
+        }
+
+        // Находим макс ID для текущего атласа
+        $maxLandingId = 0;
+        foreach ($atlasLandings as $l) {
             if ($l['landing_id'] > $maxLandingId) {
                 $maxLandingId = $l['landing_id'];
             }
@@ -84,10 +107,12 @@ class LandingTransitionGenerator
         $tileWithPadding = $this->tileWidth + $this->padding;
         $tileHeightWithPadding = $this->tileHeight + $this->padding;
 
-        // Колонки: от 0 до maxLandingId (0 = самоссылка, 1-10 = другие лендинги)
-        $atlasWidth = ($maxLandingId + 1) * $tileWithPadding;
-        // Строки: строка 0 (вариации) + строки 1-11 (переходы для каждого лендинга сверху)
-        $atlasHeight = ($maxLandingId + 2) * $tileHeightWithPadding;
+        // Для корабельного атласа вычитаем 10 из размеров
+        $atlasOffset = $isShipLanding ? 10 : 0;
+
+        // Колонки и строки с учетом offset
+        $atlasWidth = ($maxLandingId - $atlasOffset + 1) * $tileWithPadding;
+        $atlasHeight = ($maxLandingId - $atlasOffset + 2) * $tileHeightWithPadding;
 
         // Создаем пустой атлас
         $atlas = imagecreatetruecolor($atlasWidth, $atlasHeight);
@@ -112,11 +137,11 @@ class LandingTransitionGenerator
             );
         }
 
-        // Загружаем изображения всех лендингов (для генерации всех комбинаций)
+        // Загружаем изображения всех лендингов для текущего атласа
         $landingImages = [];
         $landingImages[0] = $baseImage; // 0 = самоссылка
 
-        foreach ($allLandings as $l) {
+        foreach ($atlasLandings as $l) {
             $lId = $l['landing_id'];
             $lImageName = $l['folder'];
 
@@ -125,17 +150,21 @@ class LandingTransitionGenerator
         }
 
         // Генерируем ВСЕ комбинации: каждый лендинг сверху × каждый лендинг справа
-        for ($topId = 0; $topId <= $maxLandingId; $topId++) {
+        foreach ($atlasLandings as $topLanding) {
+            $topId = $topLanding['landing_id'];
+
             if (!isset($landingImages[$topId])) {
-                continue; // Пропускаем несуществующие ID
+                continue;
             }
 
             $topImage = $landingImages[$topId];
-            $row = $topId + 1;  // +1 потому что строка 0 занята вариациями
+            $row = ($topId - $atlasOffset) + 1;  // +1 потому что строка 0 занята вариациями, -offset для ship
 
-            for ($rightId = 0; $rightId <= $maxLandingId; $rightId++) {
+            foreach ($atlasLandings as $rightLanding) {
+                $rightId = $rightLanding['landing_id'];
+
                 if (!isset($landingImages[$rightId])) {
-                    continue; // Пропускаем несуществующие ID
+                    continue;
                 }
 
                 $rightImage = $landingImages[$rightId];
@@ -143,22 +172,32 @@ class LandingTransitionGenerator
                 // Special rules for Island Edge (ID=10) transitions:
 
                 // 1. For Sky: if top is Island Edge, treat as Sky
-                if ($landingId == 9 && $topId == 10) {
-                    $topImage = $landingImages[9];
+                if ($landingId == 11 && $topId == 10) {
+                    $topImage = $landingImages[11]; // Use sky itself
                 }
 
                 // 2. For Island Edge: if right is Sky, treat as Island Edge
-                if ($landingId == 10 && $rightId == 9) {
+                if ($landingId == 10 && $rightId == 11) {
                     $rightImage = $landingImages[10];
                 }
 
+                // 1. For Sky: if top is Ship Edge, treat as Sky
+                if ($landingId == 11 && $topId == 12) {
+                    $topImage = $landingImages[11]; // Use sky itself
+                }
+
+                // 2. For Ship Edge: if right is Sky, treat as Ship Edge
+                if ($landingId == 12 && $rightId == 11) {
+                    $rightImage = $landingImages[12];
+                }
+
                 // Генерируем переход: сверху topImage, справа rightImage
-                $transition = $this->createTransition($baseImage, $topImage, $rightImage);
+                $transition = $this->createTransition($baseImage, $topImage, $rightImage, $landingId);
 
                 imagecopy(
                     $atlas,
                     $transition,
-                    $rightId * $tileWithPadding,
+                    ($rightId - $atlasOffset) * $tileWithPadding,  // -offset для ship
                     $row * $tileHeightWithPadding,
                     0, 0,
                     $this->tileWidth,
@@ -190,13 +229,22 @@ class LandingTransitionGenerator
     }
 
     /**
-     * Создает переход между тайлами с волнистыми линиями
+     * Check if landing is ship type (id >= 11)
+     */
+    private function isShipLanding($landingId)
+    {
+        return $landingId >= 11;
+    }
+
+    /**
+     * Создает переход между тайлами с волнистыми линиями (для островных) или прямыми (для корабельных)
      * @param resource $base - Базовый тайл
      * @param resource $top - Тайл сверху
      * @param resource $right - Тайл справа
+     * @param int $baseLandingId - ID базового лендинга
      * @return resource
      */
-    private function createTransition($base, $top, $right)
+    private function createTransition($base, $top, $right, $baseLandingId = 0)
     {
         // Получаем цвет outline (затемненная версия самого темного цвета в базовом тайле)
         $outlineColor = $this->getDarkenedColor($base, 0.5);
@@ -205,18 +253,26 @@ class LandingTransitionGenerator
         $topIsSame = $this->imagesEqual($base, $top);
         $rightIsSame = $this->imagesEqual($base, $right);
 
+        $isShip = $this->isShipLanding($baseLandingId);
+
         if ($topIsSame && $rightIsSame) {
             // Оба соседа совпадают - просто возвращаем копию базы
             return $this->cloneImage($base);
         } elseif (!$topIsSame && $rightIsSame) {
             // Только сверху другой - TOP transition
-            return $this->generateTopTransition($base, $top, $outlineColor);
+            return $isShip
+                ? $this->generateShipTopTransition($base, $outlineColor)
+                : $this->generateTopTransition($base, $top, $outlineColor);
         } elseif ($topIsSame && !$rightIsSame) {
             // Только справа другой - RIGHT transition
-            return $this->generateRightTransition($base, $right, $outlineColor);
+            return $isShip
+                ? $this->generateShipRightTransition($base, $outlineColor)
+                : $this->generateRightTransition($base, $right, $outlineColor);
         } else {
             // Оба соседа разные - CORNER transition
-            return $this->generateCornerTransition($base, $top, $right, $outlineColor);
+            return $isShip
+                ? $this->generateShipCornerTransition($base, $outlineColor)
+                : $this->generateCornerTransition($base, $top, $right, $outlineColor);
         }
     }
 
@@ -516,6 +572,69 @@ class LandingTransitionGenerator
         return Yii::$app->db->createCommand(
             'SELECT landing_id, folder FROM {{%landing}} WHERE landing_id = :id'
         )->bindValue(':id', $id)->queryOne();
+    }
+
+    /**
+     * Generate RIGHT transition for ship landings - straight line, outline only
+     */
+    private function generateShipRightTransition($baseImage, $outlineColor)
+    {
+        $result = $this->cloneImage($baseImage);
+
+        // Straight line positions (constant X at right edge - amplitude)
+        $straightX = [];
+        for ($y = 0; $y < $this->tileHeight; $y++) {
+            $straightX[$y] = $this->tileWidth - 1 - $this->waveAmplitude;
+        }
+
+        // Draw outline only (no pixel copying for ships)
+        $this->drawOutline($result, $straightX, 'vertical', $outlineColor);
+
+        return $result;
+    }
+
+    /**
+     * Generate TOP transition for ship landings - straight line, outline only
+     */
+    private function generateShipTopTransition($baseImage, $outlineColor)
+    {
+        $result = $this->cloneImage($baseImage);
+
+        // Straight line positions (constant Y at top edge + amplitude)
+        $straightY = [];
+        for ($x = 0; $x < $this->tileWidth; $x++) {
+            $straightY[$x] = $this->waveAmplitude;
+        }
+
+        // Draw outline only (no pixel copying for ships)
+        $this->drawOutline($result, $straightY, 'horizontal', $outlineColor);
+
+        return $result;
+    }
+
+    /**
+     * Generate CORNER transition for ship landings - L-shaped straight lines, outline only
+     */
+    private function generateShipCornerTransition($baseImage, $outlineColor)
+    {
+        $result = $this->cloneImage($baseImage);
+
+        // Top edge straight Y positions
+        $topStraightY = [];
+        for ($x = 0; $x < $this->tileWidth; $x++) {
+            $topStraightY[$x] = $this->waveAmplitude;
+        }
+
+        // Right edge straight X positions
+        $rightStraightX = [];
+        for ($y = 0; $y < $this->tileHeight; $y++) {
+            $rightStraightX[$y] = $this->tileWidth - 1 - $this->waveAmplitude;
+        }
+
+        // Draw L-shaped outline (no pixel copying for ships)
+        $this->drawLShapedOutline($result, $topStraightY, $rightStraightX, $outlineColor);
+
+        return $result;
     }
 
     /**

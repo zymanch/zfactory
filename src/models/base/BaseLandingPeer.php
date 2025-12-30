@@ -5,6 +5,7 @@ namespace models\base;
 class BaseLandingPeer  {
 
     const LANDING_ID = "landing_id";
+    const TYPE = "type";
     const NAME = "name";
     const IS_BUILDABLE = "is_buildable";
     const FOLDER = "folder";

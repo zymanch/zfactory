@@ -13,6 +13,7 @@ namespace models\base;
  * @property string $image_url
  * @property string $extension
  * @property integer $max_durability
+ * @property integer $converts_to_landing_id
  * @property integer $width
  * @property integer $height
  * @property string $icon_url
@@ -23,10 +24,12 @@ namespace models\base;
  * @property string $description
  * @property integer $construction_ticks
  *
+ * @property \models\Landing $convertsToLanding
  * @property \models\EntityTypeCost[] $entityTypeCosts
  * @property \models\BaseResource[] $resources
  * @property \models\EntityTypeRecipe[] $entityTypeRecipes
  * @property \models\BaseRecipe[] $recipes
+ * @property \models\ShipEntity[] $shipEntities
  */
 class BaseEntityType extends \yii\db\ActiveRecord
 {
@@ -45,12 +48,13 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         return [
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::IMAGE_URL], 'required'],
-            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS], 'integer'],
+            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS], 'integer'],
             [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION], 'string'],
             [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
             [[BaseEntityTypePeer::IMAGE_URL, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
             [[BaseEntityTypePeer::EXTENSION], 'string', 'max' => 4],
+            [[BaseEntityTypePeer::CONVERTS_TO_LANDING_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseLanding::className(), 'targetAttribute' => [BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => BaseLandingPeer::LANDING_ID]],
         ];
     }
 
@@ -66,6 +70,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::IMAGE_URL => 'Image Url',
             BaseEntityTypePeer::EXTENSION => 'Extension',
             BaseEntityTypePeer::MAX_DURABILITY => 'Max Durability',
+            BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => 'Converts To Landing ID',
             BaseEntityTypePeer::WIDTH => 'Width',
             BaseEntityTypePeer::HEIGHT => 'Height',
             BaseEntityTypePeer::ICON_URL => 'Icon Url',
@@ -78,6 +83,12 @@ class BaseEntityType extends \yii\db\ActiveRecord
         ];
     }
     /**
+     * @return \models\LandingQuery
+     */
+    public function getConvertsToLanding() {
+        return $this->hasOne(\models\Landing::className(), [BaseLandingPeer::LANDING_ID => BaseEntityTypePeer::CONVERTS_TO_LANDING_ID]);
+    }
+        /**
      * @return \models\EntityTypeCostQuery
      */
     public function getEntityTypeCosts() {
@@ -100,6 +111,12 @@ class BaseEntityType extends \yii\db\ActiveRecord
      */
     public function getRecipes() {
         return $this->hasMany(BaseRecipe::className(), [BaseRecipePeer::RECIPE_ID => BaseEntityTypeRecipePeer::RECIPE_ID])->viaTable('entity_type_recipe', [BaseEntityTypeRecipePeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID]);
+    }
+        /**
+     * @return \models\ShipEntityQuery
+     */
+    public function getShipEntities() {
+        return $this->hasMany(\models\ShipEntity::className(), [BaseShipEntityPeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID])->inverseOf('entityType');
     }
     
     /**
@@ -125,6 +142,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'image_url' => BaseEntityTypePeer::IMAGE_URL,
             'extension' => BaseEntityTypePeer::EXTENSION,
             'max_durability' => BaseEntityTypePeer::MAX_DURABILITY,
+            'converts_to_landing_id' => BaseEntityTypePeer::CONVERTS_TO_LANDING_ID,
             'width' => BaseEntityTypePeer::WIDTH,
             'height' => BaseEntityTypePeer::HEIGHT,
             'icon_url' => BaseEntityTypePeer::ICON_URL,
@@ -145,10 +163,12 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         /*
         return [
+            'convertsToLanding' => 'convertsToLanding',
             'entityTypeCosts' => 'entityTypeCosts',
             'resources' => 'resources',
             'entityTypeRecipes' => 'entityTypeRecipes',
             'recipes' => 'recipes',
+            'shipEntities' => 'shipEntities',
         ];
         */
     }

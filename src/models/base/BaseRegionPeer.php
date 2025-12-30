@@ -14,5 +14,7 @@ class BaseRegionPeer  {
     const HEIGHT = "height";
     const IMAGE_URL = "image_url";
     const CREATED_AT = "created_at";
+    const SHIP_ATTACH_X = "ship_attach_x";
+    const SHIP_ATTACH_Y = "ship_attach_y";
 
 }
