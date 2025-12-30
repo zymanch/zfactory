@@ -252,10 +252,33 @@ export class BuildMode {
     }
 
     /**
+     * Check if user can afford building
+     */
+    canAffordBuilding(entityTypeId) {
+        const costs = this.game.entityTypeCosts[entityTypeId];
+        if (!costs) return true; // No cost = free
+
+        for (const [resourceId, quantity] of Object.entries(costs)) {
+            const available = this.game.userResources[resourceId] || 0;
+            if (available < quantity) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Check if building can be placed at tile position
      * Uses EntityBehaviorFactory for type-specific rules
      */
     checkPlacement(tileX, tileY) {
+        // Check if user can afford building
+        if (!this.canAffordBuilding(this.entityTypeId)) {
+            this.placementError = 'Not enough resources';
+            return false;
+        }
+
         const behavior = EntityBehaviorFactory.create(this.game, this.entityTypeId);
         if (!behavior) {
             this.placementError = 'Invalid entity type';
@@ -316,6 +339,28 @@ export class BuildMode {
             const data = await response.json();
 
             if (data.result === 'ok' && data.entity) {
+                // Update local user resources (deduct building cost)
+                const costs = this.game.entityTypeCosts[this.entityTypeId];
+                if (costs) {
+                    for (const [resourceId, quantity] of Object.entries(costs)) {
+                        const rid = parseInt(resourceId);
+                        this.game.userResources[rid] = (this.game.userResources[rid] || 0) - quantity;
+                        if (this.game.userResources[rid] < 0) {
+                            this.game.userResources[rid] = 0;
+                        }
+                    }
+
+                    // Update build panel affordability after resource change
+                    if (this.game.buildPanel) {
+                        this.game.buildPanel.updateAffordability();
+                    }
+
+                    // Update resource panel display
+                    if (this.game.resourcePanel) {
+                        this.game.resourcePanel.updateAll();
+                    }
+                }
+
                 // Remove target entity from client if it was replaced
                 if (this.targetEntity && data.targetRemoved) {
                     const targetKey = `entity_${this.targetEntity.entity_id}`;

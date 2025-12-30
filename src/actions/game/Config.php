@@ -12,6 +12,8 @@ use models\Recipe;
 use models\EntityTypeRecipe;
 use models\EntityResource;
 use models\EntityCrafting;
+use models\EntityTypeCost;
+use models\UserResource;
 use models\DepositType;
 use services\BuildingRules;
 use Yii;
@@ -120,6 +122,30 @@ class Config extends JsonAction
             ['deposit_id', 'deposit_type_id', 'x', 'y', 'resource_amount']
         );
 
+        // Get entity type costs
+        $entityTypeCostsRaw = EntityTypeCost::find()->asArray()->all();
+        $entityTypeCosts = [];
+        foreach ($entityTypeCostsRaw as $cost) {
+            $typeId = (int)$cost['entity_type_id'];
+            if (!isset($entityTypeCosts[$typeId])) {
+                $entityTypeCosts[$typeId] = [];
+            }
+            $entityTypeCosts[$typeId][(int)$cost['resource_id']] = (int)$cost['quantity'];
+        }
+
+        // Get user resources
+        $userResources = [];
+        if (!$this->isGuest()) {
+            $userResourcesRaw = UserResource::find()
+                ->where(['user_id' => $this->getUser()->user_id])
+                ->asArray()
+                ->all();
+
+            foreach ($userResourcesRaw as $ur) {
+                $userResources[(int)$ur['resource_id']] = (int)$ur['quantity'];
+            }
+        }
+
         // Get user's build panel and camera position
         $buildPanel = array_fill(0, 10, null);
         $cameraX = 0;
@@ -143,6 +169,8 @@ class Config extends JsonAction
             'resources' => $resources,
             'recipes' => $recipes,
             'entityTypeRecipes' => $entityTypeRecipes,
+            'entityTypeCosts' => $entityTypeCosts,
+            'userResources' => $userResources,
             'entityResources' => $entityResources,
             'craftingStates' => $craftingStates,
             'transportStates' => $transportStates,
@@ -163,6 +191,7 @@ class Config extends JsonAction
                 'savePositionUrl' => \yii\helpers\Url::to(['user/save-position'], true),
                 'saveStateUrl' => \yii\helpers\Url::to(['game/save-state'], true),
                 'finishConstructionUrl' => \yii\helpers\Url::to(['game/finish-construction'], true),
+                'addUserResourceUrl' => \yii\helpers\Url::to(['game/add-user-resource'], true),
                 'tilesPath' => '/assets/tiles/',
                 'tileWidth' => Yii::$app->params['tile_width'],
                 'tileHeight' => Yii::$app->params['tile_height'],

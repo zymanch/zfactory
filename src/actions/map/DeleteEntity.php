@@ -4,6 +4,7 @@ namespace actions\map;
 
 use actions\JsonAction;
 use models\Entity;
+use models\EntityTypeCost;
 use Yii;
 
 /**
@@ -36,6 +37,11 @@ class DeleteEntity extends JsonAction
         // Begin transaction
         $transaction = Yii::$app->db->beginTransaction();
         try {
+            // Refund resources if deleting a blueprint
+            if ($entity->state === 'blueprint') {
+                EntityTypeCost::refundCost(Yii::$app->user->id, $entity->entity_type_id);
+            }
+
             // Delete entity (cascades to delete related data: EntityResource, etc.)
             if (!$entity->delete()) {
                 throw new \Exception('Failed to delete entity: ' . json_encode($entity->errors));

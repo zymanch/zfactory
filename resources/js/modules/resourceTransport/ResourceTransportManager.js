@@ -746,6 +746,18 @@ export class ResourceTransportManager {
         // Building
         const building = this.buildings.get(entityId);
         if (building) {
+            // Check if this is HQ (special building)
+            const entity = this.game.entityData.get(`entity_${entityId}`);
+            if (entity) {
+                const entityType = this.game.entityTypes[entity.entity_type_id];
+                if (entityType && entityType.type === 'special') {
+                    // This is HQ - add to user resources instead of entity resources
+                    this.addToUserResources(resourceId, amount);
+                    return true;
+                }
+            }
+
+            // Regular building - add to entity resources
             building.addResource(resourceId, amount);
             // Try to start crafting when resource received
             this.tryStartCraftForEntity(entityId);
@@ -753,6 +765,55 @@ export class ResourceTransportManager {
         }
 
         return false;
+    }
+
+    /**
+     * Add resources to user's global inventory (for HQ)
+     */
+    async addToUserResources(resourceId, amount) {
+        const url = this.game.config.addUserResourceUrl;
+        if (!url) {
+            console.warn('[HQ] addUserResourceUrl not configured');
+            return;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    resource_id: resourceId,
+                    amount: amount
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.result === 'ok') {
+                // Update local user resources
+                this.game.userResources = data.userResources || {};
+
+                // Update resource panel
+                if (this.game.resourcePanel) {
+                    this.game.resourcePanel.updateAll();
+                }
+
+                // Update build panel affordability
+                if (this.game.buildPanel) {
+                    this.game.buildPanel.updateAffordability();
+                }
+
+                const resourceInfo = this.game.resources[resourceId];
+                console.log(`[HQ] Added to user resources: ${amount}x ${resourceInfo?.name || resourceId}`);
+            } else {
+                console.error('[HQ] Failed to add user resource:', data.error);
+            }
+        } catch (e) {
+            console.error('[HQ] Error adding user resource:', e);
+        }
     }
 
     /**

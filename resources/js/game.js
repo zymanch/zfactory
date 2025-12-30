@@ -2,6 +2,7 @@ import * as PIXI from 'pixi.js';
 import { Camera } from './modules/camera.js';
 import { InputManager } from './modules/inputManager.js';
 import { BuildPanel } from './modules/ui/BuildPanel.js';
+import { ResourcePanel } from './modules/ui/ResourcePanel.js';
 import { CameraInfo } from './modules/ui/CameraInfo.js';
 import { ControlsHint } from './modules/ui/ControlsHint.js';
 import { BuildingWindow } from './modules/windows/buildingWindow.js';
@@ -42,6 +43,8 @@ class ZFactoryGame {
         this.resources = {};
         this.recipes = {};
         this.entityTypeRecipes = {};
+        this.entityTypeCosts = {};
+        this.userResources = {};
 
         // Entity management
         this.loadedEntities = new Map();
@@ -65,6 +68,7 @@ class ZFactoryGame {
 
         // UI modules
         this.buildPanel = null;
+        this.resourcePanel = null;
         this.cameraInfo = null;
         this.controlsHint = null;
 
@@ -111,6 +115,7 @@ class ZFactoryGame {
 
         // UI modules
         this.buildPanel = new BuildPanel(this);
+        this.resourcePanel = new ResourcePanel(this);
         this.cameraInfo = new CameraInfo(this);
         this.controlsHint = new ControlsHint(this);
 
@@ -202,6 +207,7 @@ class ZFactoryGame {
 
         // UI modules
         this.buildPanel.init();
+        this.resourcePanel.init();
         this.cameraInfo.init();
         this.controlsHint.init();
 
@@ -249,6 +255,8 @@ class ZFactoryGame {
         this.resources = data.resources || {};
         this.recipes = data.recipes || {};
         this.entityTypeRecipes = data.entityTypeRecipes || {};
+        this.entityTypeCosts = data.entityTypeCosts || {};
+        this.userResources = data.userResources || {};
         this.initialBuildPanel = data.buildPanel || [];
         this.initialEyeEntities = data.eyeEntities || [];
         this.initialDeposits = data.deposits || [];

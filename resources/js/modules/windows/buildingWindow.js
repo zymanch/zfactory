@@ -163,6 +163,41 @@ export class BuildingWindow {
             <div class="building-name">${entityType.name}</div>
         `;
 
+        // Add cost display if building has a cost
+        const costs = this.game.entityTypeCosts[typeId];
+        if (costs && Object.keys(costs).length > 0) {
+            const costDiv = document.createElement('div');
+            costDiv.className = 'entity-cost';
+
+            for (const [resourceId, quantity] of Object.entries(costs)) {
+                const resource = this.game.resources[resourceId];
+                if (!resource) continue;
+
+                const available = this.game.userResources[resourceId] || 0;
+                const canAfford = available >= quantity;
+
+                const costItem = document.createElement('div');
+                costItem.className = canAfford ? 'cost-item' : 'cost-item insufficient';
+
+                // Resource icon (16x16)
+                const icon = document.createElement('img');
+                icon.src = `${this.game.config.tilesPath}resources/${resource.icon_url}?v=${this.game.config.assetVersion}`;
+                icon.width = 16;
+                icon.height = 16;
+                icon.title = resource.name;
+
+                // Quantity
+                const text = document.createElement('span');
+                text.textContent = `${quantity}`;
+
+                costItem.appendChild(icon);
+                costItem.appendChild(text);
+                costDiv.appendChild(costItem);
+            }
+
+            item.appendChild(costDiv);
+        }
+
         item.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('entityTypeId', typeId);
             e.dataTransfer.effectAllowed = 'copy';

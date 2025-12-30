@@ -6,6 +6,7 @@ use actions\JsonAction;
 use models\Entity;
 use models\EntityType;
 use models\EntityResource;
+use models\EntityTypeCost;
 use models\Deposit;
 use models\DepositType;
 use services\BuildingRules;
@@ -42,6 +43,12 @@ class CreateEntity extends JsonAction
             return $this->error('Invalid entity_type_id');
         }
 
+        // Check if user can afford building (BEFORE placement rules)
+        $userId = Yii::$app->user->id;
+        if (!EntityTypeCost::canAfford($userId, $entityTypeId)) {
+            return $this->error('Not enough resources to build this');
+        }
+
         // Check building rules using behavior system (tile coordinates)
         // This checks: fog of war, landing buildability, entity collision, resource target
         $ruleCheck = BuildingRules::canPlace($entityTypeId, $tileX, $tileY);
@@ -60,6 +67,9 @@ class CreateEntity extends JsonAction
         // Begin transaction
         $transaction = Yii::$app->db->beginTransaction();
         try {
+            // Deduct building cost from user resources
+            EntityTypeCost::deductCost($userId, $entityTypeId);
+
             // Create new entity with tile coordinates
             $entity = new Entity();
             $entity->entity_type_id = $entityTypeId;

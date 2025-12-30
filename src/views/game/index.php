@@ -8,7 +8,7 @@ use yii\helpers\Html;
 $this->title = 'ZFactory';
 
 // Register compiled CSS
-$this->registerCssFile('/css/game.css');
+$this->registerCssFile('/js/game.css');
 
 // Pass only config URL to JavaScript (other config loaded via AJAX)
 $this->registerJs("

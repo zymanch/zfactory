@@ -128,6 +128,52 @@ export class BuildPanel {
             iconEl.style.backgroundImage = '';
             iconEl.classList.remove('has-icon');
         }
+
+        // Update affordability visual
+        this.updateSlotAffordability(index);
+    }
+
+    /**
+     * Check if user can afford building
+     */
+    canAffordBuilding(entityTypeId) {
+        const costs = this.game.entityTypeCosts[entityTypeId];
+        if (!costs) return true; // No cost = free
+
+        for (const [resourceId, quantity] of Object.entries(costs)) {
+            const available = this.game.userResources[resourceId] || 0;
+            if (available < quantity) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Update affordability visual for specific slot
+     */
+    updateSlotAffordability(index) {
+        const slot = this.slotElements[index];
+        if (!slot) return;
+
+        const entityTypeId = this.slots[index];
+        if (!entityTypeId) {
+            slot.classList.remove('unaffordable');
+            return;
+        }
+
+        const canAfford = this.canAffordBuilding(entityTypeId);
+        slot.classList.toggle('unaffordable', !canAfford);
+    }
+
+    /**
+     * Update affordability for all slots (call after resource changes)
+     */
+    updateAffordability() {
+        this.slotElements.forEach((_, index) => {
+            this.updateSlotAffordability(index);
+        });
     }
 
     /**
