@@ -78,6 +78,7 @@ class CreateEntity extends JsonAction
             $entity->state = $state;
             $entity->durability = $state === 'built' ? $entityType->max_durability : 0;
             $entity->construction_progress = $state === 'built' ? 100 : 0;
+            $entity->region_id = (int)$this->getUser()->current_region_id;
 
             if (!$entity->save()) {
                 throw new \Exception('Failed to save entity: ' . json_encode($entity->errors));

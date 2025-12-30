@@ -7,22 +7,27 @@ use models\DepositQuery;
 /**
  * This is the ActiveQuery class for [[models\Deposit]].
  * @method DepositQuery filterByDepositId($value, $criteria = null)
+ * @method DepositQuery filterByRegionId($value, $criteria = null)
  * @method DepositQuery filterByDepositTypeId($value, $criteria = null)
  * @method DepositQuery filterByX($value, $criteria = null)
  * @method DepositQuery filterByY($value, $criteria = null)
  * @method DepositQuery filterByResourceAmount($value, $criteria = null)
   * @method DepositQuery andJoinOnConditionByDepositId($value, $criteria = null)
+  * @method DepositQuery andJoinOnConditionByRegionId($value, $criteria = null)
   * @method DepositQuery andJoinOnConditionByDepositTypeId($value, $criteria = null)
   * @method DepositQuery andJoinOnConditionByX($value, $criteria = null)
   * @method DepositQuery andJoinOnConditionByY($value, $criteria = null)
   * @method DepositQuery andJoinOnConditionByResourceAmount($value, $criteria = null)
   * @method DepositQuery orderByDepositId($order = Criteria::ASC)
+  * @method DepositQuery orderByRegionId($order = Criteria::ASC)
   * @method DepositQuery orderByDepositTypeId($order = Criteria::ASC)
   * @method DepositQuery orderByX($order = Criteria::ASC)
   * @method DepositQuery orderByY($order = Criteria::ASC)
   * @method DepositQuery orderByResourceAmount($order = Criteria::ASC)
   * @method DepositQuery withDepositType($params = [])
   * @method DepositQuery joinWithDepositType($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method DepositQuery withRegion($params = [])
+  * @method DepositQuery joinWithRegion($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseDepositQuery extends \yii\db\ActiveQuery
 {

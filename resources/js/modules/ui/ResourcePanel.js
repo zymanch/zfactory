@@ -31,9 +31,6 @@ export class ResourcePanel {
     refresh() {
         if (!this.element) return;
 
-        console.log('[ResourcePanel] Refreshing, userResources:', this.game.userResources);
-        console.log('[ResourcePanel] entityTypeCosts:', this.game.entityTypeCosts);
-
         // Clear existing content
         this.element.innerHTML = '';
         this.resourceElements = {};
@@ -55,42 +52,18 @@ export class ResourcePanel {
             }
         }
 
-        console.log('[ResourcePanel] Displaying resources:', Array.from(displayedResources));
-
         // Sort by resource_id for consistent display
         const sortedResourceIds = Array.from(displayedResources).sort((a, b) => a - b);
-
-        console.log('[ResourcePanel] Creating items for resources:', sortedResourceIds);
 
         // Create resource items
         for (const resourceId of sortedResourceIds) {
             const resource = this.game.resources[resourceId];
-            if (!resource) {
-                console.warn('[ResourcePanel] Resource not found:', resourceId);
-                continue;
-            }
+            if (!resource) continue;
 
-            console.log('[ResourcePanel] Creating item for:', resourceId, resource.name);
             const item = this.createResourceItem(resourceId, resource);
             this.element.appendChild(item);
             this.resourceElements[resourceId] = item;
         }
-
-        console.log('[ResourcePanel] Panel element:', this.element);
-        console.log('[ResourcePanel] Panel children count:', this.element.children.length);
-
-        // Check computed styles
-        const styles = window.getComputedStyle(this.element);
-        console.log('[ResourcePanel] Computed styles:', {
-            display: styles.display,
-            position: styles.position,
-            top: styles.top,
-            left: styles.left,
-            zIndex: styles.zIndex,
-            transform: styles.transform,
-            visibility: styles.visibility,
-            opacity: styles.opacity
-        });
     }
 
     /**

@@ -72,7 +72,7 @@ return [
             'identityClass' => 'models\User',
             'enableAutoLogin' => true,
             'identityCookie' => ['name' => '_identity-backend', 'httpOnly' => true],
-            'loginUrl' => ['profile/home'],
+            'loginUrl' => ['site/index'], // Redirect to homepage for unauthenticated users
         ],
         'session' => [
             // this is the name of the session cookie used for login on the backend

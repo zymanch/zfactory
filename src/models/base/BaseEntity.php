@@ -8,6 +8,7 @@ namespace models\base;
  * This is the model class for table "zfactory.entity".
  *
  * @property integer $entity_id
+ * @property integer $region_id
  * @property integer $entity_type_id
  * @property string $state
  * @property integer $durability
@@ -15,6 +16,7 @@ namespace models\base;
  * @property integer $y
  * @property integer $construction_progress
  *
+ * @property \models\Region $region
  * @property \models\EntityCrafting $entityCrafting
  * @property \models\EntityResource[] $entityResources
  * @property \models\BaseResource[] $resources
@@ -35,9 +37,10 @@ class BaseEntity extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [[BaseEntityPeer::REGION_ID, BaseEntityPeer::ENTITY_TYPE_ID, BaseEntityPeer::DURABILITY, BaseEntityPeer::X, BaseEntityPeer::Y, BaseEntityPeer::CONSTRUCTION_PROGRESS], 'integer'],
             [[BaseEntityPeer::ENTITY_TYPE_ID, BaseEntityPeer::X, BaseEntityPeer::Y], 'required'],
-            [[BaseEntityPeer::ENTITY_TYPE_ID, BaseEntityPeer::DURABILITY, BaseEntityPeer::X, BaseEntityPeer::Y, BaseEntityPeer::CONSTRUCTION_PROGRESS], 'integer'],
             [[BaseEntityPeer::STATE], 'string'],
+            [[BaseEntityPeer::REGION_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseRegion::className(), 'targetAttribute' => [BaseEntityPeer::REGION_ID => BaseRegionPeer::REGION_ID]],
         ];
     }
 
@@ -48,6 +51,7 @@ class BaseEntity extends \yii\db\ActiveRecord
     {
         return [
             BaseEntityPeer::ENTITY_ID => 'Entity ID',
+            BaseEntityPeer::REGION_ID => 'Region ID',
             BaseEntityPeer::ENTITY_TYPE_ID => 'Entity Type ID',
             BaseEntityPeer::STATE => 'State',
             BaseEntityPeer::DURABILITY => 'Durability',
@@ -57,6 +61,12 @@ class BaseEntity extends \yii\db\ActiveRecord
         ];
     }
     /**
+     * @return \models\RegionQuery
+     */
+    public function getRegion() {
+        return $this->hasOne(\models\Region::className(), [BaseRegionPeer::REGION_ID => BaseEntityPeer::REGION_ID]);
+    }
+        /**
      * @return \models\EntityCraftingQuery
      */
     public function getEntityCrafting() {
@@ -93,6 +103,7 @@ class BaseEntity extends \yii\db\ActiveRecord
     {
         return [
             'entity_id' => BaseEntityPeer::ENTITY_ID,
+            'region_id' => BaseEntityPeer::REGION_ID,
             'entity_type_id' => BaseEntityPeer::ENTITY_TYPE_ID,
             'state' => BaseEntityPeer::STATE,
             'durability' => BaseEntityPeer::DURABILITY,
@@ -110,6 +121,7 @@ class BaseEntity extends \yii\db\ActiveRecord
     {
         /*
         return [
+            'region' => 'region',
             'entityCrafting' => 'entityCrafting',
             'entityResources' => 'entityResources',
             'resources' => 'resources',

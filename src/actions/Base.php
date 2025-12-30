@@ -10,6 +10,7 @@ use yii\base\Action;
  */
 abstract class Base extends Action
 {
+
     /**
      * Render a view
      */

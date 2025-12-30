@@ -23,6 +23,8 @@ namespace models\base;
  * @property string $description
  * @property integer $construction_ticks
  *
+ * @property \models\EntityTypeCost[] $entityTypeCosts
+ * @property \models\BaseResource[] $resources
  * @property \models\EntityTypeRecipe[] $entityTypeRecipes
  * @property \models\BaseRecipe[] $recipes
  */
@@ -76,6 +78,18 @@ class BaseEntityType extends \yii\db\ActiveRecord
         ];
     }
     /**
+     * @return \models\EntityTypeCostQuery
+     */
+    public function getEntityTypeCosts() {
+        return $this->hasMany(\models\EntityTypeCost::className(), [BaseEntityTypeCostPeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID])->inverseOf('entityType');
+    }
+        /**
+     * @return \models\BaseResourceQuery
+     */
+    public function getResources() {
+        return $this->hasMany(BaseResource::className(), [BaseResourcePeer::RESOURCE_ID => BaseEntityTypeCostPeer::RESOURCE_ID])->viaTable('entity_type_cost', [BaseEntityTypeCostPeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID]);
+    }
+        /**
      * @return \models\EntityTypeRecipeQuery
      */
     public function getEntityTypeRecipes() {
@@ -131,6 +145,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         /*
         return [
+            'entityTypeCosts' => 'entityTypeCosts',
+            'resources' => 'resources',
             'entityTypeRecipes' => 'entityTypeRecipes',
             'recipes' => 'recipes',
         ];

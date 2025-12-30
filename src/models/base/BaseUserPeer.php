@@ -5,6 +5,9 @@ namespace models\base;
 class BaseUserPeer  {
 
     const USER_ID = "user_id";
+    const CURRENT_REGION_ID = "current_region_id";
+    const SHIP_VIEW_RADIUS = "ship_view_radius";
+    const SHIP_JUMP_DISTANCE = "ship_jump_distance";
     const USERNAME = "username";
     const PASSWORD = "password";
     const EMAIL = "email";

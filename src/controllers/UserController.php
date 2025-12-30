@@ -3,9 +3,34 @@
 namespace controllers;
 
 use yii\web\Controller;
+use yii\filters\AccessControl;
 
 class UserController extends Controller
 {
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'denyCallback' => function ($rule, $action) {
+                    \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+                    \Yii::$app->response->statusCode = 401;
+                    \Yii::$app->response->data = [
+                        'result' => 'error',
+                        'error' => 'Authentication required'
+                    ];
+                    \Yii::$app->end();
+                },
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'roles' => ['@'], // Only authenticated
+                    ],
+                ],
+            ],
+        ];
+    }
+
     /**
      * Disable CSRF for AJAX endpoints
      */

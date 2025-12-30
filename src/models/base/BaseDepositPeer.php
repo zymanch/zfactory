@@ -5,6 +5,7 @@ namespace models\base;
 class BaseDepositPeer  {
 
     const DEPOSIT_ID = "deposit_id";
+    const REGION_ID = "region_id";
     const DEPOSIT_TYPE_ID = "deposit_type_id";
     const X = "x";
     const Y = "y";

@@ -54,7 +54,14 @@ class Config extends JsonAction
             }
         }
 
+        // Get current region ID
+        $currentRegionId = 1; // Default
+        if (!$this->isGuest()) {
+            $currentRegionId = (int)$this->getUser()->current_region_id;
+        }
+
         // Get ALL eye entities (for fog of war) - not cached, need fresh data
+        // Filter by current region
         $eyeEntities = [];
         if (!empty($eyeTypeIds)) {
             $eyeEntities = $this->castNumericFieldsArray(
@@ -62,6 +69,7 @@ class Config extends JsonAction
                     ->select(['entity_id', 'entity_type_id', 'state', 'x', 'y'])
                     ->where(['entity_type_id' => $eyeTypeIds])
                     ->andWhere(['state' => 'built'])
+                    ->andWhere(['region_id' => $currentRegionId])
                     ->asArray()
                     ->all(),
                 ['entity_id', 'entity_type_id', 'x', 'y']
@@ -116,9 +124,9 @@ class Config extends JsonAction
             ['position', 'lateral_offset', 'arm_position']  // floats
         );
 
-        // Get all deposits (trees, rocks, ores)
+        // Get all deposits (trees, rocks, ores) - filter by current region
         $deposits = $this->castNumericFieldsArray(
-            \models\Deposit::find()->asArray()->all(),
+            \models\Deposit::find()->where(['region_id' => $currentRegionId])->asArray()->all(),
             ['deposit_id', 'deposit_type_id', 'x', 'y', 'resource_amount']
         );
 
@@ -192,7 +200,9 @@ class Config extends JsonAction
                 'saveStateUrl' => \yii\helpers\Url::to(['game/save-state'], true),
                 'finishConstructionUrl' => \yii\helpers\Url::to(['game/finish-construction'], true),
                 'addUserResourceUrl' => \yii\helpers\Url::to(['game/add-user-resource'], true),
+                'regionsMapUrl' => \yii\helpers\Url::to(['regions/index'], true),
                 'tilesPath' => '/assets/tiles/',
+                'currentRegionId' => $currentRegionId,
                 'tileWidth' => Yii::$app->params['tile_width'],
                 'tileHeight' => Yii::$app->params['tile_height'],
                 'assetVersion' => Yii::$app->params['asset_version'],

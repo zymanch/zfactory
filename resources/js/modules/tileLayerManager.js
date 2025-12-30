@@ -127,6 +127,19 @@ export class TileLayerManager {
                 if (sprite) {
                     this.game.landingLayer.addChild(sprite);
                     this.loadedTiles.set(key, sprite);
+
+                    // DEBUG: Show landing_id on tile
+                    const text = new PIXI.Text(landingId.toString(), {
+                        fontFamily: 'Arial',
+                        fontSize: 12,
+                        fill: 0xff0000,
+                        stroke: 0xffffff,
+                        strokeThickness: 2
+                    });
+                    text.x = x * tileWidth + tileWidth / 2;
+                    text.y = y * tileHeight + tileHeight / 2;
+                    text.anchor.set(0.5);
+                    this.game.landingLayer.addChild(text);
                 }
             }
         }

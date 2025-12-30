@@ -7,17 +7,22 @@ use models\MapQuery;
 /**
  * This is the ActiveQuery class for [[models\Map]].
  * @method MapQuery filterByMapId($value, $criteria = null)
+ * @method MapQuery filterByRegionId($value, $criteria = null)
  * @method MapQuery filterByLandingId($value, $criteria = null)
  * @method MapQuery filterByX($value, $criteria = null)
  * @method MapQuery filterByY($value, $criteria = null)
   * @method MapQuery andJoinOnConditionByMapId($value, $criteria = null)
+  * @method MapQuery andJoinOnConditionByRegionId($value, $criteria = null)
   * @method MapQuery andJoinOnConditionByLandingId($value, $criteria = null)
   * @method MapQuery andJoinOnConditionByX($value, $criteria = null)
   * @method MapQuery andJoinOnConditionByY($value, $criteria = null)
   * @method MapQuery orderByMapId($order = Criteria::ASC)
+  * @method MapQuery orderByRegionId($order = Criteria::ASC)
   * @method MapQuery orderByLandingId($order = Criteria::ASC)
   * @method MapQuery orderByX($order = Criteria::ASC)
   * @method MapQuery orderByY($order = Criteria::ASC)
+  * @method MapQuery withRegion($params = [])
+  * @method MapQuery joinWithRegion($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseMapQuery extends \yii\db\ActiveQuery
 {

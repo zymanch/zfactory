@@ -7,6 +7,9 @@ use models\UserQuery;
 /**
  * This is the ActiveQuery class for [[models\User]].
  * @method UserQuery filterByUserId($value, $criteria = null)
+ * @method UserQuery filterByCurrentRegionId($value, $criteria = null)
+ * @method UserQuery filterByShipViewRadius($value, $criteria = null)
+ * @method UserQuery filterByShipJumpDistance($value, $criteria = null)
  * @method UserQuery filterByUsername($value, $criteria = null)
  * @method UserQuery filterByPassword($value, $criteria = null)
  * @method UserQuery filterByEmail($value, $criteria = null)
@@ -17,6 +20,9 @@ use models\UserQuery;
  * @method UserQuery filterByCreatedAt($value, $criteria = null)
  * @method UserQuery filterByUpdatedAt($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByUserId($value, $criteria = null)
+  * @method UserQuery andJoinOnConditionByCurrentRegionId($value, $criteria = null)
+  * @method UserQuery andJoinOnConditionByShipViewRadius($value, $criteria = null)
+  * @method UserQuery andJoinOnConditionByShipJumpDistance($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByUsername($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByPassword($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByEmail($value, $criteria = null)
@@ -27,6 +33,9 @@ use models\UserQuery;
   * @method UserQuery andJoinOnConditionByCreatedAt($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByUpdatedAt($value, $criteria = null)
   * @method UserQuery orderByUserId($order = Criteria::ASC)
+  * @method UserQuery orderByCurrentRegionId($order = Criteria::ASC)
+  * @method UserQuery orderByShipViewRadius($order = Criteria::ASC)
+  * @method UserQuery orderByShipJumpDistance($order = Criteria::ASC)
   * @method UserQuery orderByUsername($order = Criteria::ASC)
   * @method UserQuery orderByPassword($order = Criteria::ASC)
   * @method UserQuery orderByEmail($order = Criteria::ASC)
@@ -36,6 +45,16 @@ use models\UserQuery;
   * @method UserQuery orderByZoom($order = Criteria::ASC)
   * @method UserQuery orderByCreatedAt($order = Criteria::ASC)
   * @method UserQuery orderByUpdatedAt($order = Criteria::ASC)
+  * @method UserQuery withCurrentRegion($params = [])
+  * @method UserQuery joinWithCurrentRegion($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method UserQuery withUserRegionVisits($params = [])
+  * @method UserQuery joinWithUserRegionVisits($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method UserQuery withRegions($params = [])
+  * @method UserQuery joinWithRegions($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method UserQuery withUserResources($params = [])
+  * @method UserQuery joinWithUserResources($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method UserQuery withResources($params = [])
+  * @method UserQuery joinWithResources($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseUserQuery extends \yii\db\ActiveQuery
 {

@@ -27,6 +27,10 @@ use models\ResourceQuery;
   * @method ResourceQuery joinWithEntityResources($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withEntities($params = [])
   * @method ResourceQuery joinWithEntities($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method ResourceQuery withEntityTypeCosts($params = [])
+  * @method ResourceQuery joinWithEntityTypeCosts($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method ResourceQuery withEntityTypes($params = [])
+  * @method ResourceQuery joinWithEntityTypes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withRecipes($params = [])
   * @method ResourceQuery joinWithRecipes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withRecipes0($params = [])
@@ -35,6 +39,10 @@ use models\ResourceQuery;
   * @method ResourceQuery joinWithRecipes1($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method ResourceQuery withRecipes2($params = [])
   * @method ResourceQuery joinWithRecipes2($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method ResourceQuery withUserResources($params = [])
+  * @method ResourceQuery joinWithUserResources($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method ResourceQuery withUsers($params = [])
+  * @method ResourceQuery joinWithUsers($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseResourceQuery extends \yii\db\ActiveQuery
 {

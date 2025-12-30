@@ -5,6 +5,7 @@ namespace models\base;
 class BaseEntityPeer  {
 
     const ENTITY_ID = "entity_id";
+    const REGION_ID = "region_id";
     const ENTITY_TYPE_ID = "entity_type_id";
     const STATE = "state";
     const DURABILITY = "durability";

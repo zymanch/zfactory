@@ -31,13 +31,17 @@ class ArController extends \yii\console\Controller
                 'entity_crafting',
                 'entity_resource',
                 'entity_type',
+                'entity_type_cost',
                 'entity_type_recipe',
                 'landing',
                 'landing_adjacency',
                 'map',
                 'recipe',
+                'region',
                 'resource',
                 'user',
+                'user_region_visit',
+                'user_resource',
             ],
 
         ];

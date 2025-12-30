@@ -16,10 +16,14 @@ namespace models\base;
  * @property \models\DepositType[] $depositTypes
  * @property \models\EntityResource[] $entityResources
  * @property \models\BaseEntity[] $entities
+ * @property \models\EntityTypeCost[] $entityTypeCosts
+ * @property \models\BaseEntityType[] $entityTypes
  * @property \models\Recipe[] $recipes
  * @property \models\Recipe[] $recipes0
  * @property \models\Recipe[] $recipes1
  * @property \models\Recipe[] $recipes2
+ * @property \models\UserResource[] $userResources
+ * @property \models\BaseUser[] $users
  */
 class BaseResource extends \yii\db\ActiveRecord
 {
@@ -77,6 +81,18 @@ class BaseResource extends \yii\db\ActiveRecord
         return $this->hasMany(BaseEntity::className(), [BaseEntityPeer::ENTITY_ID => BaseEntityResourcePeer::ENTITY_ID])->viaTable('entity_resource', [BaseEntityResourcePeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]);
     }
         /**
+     * @return \models\EntityTypeCostQuery
+     */
+    public function getEntityTypeCosts() {
+        return $this->hasMany(\models\EntityTypeCost::className(), [BaseEntityTypeCostPeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID])->inverseOf('resource');
+    }
+        /**
+     * @return \models\BaseEntityTypeQuery
+     */
+    public function getEntityTypes() {
+        return $this->hasMany(BaseEntityType::className(), [BaseEntityTypePeer::ENTITY_TYPE_ID => BaseEntityTypeCostPeer::ENTITY_TYPE_ID])->viaTable('entity_type_cost', [BaseEntityTypeCostPeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]);
+    }
+        /**
      * @return \models\RecipeQuery
      */
     public function getRecipes() {
@@ -99,6 +115,18 @@ class BaseResource extends \yii\db\ActiveRecord
      */
     public function getRecipes2() {
         return $this->hasMany(\models\Recipe::className(), [BaseRecipePeer::OUTPUT_RESOURCE_ID => BaseResourcePeer::RESOURCE_ID])->inverseOf('outputResource');
+    }
+        /**
+     * @return \models\UserResourceQuery
+     */
+    public function getUserResources() {
+        return $this->hasMany(\models\UserResource::className(), [BaseUserResourcePeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID])->inverseOf('resource');
+    }
+        /**
+     * @return \models\BaseUserQuery
+     */
+    public function getUsers() {
+        return $this->hasMany(BaseUser::className(), [BaseUserPeer::USER_ID => BaseUserResourcePeer::USER_ID])->viaTable('user_resource', [BaseUserResourcePeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]);
     }
     
     /**
@@ -137,10 +165,14 @@ class BaseResource extends \yii\db\ActiveRecord
             'depositTypes' => 'depositTypes',
             'entityResources' => 'entityResources',
             'entities' => 'entities',
+            'entityTypeCosts' => 'entityTypeCosts',
+            'entityTypes' => 'entityTypes',
             'recipes' => 'recipes',
             'recipes0' => 'recipes0',
             'recipes1' => 'recipes1',
             'recipes2' => 'recipes2',
+            'userResources' => 'userResources',
+            'users' => 'users',
         ];
         */
     }
