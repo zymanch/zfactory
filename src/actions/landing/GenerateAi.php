@@ -3,6 +3,7 @@
 namespace actions\landing;
 
 use actions\ConsoleAction;
+use app\client\StableDiffusionClient;
 use models\Landing;
 use Yii;
 use yii\helpers\Console;
@@ -18,14 +19,25 @@ class GenerateAi extends ConsoleAction
 {
     public $landingName = 'all';
 
+    /** @var StableDiffusionClient */
+    private $client;
+
     public function run($landingName = 'all')
     {
         $this->landingName = $landingName;
+        $this->client = new StableDiffusionClient();
+
         $this->stdout("Generating landing sprites using Stable Diffusion API...\n\n");
 
-        $apiUrl = 'http://localhost:7860';
         $basePath = Yii::getAlias('@app/..');
         $landingDir = $basePath . '/public/assets/tiles/landing';
+
+        // Check if SD is running
+        if (!$this->client->isAvailable()) {
+            $this->stdout("Error: Stable Diffusion WebUI is not running at {$this->client->getApiUrl()}\n", Console::FG_RED);
+            $this->stdout("Please start it first.\n");
+            return 1;
+        }
 
         // Prompts for each landing type
         $prompts = $this->getPrompts();
@@ -70,10 +82,13 @@ class GenerateAi extends ConsoleAction
             // Generate base image (variation 0)
             $this->stdout("  Generating base image (0/{$variationsCount})...\n");
             $originalPath = $landingPath . '/' . $name . '_0_original.png';
-            $baseImageBase64 = base64_encode(file_get_contents($originalPath));
 
-            // Save variation 0
-            $originalPath = $landingPath . '/' . $name . '_0_original.png';
+            if (!file_exists($originalPath)) {
+                $this->stdout("    Warning: Base image not found, skipping variations\n", Console::FG_YELLOW);
+                continue;
+            }
+
+            $baseImageBase64 = base64_encode(file_get_contents($originalPath));
 
             // Generate other variations using img2img with low denoising for seamless edges
             for ($i = 1; $i < $variationsCount; $i++) {
@@ -83,21 +98,20 @@ class GenerateAi extends ConsoleAction
                 $varPrompt = $prompts[$name]['positive'] . ($modifier ? ', ' . $modifier : '');
 
                 // Use img2img with low denoising to preserve seamless edges
-                $varImageData = $this->generateImg2ImgViaSdApi(
-                    $apiUrl,
+                $result = $this->client->img2img(
                     $baseImageBase64,
                     $varPrompt,
                     $prompts[$name]['negative'],
                     512,
                     384,
-                    0.25  // Low denoising = preserve edges, subtle changes only
+                    ['denoising_strength' => 0.25]
                 );
 
-                if (!$varImageData) {
-                    $this->stdout("    Warning: Failed to generate variation {$i}, using base instead\n");
+                if (!$result) {
+                    $this->stdout("    Warning: Failed to generate variation {$i}, using base instead\n", Console::FG_YELLOW);
                     $varImageBase64 = $baseImageBase64;
                 } else {
-                    $varImageBase64 = $varImageData['image'];
+                    $varImageBase64 = $result->imageBase64;
                 }
 
                 $varPath = $landingPath . '/' . $name . '_' . $i . '_original.png';
@@ -135,7 +149,7 @@ class GenerateAi extends ConsoleAction
     /**
      * Get prompts for each landing type
      */
-    protected  function getPrompts()
+    protected function getPrompts()
     {
         return [
             'grass' => [
@@ -204,7 +218,7 @@ class GenerateAi extends ConsoleAction
     /**
      * Get variation prompts for img2img
      */
-    protected  function getVariationPrompts()
+    protected function getVariationPrompts()
     {
         return [
             'grass' => [
@@ -274,144 +288,6 @@ class GenerateAi extends ConsoleAction
     }
 
     /**
-     * Generate image using Stable Diffusion API
-     * Returns array ['image' => base64, 'seed' => int, 'info' => array] or null
-     */
-    protected function generateViaSdApi($apiUrl, $positivePrompt, $negativePrompt, $width, $height)
-    {
-
-
-        $payload = [
-            'prompt' => $positivePrompt,
-            'negative_prompt' => $negativePrompt,
-            'width' => $width,
-            'height' => $height,
-            'steps' => 25,
-            //          cfg_scale (Classifier Free Guidance Scale)
-            //
-            //          Диапазон: 1-20, обычно 5-10
-            //
-            //          Что делает: Насколько строго следовать промпту
-            //            - Низкий (3-5): Мягкие, художественные, менее четкие результаты
-            //            - Средний (7-9): Баланс между креативностью и точностью
-            //            - Высокий (12-20): Очень четкие, но могут быть пересатурированные/резкие
-            'cfg_scale' => 3,
-            //          sampler_name (Метод генерации)
-            //
-            //          Варианты: Euler a, DPM++ 2M Karras, DDIM, и др.
-            //
-            //            Что делает: Алгоритм создания изображения
-            //            - Euler a: Быстрый, мягкий, хорош для текстур
-            //            - DPM++ 2M Karras: Более детальный, но медленнее
-            //            - DDIM: Стабильный, предсказуемый
-            'sampler_name' => 'Euler a',  // Softer sampler (was DPM++ 2M Karras)
-            'seed' => -1,  // Random seed
-            'batch_size' => 1,
-            //          n_iter (Number of Iterations)
-            //
-            //          Что делает: Сколько изображений генерировать за раз
-            //
-            //            - n_iter: 1 = одно изображение
-            //            - n_iter: 4 = четыре изображения сразу
-            'n_iter' => 1,
-            //          tiling (Бесшовность)
-            //
-            //          Что делает: Делает края изображения бесшовными
-            //
-            //            - true = края левая/правая и верх/низ совпадают (можно клонировать как плитку)
-            //          - false = обычное изображение
-            //
-            //          Сейчас у нас: true ✅ (критически важно для тайлов!)
-            'tiling' => true,  // Enable seamless mode
-        ];
-
-        $ch = curl_init($apiUrl . '/sdapi/v1/txt2img');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 minutes timeout
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            $this->stdout("  API Error: HTTP {$httpCode}\n");
-            return null;
-        }
-
-        $data = json_decode($response, true);
-        if (!isset($data['images'][0])) {
-            return null;
-        }
-
-        // Extract seed from info
-        $info = json_decode($data['info'] ?? '{}', true);
-        $seed = $info['seed'] ?? null;
-
-        return [
-            'image' => $data['images'][0],
-            'seed' => $seed,
-            'info' => $info
-        ];
-    }
-
-    /**
-     * Generate image variation using Stable Diffusion img2img API
-     * Returns array ['image' => base64, 'seed' => int, 'info' => array] or null
-     */
-    private function generateImg2ImgViaSdApi($apiUrl, $baseImageBase64, $positivePrompt, $negativePrompt, $width, $height, $denoisingStrength = 0.4)
-    {
-        $payload = [
-            'init_images' => [$baseImageBase64],
-            'prompt' => $positivePrompt,
-            'negative_prompt' => $negativePrompt,
-            'width' => $width,
-            'height' => $height,
-            'steps' => 20,  // Fewer steps for img2img
-            'cfg_scale' => 5,
-            'sampler_name' => 'Euler a',
-            'denoising_strength' => $denoisingStrength,  // 0.3-0.5 = subtle changes, keep structure
-            'seed' => -1,
-            'batch_size' => 1,
-            'n_iter' => 1,
-            'tiling' => true,
-        ];
-
-        $ch = curl_init($apiUrl . '/sdapi/v1/img2img');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 300);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            $this->stdout("  API Error: HTTP {$httpCode}\n");
-            return null;
-        }
-
-        $data = json_decode($response, true);
-        if (!isset($data['images'][0])) {
-            return null;
-        }
-
-        // Extract seed from info
-        $info = json_decode($data['info'] ?? '{}', true);
-        $seed = $info['seed'] ?? null;
-
-        return [
-            'image' => $data['images'][0],
-            'seed' => $seed,
-            'info' => $info
-        ];
-    }
-
-    /**
      * Make bottom portion of image transparent (for island_edge stalactites)
      */
     private function makeBottomTransparent($imagePath, $transparentHeight = 0.4)
@@ -423,7 +299,7 @@ class GenerateAi extends ConsoleAction
 
         $width = imagesx($image);
         $height = imagesy($image);
-        $startY = (int)($height * (1 - $transparentHeight)); // Start transparency from 60% down
+        $startY = (int)($height * (1 - $transparentHeight));
 
         // Make bottom portion transparent
         for ($y = $startY; $y < $height; $y++) {
@@ -456,7 +332,6 @@ class GenerateAi extends ConsoleAction
      */
     private function loadImageAny($path)
     {
-        // Определяем тип изображения
         $imageInfo = getimagesize($path);
         $mimeType = $imageInfo['mime'] ?? '';
 

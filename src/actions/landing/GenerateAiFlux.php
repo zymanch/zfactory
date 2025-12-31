@@ -3,6 +3,7 @@
 namespace actions\landing;
 
 use actions\ConsoleAction;
+use app\client\ComfyUIClient;
 use models\Landing;
 use Yii;
 use yii\helpers\Console;
@@ -18,25 +19,29 @@ use yii\helpers\Console;
 class GenerateAiFlux extends ConsoleAction
 {
     public $landingName = 'all';
-    public $testMode = false; // Generate only base sprite for testing
+    public $testMode = false;
+
+    /** @var ComfyUIClient */
+    private $client;
 
     public function run($landingName = 'all', $testMode = false)
     {
         $this->landingName = $landingName;
         $this->testMode = $testMode;
+        $this->client = new ComfyUIClient();
+
         $this->stdout("Generating landing sprites using FLUX.1 Dev via ComfyUI...\n");
         if ($testMode) {
             $this->stdout("TEST MODE: Generating only base sprite (no variations)\n");
         }
         $this->stdout("\n");
 
-        $apiUrl = 'http://localhost:8188';
         $basePath = Yii::getAlias('@app/..');
         $landingDir = $basePath . '/public/assets/tiles/landing';
 
         // Check if ComfyUI is running
-        if (!$this->checkComfyUIRunning($apiUrl)) {
-            $this->stdout("Error: ComfyUI is not running at $apiUrl\n", Console::FG_RED);
+        if (!$this->client->isAvailable()) {
+            $this->stdout("Error: ComfyUI is not running at {$this->client->getApiUrl()}\n", Console::FG_RED);
             $this->stdout("Please start ComfyUI first: cd ai && start_comfyui.bat\n");
             return 1;
         }
@@ -80,21 +85,21 @@ class GenerateAiFlux extends ConsoleAction
 
             // Generate base sprite
             $this->stdout("  Generating base sprite...\n");
-            $imageData = $this->generateViaComfyUI(
-                $apiUrl,
+            $result = $this->client->txt2img(
                 $prompts[$name]['positive'],
                 $prompts[$name]['negative'],
                 512,
-                384
+                384,
+                ['steps' => 28, 'cfg' => 1.5]
             );
 
-            if (!$imageData) {
+            if (!$result) {
                 $this->stdout("  Error: Failed to generate base sprite\n", Console::FG_RED);
                 continue;
             }
 
             $originalPath = $landingPath . '/' . $name . '_0_original.png';
-            file_put_contents($originalPath, base64_decode($imageData));
+            $result->saveToFile($originalPath);
 
             // Make seamless tileable
             $this->makeSeamless($originalPath);
@@ -110,21 +115,21 @@ class GenerateAiFlux extends ConsoleAction
                     $varPrompt .= ', ' . $variationPrompts[$name][$i - 1];
                 }
 
-                $varImageData = $this->generateViaComfyUI(
-                    $apiUrl,
+                $varResult = $this->client->txt2img(
                     $varPrompt,
                     $prompts[$name]['negative'],
                     512,
-                    384
+                    384,
+                    ['steps' => 28, 'cfg' => 1.5]
                 );
 
-                if (!$varImageData) {
+                if (!$varResult) {
                     $this->stdout("    Warning: Failed to generate variation {$i}\n", Console::FG_YELLOW);
                     continue;
                 }
 
                 $varPath = $landingPath . '/' . $name . '_' . $i . '_original.png';
-                file_put_contents($varPath, base64_decode($varImageData));
+                $varResult->saveToFile($varPath);
 
                 // Make seamless tileable
                 $this->makeSeamless($varPath);
@@ -158,157 +163,6 @@ class GenerateAiFlux extends ConsoleAction
     }
 
     /**
-     * Check if ComfyUI is running
-     */
-    private function checkComfyUIRunning($apiUrl)
-    {
-        $ch = curl_init($apiUrl . '/system_stats');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-        $result = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        return $httpCode === 200;
-    }
-
-    /**
-     * Generate image via ComfyUI API
-     */
-    private function generateViaComfyUI($apiUrl, $prompt, $negativePrompt, $width, $height)
-    {
-        // Load FLUX workflow template
-        $workflowPath = Yii::getAlias('@app/../ai/workflow_flux_api.json');
-        if (!file_exists($workflowPath)) {
-            $this->stdout("Error: Workflow file not found: $workflowPath\n", Console::FG_RED);
-            return null;
-        }
-
-        // Load workflow (already in API format)
-        $workflow = json_decode(file_get_contents($workflowPath), true);
-
-        // Update workflow with our parameters
-        // Node structure:
-        // 1 = DualCLIPLoader
-        // 2 = CLIPTextEncode (positive)
-        // 3 = CLIPTextEncode (negative)
-        // 4 = UNETLoader
-        // 5 = EmptyLatentImage
-        // 6 = KSampler
-        // 7 = VAELoader
-        // 8 = VAEDecode
-        // 9 = SaveImage
-
-        // Update prompts
-        $workflow['2']['inputs']['text'] = $prompt;
-        $workflow['3']['inputs']['text'] = $negativePrompt;
-
-        // Update image size
-        $workflow['5']['inputs']['width'] = $width;
-        $workflow['5']['inputs']['height'] = $height;
-
-        // Update generation parameters
-        $workflow['6']['inputs']['seed'] = rand(0, 2147483647);
-        $workflow['6']['inputs']['steps'] = 28; // Increased for better quality
-        $workflow['6']['inputs']['cfg'] = 1.5; // Lower CFG for less saturated colors
-
-        // Queue prompt
-        $payload = [
-            'prompt' => $workflow
-        ];
-
-        $ch = curl_init($apiUrl . '/prompt');
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 minutes timeout
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            $this->stdout("Error: ComfyUI API returned HTTP $httpCode\n", Console::FG_RED);
-            return null;
-        }
-
-        $data = json_decode($response, true);
-        if (!isset($data['prompt_id'])) {
-            $this->stdout("Error: No prompt_id in response\n", Console::FG_RED);
-            return null;
-        }
-
-        $promptId = $data['prompt_id'];
-
-        // Wait for completion and get image
-        return $this->waitForCompletion($apiUrl, $promptId);
-    }
-
-    /**
-     * Wait for prompt completion and return image
-     */
-    private function waitForCompletion($apiUrl, $promptId)
-    {
-        $maxAttempts = 300; // 5 minutes max (with 1 sec intervals)
-        $attempt = 0;
-
-        while ($attempt < $maxAttempts) {
-            sleep(1);
-            $attempt++;
-
-            // Check history
-            $ch = curl_init($apiUrl . '/history/' . $promptId);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
-            curl_close($ch);
-
-            $history = json_decode($response, true);
-            if (empty($history) || !isset($history[$promptId])) {
-                continue;
-            }
-
-            $status = $history[$promptId];
-            if (isset($status['outputs'])) {
-                // Find SaveImage node output
-                foreach ($status['outputs'] as $nodeId => $output) {
-                    if (isset($output['images'][0])) {
-                        $imageInfo = $output['images'][0];
-                        $filename = $imageInfo['filename'];
-                        $subfolder = $imageInfo['subfolder'] ?? '';
-
-                        // Download image
-                        return $this->downloadImage($apiUrl, $filename, $subfolder);
-                    }
-                }
-            }
-        }
-
-        $this->stdout("Error: Timeout waiting for generation\n", Console::FG_RED);
-        return null;
-    }
-
-    /**
-     * Download image from ComfyUI
-     */
-    private function downloadImage($apiUrl, $filename, $subfolder)
-    {
-        $url = $apiUrl . '/view';
-        $url .= '?filename=' . urlencode($filename);
-        if ($subfolder) {
-            $url .= '&subfolder=' . urlencode($subfolder);
-        }
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $imageData = curl_exec($ch);
-        curl_close($ch);
-
-        return base64_encode($imageData);
-    }
-
-    /**
      * Make texture seamless tileable using offset+blend method
      */
     private function makeSeamless($imagePath)
@@ -335,8 +189,8 @@ class GenerateAiFlux extends ConsoleAction
 
         imagedestroy($img);
 
-        // Apply Gaussian blur to hide seams (light blur to preserve details)
-        $blurRadius = 5; // Increased slightly to better hide seams
+        // Apply Gaussian blur to hide seams
+        $blurRadius = 5;
         for ($i = 0; $i < $blurRadius; $i++) {
             imagefilter($seamless, IMG_FILTER_GAUSSIAN_BLUR);
         }

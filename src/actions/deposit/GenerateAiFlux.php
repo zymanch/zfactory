@@ -3,8 +3,8 @@
 namespace actions\deposit;
 
 use actions\ConsoleAction;
-use generators\base\FluxAiGenerator;
-use generators\DepositGenerator;
+use app\client\ComfyUIClient;
+use bl\entity\generators\DepositGeneratorFactory;
 use models\DepositType;
 use Yii;
 use yii\helpers\Console;
@@ -17,12 +17,17 @@ use yii\helpers\Console;
  * Examples:
  *   php yii deposit/generate-ai-flux ore_iron      (single deposit)
  *   php yii deposit/generate-ai-flux ores          (all ores only)
- *   php yii deposit/generate-ai-flux all           (all deposits with prompts)
+ *   php yii deposit/generate-ai-flux all           (all deposits with generators)
  */
 class GenerateAiFlux extends ConsoleAction
 {
-    private $fluxAi;
-    private $generator;
+    /** @var ComfyUIClient */
+    private $fluxClient;
+
+    /** @var DepositGeneratorFactory */
+    private $factory;
+
+    /** @var string */
     private $basePath;
 
     public function init()
@@ -30,8 +35,8 @@ class GenerateAiFlux extends ConsoleAction
         parent::init();
 
         $this->basePath = Yii::getAlias('@app/..');
-        $this->fluxAi = new FluxAiGenerator();
-        $this->generator = new DepositGenerator($this->fluxAi, $this->basePath);
+        $this->fluxClient = new ComfyUIClient();
+        $this->factory = new DepositGeneratorFactory($this->fluxClient, $this->basePath);
     }
 
     public function run($depositName = 'all')
@@ -39,8 +44,8 @@ class GenerateAiFlux extends ConsoleAction
         $this->stdout("=== Deposit Sprite Generator (FLUX.1 Dev via ComfyUI) ===\n\n");
 
         // Check if ComfyUI is running
-        if (!$this->fluxAi->checkRunning()) {
-            $this->stdout("Error: ComfyUI is not running at http://localhost:8188\n", Console::FG_RED);
+        if (!$this->fluxClient->isAvailable()) {
+            $this->stdout("Error: ComfyUI is not running at {$this->fluxClient->getApiUrl()}\n", Console::FG_RED);
             $this->stdout("Please start ComfyUI first: cd ai && start_comfyui.bat\n");
             return 1;
         }
@@ -62,10 +67,17 @@ class GenerateAiFlux extends ConsoleAction
         $failCount = 0;
 
         foreach ($depositsToProcess as $deposit) {
+            $generator = $this->factory->getGenerator($deposit);
+
+            if (!$generator) {
+                $this->stdout("Warning: No generator for '{$deposit->image_url}'\n", Console::FG_YELLOW);
+                continue;
+            }
+
             $this->stdout("Deposit: {$deposit->image_url} ({$deposit->name})\n");
 
             try {
-                $success = $this->generator->generate($deposit);
+                $success = $generator->generate($deposit);
 
                 if ($success) {
                     $successCount++;
@@ -98,28 +110,19 @@ class GenerateAiFlux extends ConsoleAction
      */
     private function getDepositsToProcess($depositName)
     {
-        $prompts = $this->generator->getPrompts();
+        $registeredUrls = $this->factory->getRegisteredImageUrls();
 
         if ($depositName === 'all') {
-            // All deposits that have prompts
-            $allDeposits = DepositType::find()->all();
-            $result = [];
-            foreach ($allDeposits as $deposit) {
-                if (isset($prompts[$deposit->image_url])) {
-                    $result[] = $deposit;
-                }
-            }
-            return $result;
+            // All deposits that have generators
+            return DepositType::find()
+                ->where(['in', 'image_url', $registeredUrls])
+                ->all();
         } elseif ($depositName === 'ores') {
             // Only ore deposits
-            $oreDeposits = DepositType::find()->where(['type' => 'ore'])->all();
-            $result = [];
-            foreach ($oreDeposits as $deposit) {
-                if (isset($prompts[$deposit->image_url])) {
-                    $result[] = $deposit;
-                }
-            }
-            return $result;
+            return DepositType::find()
+                ->where(['type' => 'ore'])
+                ->andWhere(['in', 'image_url', $registeredUrls])
+                ->all();
         } else {
             // Specific deposit
             $deposit = DepositType::find()
@@ -131,8 +134,8 @@ class GenerateAiFlux extends ConsoleAction
                 return [];
             }
 
-            if (!isset($prompts[$deposit->image_url])) {
-                $this->stdout("Error: No prompt defined for deposit '{$depositName}'.\n", Console::FG_RED);
+            if (!$this->factory->hasGenerator($depositName)) {
+                $this->stdout("Error: No generator for deposit '{$depositName}'.\n", Console::FG_RED);
                 return [];
             }
 

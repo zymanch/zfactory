@@ -227,6 +227,41 @@ zfactory.local/
 │   │   │   └── Logout.php
 │   │   └── user/                 # UserController actions
 │   │       └── SaveBuildPanel.php
+│   ├── app/               # Application services
+│   │   └── client/               # AI client abstractions
+│   │       ├── ImageGeneratorInterface.php
+│   │       ├── ImageResult.php
+│   │       ├── ComfyUIClient.php     # FLUX.1 Dev via ComfyUI
+│   │       └── StableDiffusionClient.php
+│   ├── bl/                # Business logic
+│   │   ├── entity/               # Entity business logic
+│   │   │   ├── types/            # EntityType class hierarchy
+│   │   │   │   ├── AbstractEntityType.php
+│   │   │   │   ├── BuildingEntityType.php
+│   │   │   │   ├── TreeEntityType.php
+│   │   │   │   ├── TransporterEntityType.php
+│   │   │   │   ├── ManipulatorEntityType.php
+│   │   │   │   ├── ReliefEntityType.php
+│   │   │   │   ├── EyeEntityType.php
+│   │   │   │   ├── EntityTypeFactory.php
+│   │   │   │   ├── building/     # Individual building classes
+│   │   │   │   ├── tree/         # Individual tree classes
+│   │   │   │   ├── transporter/  # Conveyor etc.
+│   │   │   │   ├── manipulator/  # Manipulator classes
+│   │   │   │   ├── relief/       # Rock classes
+│   │   │   │   └── eye/          # Crystal tower classes
+│   │   │   └── generators/       # AI sprite generators
+│   │   │       ├── base/
+│   │   │       ├── EntityGeneratorFactory.php
+│   │   │       ├── building/
+│   │   │       ├── tree/
+│   │   │       └── ...
+│   │   └── landing/              # Landing business logic
+│   │       ├── AbstractLanding.php
+│   │       ├── LandingFactory.php
+│   │       ├── GrassLanding.php
+│   │       ├── DirtLanding.php
+│   │       └── ... (10 landing types)
 │   ├── commands/          # Console commands
 │   ├── controllers/       # Web controllers (thin, use actions())
 │   │   ├── GameController.php
@@ -234,11 +269,11 @@ zfactory.local/
 │   │   ├── SiteController.php
 │   │   └── UserController.php
 │   ├── migrations/        # Database migrations
-│   ├── models/            # ActiveRecord models
+│   ├── models/            # ActiveRecord models (with polymorphic instantiate())
 │   │   ├── User.php              # IdentityInterface
 │   │   ├── Entity.php
-│   │   ├── EntityType.php
-│   │   ├── Landing.php
+│   │   ├── EntityType.php        # Uses EntityTypeFactory::instantiate()
+│   │   ├── Landing.php           # Uses LandingFactory::instantiate()
 │   │   └── Map.php
 │   └── views/             # View templates
 │       ├── game/index.php        # Game page
@@ -247,6 +282,92 @@ zfactory.local/
 ├── package.json            # NPM dependencies
 └── webpack.mix.js          # Asset compilation config
 ```
+
+## Business Logic Classes
+
+### Polymorphic Models
+
+EntityType and Landing models use Yii2's `instantiate()` method to return specific subclasses based on database IDs. This enables polymorphism and eliminates if-statements.
+
+```php
+// Returns specific class (e.g., FurnaceEntityType, GrassLanding)
+$entity = EntityType::findOne(FurnaceEntityType::ENTITY_TYPE_ID);
+$landing = Landing::findOne(GrassLanding::LANDING_ID);
+
+// Use constants instead of magic numbers
+use bl\entity\types\building\FurnaceEntityType;
+use bl\landing\GrassLanding;
+
+EntityType::findOne(FurnaceEntityType::ENTITY_TYPE_ID);  // Instead of findOne(101)
+Landing::findOne(GrassLanding::LANDING_ID);               // Instead of findOne(1)
+```
+
+### EntityType Class Hierarchy
+
+```
+bl\entity\types\
+├── AbstractEntityType          # Base class with getGenerator(), getSpriteDir()
+├── BuildingEntityType          # Buildings (furnace, drill, etc.)
+├── TreeEntityType              # Trees
+├── TransporterEntityType       # Conveyors
+├── ManipulatorEntityType       # Robotic arms
+├── ReliefEntityType            # Rocks
+├── EyeEntityType               # Crystal towers
+├── EntityTypeFactory           # Maps entity_type_id to class
+├── building/
+│   ├── FurnaceEntityType       # ENTITY_TYPE_ID = 101
+│   ├── DrillEntityType         # ENTITY_TYPE_ID = 102
+│   ├── AssemblerEntityType     # ENTITY_TYPE_ID = 103
+│   └── ... (22 building types)
+├── tree/
+│   ├── PineTreeEntityType      # ENTITY_TYPE_ID = 1
+│   └── ... (8 tree types)
+├── transporter/
+│   └── ConveyorEntityType      # ENTITY_TYPE_ID = 100
+├── manipulator/
+│   ├── ShortManipulatorEntityType  # ENTITY_TYPE_ID = 200
+│   └── LongManipulatorEntityType   # ENTITY_TYPE_ID = 201
+├── relief/
+│   ├── SmallRockEntityType     # ENTITY_TYPE_ID = 10
+│   └── ... (3 rock sizes)
+└── eye/
+    ├── SmallCrystalTowerEntityType  # ENTITY_TYPE_ID = 400
+    └── ... (3 crystal towers)
+```
+
+### Landing Class Hierarchy
+
+```
+bl\landing\
+├── AbstractLanding             # Base class with getSpriteDir(), isBuildable()
+├── LandingFactory              # Maps landing_id to class
+├── GrassLanding                # LANDING_ID = 1
+├── DirtLanding                 # LANDING_ID = 2
+├── SandLanding                 # LANDING_ID = 3
+├── WaterLanding                # LANDING_ID = 4
+├── StoneLanding                # LANDING_ID = 5
+├── LavaLanding                 # LANDING_ID = 6
+├── SnowLanding                 # LANDING_ID = 7
+├── SwampLanding                # LANDING_ID = 8
+├── SkyLanding                  # LANDING_ID = 9
+└── IslandEdgeLanding           # LANDING_ID = 10
+```
+
+### Entity Generators
+
+Each EntityType class can return its corresponding AI sprite generator:
+
+```php
+$entityType = EntityType::findOne(FurnaceEntityType::ENTITY_TYPE_ID);
+$generator = $entityType->getGenerator();  // Returns FurnaceGenerator
+$generator->generate($entityType);         // Generates sprites via FLUX.1 Dev
+```
+
+Generator hierarchy in `bl\entity\generators\`:
+- `base\AbstractEntityGenerator` - Base with generate(), generateStates()
+- `base\ImageProcessor` - Static image processing utilities
+- `EntityGeneratorFactory` - Maps image_url to generator class
+- Individual generators: `building\FurnaceGenerator`, `tree\PineTreeGenerator`, etc.
 
 ## Standalone Action Classes
 

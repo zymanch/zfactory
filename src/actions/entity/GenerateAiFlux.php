@@ -3,20 +3,14 @@
 namespace actions\entity;
 
 use actions\ConsoleAction;
-use generators\base\FluxAiGenerator;
-use generators\BuildingGenerator;
-use generators\ConveyorGenerator;
-use generators\EyeGenerator;
-use generators\ManipulatorGenerator;
-use generators\ReliefGenerator;
-use generators\ResourceGenerator;
-use generators\TreeGenerator;
+use app\client\ComfyUIClient;
+use bl\entity\generators\EntityGeneratorFactory;
 use models\EntityType;
 use Yii;
 use yii\helpers\Console;
 
 /**
- * Generate entity sprites using FLUX.1 Dev via ComfyUI (Refactored Orchestrator)
+ * Generate entity sprites using FLUX.1 Dev via ComfyUI
  *
  * Usage: php yii entity/generate-ai-flux [entity_name] [testMode] [statesOnly]
  *
@@ -28,8 +22,13 @@ use yii\helpers\Console;
  */
 class GenerateAiFlux extends ConsoleAction
 {
-    private $generators = [];
-    private $fluxAi;
+    /** @var ComfyUIClient */
+    private $fluxClient;
+
+    /** @var EntityGeneratorFactory */
+    private $factory;
+
+    /** @var string */
     private $basePath;
 
     public function init()
@@ -37,20 +36,8 @@ class GenerateAiFlux extends ConsoleAction
         parent::init();
 
         $this->basePath = Yii::getAlias('@app/..');
-        $this->fluxAi = new FluxAiGenerator();
-
-        // Initialize category generators
-        $this->generators = [
-            'building' => new BuildingGenerator($this->fluxAi, $this->basePath),
-            'mining' => new BuildingGenerator($this->fluxAi, $this->basePath), // drills use building generator
-            'special' => new BuildingGenerator($this->fluxAi, $this->basePath), // headquarters, special buildings
-            'tree' => new TreeGenerator($this->fluxAi, $this->basePath),
-            'transporter' => new ConveyorGenerator($this->fluxAi, $this->basePath),
-            'manipulator' => new ManipulatorGenerator($this->fluxAi, $this->basePath),
-            'relief' => new ReliefGenerator($this->fluxAi, $this->basePath),
-            'resource' => new ResourceGenerator($this->fluxAi, $this->basePath),
-            'eye' => new EyeGenerator($this->fluxAi, $this->basePath),
-        ];
+        $this->fluxClient = new ComfyUIClient();
+        $this->factory = new EntityGeneratorFactory($this->fluxClient, $this->basePath);
     }
 
     public function run($entityName = 'all', $testMode = false, $statesOnly = false)
@@ -66,8 +53,8 @@ class GenerateAiFlux extends ConsoleAction
         }
 
         // Check if ComfyUI is running (skip for statesOnly mode)
-        if (!$statesOnly && !$this->fluxAi->checkRunning()) {
-            $this->stdout("Error: ComfyUI is not running at http://localhost:8188\n", Console::FG_RED);
+        if (!$statesOnly && !$this->fluxClient->isAvailable()) {
+            $this->stdout("Error: ComfyUI is not running at {$this->fluxClient->getApiUrl()}\n", Console::FG_RED);
             $this->stdout("Please start ComfyUI first.\n");
             return 1;
         }
@@ -86,110 +73,58 @@ class GenerateAiFlux extends ConsoleAction
 
         $this->stdout("Processing " . count($entitiesToProcess) . " entities...\n\n");
 
-        // Group entities by category for batch processing
-        $entitiesByCategory = [];
-        foreach ($entitiesToProcess as $entity) {
-            $type = $entity->type;
-            if (!isset($entitiesByCategory[$type])) {
-                $entitiesByCategory[$type] = [];
-            }
-            $entitiesByCategory[$type][] = $entity;
-        }
-
-        // Process each category
+        // Process entities
         $successCount = 0;
         $failCount = 0;
+        $rotationalEntities = [];
 
-        foreach ($entitiesByCategory as $type => $entities) {
-            if (!isset($this->generators[$type])) {
-                $this->stdout("Warning: No generator for type '{$type}'\n", Console::FG_YELLOW);
+        foreach ($entitiesToProcess as $entity) {
+            $generator = $this->factory->getGenerator($entity);
+
+            if (!$generator) {
+                $this->stdout("Warning: No generator for '{$entity->image_url}'\n", Console::FG_YELLOW);
                 continue;
             }
 
-            $generator = $this->generators[$type];
-            $this->stdout("--- Processing category: {$type} (" . count($entities) . " entities) ---\n");
+            $this->stdout("Entity: {$entity->image_url} ({$entity->name})\n");
 
-            foreach ($entities as $entity) {
-                $this->stdout("\nEntity: {$entity->image_url} ({$entity->name})\n");
+            try {
+                if ($statesOnly) {
+                    $success = $generator->generateStates($entity);
+                } else {
+                    $success = $generator->generate($entity, $testMode);
 
-                try {
-                    if ($statesOnly) {
-                        // Только генерация состояний (damaged, blueprint, selected)
-                        $success = $generator->generateStates($entity);
-                    } else {
-                        // Полная генерация или тестовый режим
-                        $success = $generator->generate($entity, $testMode);
+                    // Track rotational entities for variant generation
+                    if ($success && $generator->isRotational()) {
+                        $rotationalEntities[] = ['entity' => $entity, 'generator' => $generator];
                     }
-
-                    if ($success) {
-                        $successCount++;
-                        $this->stdout("  ✓ Success\n", Console::FG_GREEN);
-                    } else {
-                        $failCount++;
-                        $this->stdout("  ✗ Failed\n", Console::FG_RED);
-                    }
-                } catch (\Exception $e) {
-                    $failCount++;
-                    $this->stdout("  ✗ Error: " . $e->getMessage() . "\n", Console::FG_RED);
                 }
+
+                if ($success) {
+                    $successCount++;
+                    $this->stdout("  ✓ Success\n", Console::FG_GREEN);
+                } else {
+                    $failCount++;
+                    $this->stdout("  ✗ Failed\n", Console::FG_RED);
+                }
+            } catch (\Exception $e) {
+                $failCount++;
+                $this->stdout("  ✗ Error: " . $e->getMessage() . "\n", Console::FG_RED);
             }
 
             $this->stdout("\n");
         }
 
-        // Generate rotational variants for conveyors and manipulators (skip in statesOnly if not needed)
-        if (!$statesOnly) {
-            $this->stdout("\n--- Generating rotational variants ---\n");
+        // Generate rotational variants
+        if (!$statesOnly && !empty($rotationalEntities)) {
+            $this->stdout("--- Generating rotational variants ---\n\n");
 
-            if (isset($entitiesByCategory['transporter'])) {
-                $this->stdout("\nConveyors:\n");
-                $conveyorEntities = [];
-                foreach ($entitiesByCategory['transporter'] as $entity) {
-                    $conveyorEntities[$entity->image_url] = $entity;
-                }
-                /** @var ConveyorGenerator $conveyorGen */
-                $conveyorGen = $this->generators['transporter'];
-                $conveyorGen->generateRotationalVariants($conveyorEntities);
-            }
+            foreach ($rotationalEntities as $item) {
+                $entity = $item['entity'];
+                $generator = $item['generator'];
 
-            if (isset($entitiesByCategory['manipulator'])) {
-                $this->stdout("\nManipulators:\n");
-                $manipulatorEntities = [];
-                foreach ($entitiesByCategory['manipulator'] as $entity) {
-                    $manipulatorEntities[$entity->image_url] = $entity;
-                }
-                /** @var ManipulatorGenerator $manipulatorGen */
-                $manipulatorGen = $this->generators['manipulator'];
-                $manipulatorGen->generateRotationalVariants($manipulatorEntities);
-            }
-        } else {
-            // В режиме statesOnly - генерируем states для ротированных вариантов
-            $this->stdout("\n--- Generating states for rotational variants ---\n");
-
-            if (isset($entitiesByCategory['transporter'])) {
-                $this->stdout("\nConveyors:\n");
-                foreach (['conveyor_up', 'conveyor_down', 'conveyor_left'] as $variantName) {
-                    $variantEntity = \models\EntityType::find()->where(['image_url' => $variantName])->one();
-                    if ($variantEntity) {
-                        $this->stdout("  {$variantName}...\n");
-                        $this->generators['transporter']->generateStates($variantEntity);
-                    }
-                }
-            }
-
-            if (isset($entitiesByCategory['manipulator'])) {
-                $this->stdout("\nManipulators:\n");
-                $baseNames = ['manipulator_short', 'manipulator_long'];
-                foreach ($baseNames as $baseName) {
-                    foreach (['_up', '_down', '_left'] as $suffix) {
-                        $variantName = $baseName . $suffix;
-                        $variantEntity = \models\EntityType::find()->where(['image_url' => $variantName])->one();
-                        if ($variantEntity) {
-                            $this->stdout("  {$variantName}...\n");
-                            $this->generators['manipulator']->generateStates($variantEntity);
-                        }
-                    }
-                }
+                $this->stdout("Rotating: {$entity->image_url}\n");
+                $generator->generateRotationalVariants($entity);
             }
         }
 
@@ -211,10 +146,12 @@ class GenerateAiFlux extends ConsoleAction
      */
     private function getEntitiesToProcess($entityName)
     {
+        $registeredUrls = $this->factory->getRegisteredImageUrls();
+
         if ($entityName === 'all') {
             // Get all entities that have generators
             return EntityType::find()
-                ->where(['in', 'type', array_keys($this->generators)])
+                ->where(['in', 'image_url', $registeredUrls])
                 ->all();
         } else {
             // Get specific entity
@@ -227,8 +164,8 @@ class GenerateAiFlux extends ConsoleAction
                 return [];
             }
 
-            if (!isset($this->generators[$entity->type])) {
-                $this->stdout("Error: No generator for entity type '{$entity->type}'.\n", Console::FG_RED);
+            if (!$this->factory->hasGenerator($entityName)) {
+                $this->stdout("Error: No generator for entity '{$entityName}'.\n", Console::FG_RED);
                 return [];
             }
 
