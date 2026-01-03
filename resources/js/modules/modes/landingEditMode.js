@@ -1,12 +1,13 @@
 import { LANDING_SKY_ID, LANDING_ISLAND_EDGE_ID } from '../constants.js';
+import { GameModeBase } from './gameModeBase.js';
 
 /**
  * LandingEditMode - click on map to change landing type (admin tool)
  */
-export class LandingEditMode {
+export class LandingEditMode extends GameModeBase {
     constructor(game) {
-        this.game = game;
-        this.isActive = false;
+        super(game); // Call GameModeBase constructor
+
         this.selectedLandingId = null;
         this.statusElement = null;
 
@@ -15,13 +16,13 @@ export class LandingEditMode {
     }
 
     /**
-     * Initialize mode
+     * Initialize mode (one-time setup)
      */
     init() {
         this.createStatusIndicator();
 
-        // Click handler for canvas
-        document.addEventListener('click', (e) => this.onClick(e));
+        // Register event listener using base class method (auto-cleanup)
+        this.addEventListener(document, 'click', this.onClick);
     }
 
     /**
@@ -35,11 +36,9 @@ export class LandingEditMode {
 
     /**
      * Activate edit mode with selected landing
-     * (Now called by GameModeManager, no longer needs to deactivate other modes)
      */
-    activate(landingId) {
-        this.selectedLandingId = landingId;
-        this.isActive = true;
+    onActivate(data) {
+        this.selectedLandingId = data.landingId || data;
 
         this.showStatusIndicator();
     }
@@ -47,8 +46,7 @@ export class LandingEditMode {
     /**
      * Deactivate edit mode
      */
-    deactivate() {
-        this.isActive = false;
+    onDeactivate() {
         this.selectedLandingId = null;
         this.hideStatusIndicator();
     }

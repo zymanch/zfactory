@@ -154,14 +154,22 @@ export class GameModeManager {
 
     // ================ NORMAL MODE ================
     activateNormalMode() {
-        // Включить обработку hover для entity (tooltip, selected sprites)
-        this.setEntityInteractivity(true);
+        if (this.game.normalMode) {
+            this.game.normalMode.activate();
+        } else {
+            // Fallback for backward compatibility
+            this.setEntityInteractivity(true);
+        }
     }
 
     deactivateNormalMode() {
-        // Скрыть tooltip если был открыт
-        if (this.game.entityTooltip) {
-            this.game.entityTooltip.hide();
+        if (this.game.normalMode) {
+            this.game.normalMode.deactivate();
+        } else {
+            // Fallback
+            if (this.game.entityTooltip) {
+                this.game.entityTooltip.hide();
+            }
         }
     }
 
@@ -179,7 +187,7 @@ export class GameModeManager {
 
         // Активировать buildMode
         if (this.game.buildMode) {
-            this.game.buildMode.activate(entityTypeId);
+            this.game.buildMode.activate({ entityTypeId });
         }
     }
 
@@ -191,26 +199,26 @@ export class GameModeManager {
 
     // ================ DELETE MODE ================
     activateDeleteMode() {
-        // Включить hover на entity (для tooltip и deleting sprite)
-        this.setEntityInteractivity(true);
-
-        // Показать визуальную индикацию режима удаления
-        this.showDeleteModeIndicator();
-
-        // Изменить курсор
-        this.game.app.canvas.style.cursor = 'crosshair';
+        if (this.game.deleteMode) {
+            this.game.deleteMode.activate();
+        } else {
+            // Fallback for backward compatibility
+            this.setEntityInteractivity(true);
+            this.showDeleteModeIndicator();
+            this.game.app.canvas.style.cursor = 'crosshair';
+        }
     }
 
     deactivateDeleteMode() {
-        // Скрыть индикацию
-        this.hideDeleteModeIndicator();
-
-        // Вернуть курсор
-        this.game.app.canvas.style.cursor = 'default';
-
-        // Скрыть tooltip
-        if (this.game.entityTooltip) {
-            this.game.entityTooltip.hide();
+        if (this.game.deleteMode) {
+            this.game.deleteMode.deactivate();
+        } else {
+            // Fallback
+            this.hideDeleteModeIndicator();
+            this.game.app.canvas.style.cursor = 'default';
+            if (this.game.entityTooltip) {
+                this.game.entityTooltip.hide();
+            }
         }
     }
 
@@ -319,7 +327,7 @@ export class GameModeManager {
 
         // Активировать режим редактирования landing
         if (this.game.landingEditMode) {
-            this.game.landingEditMode.activate(landingId);
+            this.game.landingEditMode.activate({ landingId });
         }
     }
 

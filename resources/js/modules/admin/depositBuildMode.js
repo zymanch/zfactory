@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { getCSRFToken } from '../utils.js';
+import { GameModeBase } from '../modes/gameModeBase.js';
 
 /**
  * DepositBuildMode - place deposits on the map with preview (admin tool)
@@ -9,10 +10,10 @@ import { getCSRFToken } from '../utils.js';
  * - Click to create deposit with random amount in range
  * - AJAX creation without validation
  */
-export class DepositBuildMode {
+export class DepositBuildMode extends GameModeBase {
     constructor(game) {
-        this.game = game;
-        this.isActive = false;
+        super(game); // Call GameModeBase constructor
+
         this.depositType = null;
         this.minAmount = 0;
         this.maxAmount = 0;
@@ -29,11 +30,10 @@ export class DepositBuildMode {
     /**
      * Activate build mode with deposit type and amount range
      */
-    activate(data) {
+    onActivate(data) {
         this.depositType = data.depositType;
         this.minAmount = data.minAmount;
         this.maxAmount = data.maxAmount;
-        this.isActive = true;
 
         this.createPreviewSprite();
         this.bindEvents();
@@ -42,9 +42,7 @@ export class DepositBuildMode {
     /**
      * Deactivate build mode
      */
-    deactivate() {
-        this.isActive = false;
-
+    onDeactivate() {
         if (this.previewSprite) {
             this.previewSprite.destroy();
             this.previewSprite = null;
@@ -77,23 +75,17 @@ export class DepositBuildMode {
      * Bind event listeners
      */
     bindEvents() {
-        this.onPointerMoveBound = (e) => this.onPointerMove(e);
-        this.onClickBound = (e) => this.onClick(e);
-
-        this.game.app.stage.on('pointermove', this.onPointerMoveBound);
-        document.addEventListener('click', this.onClickBound);
+        // Use base class method for auto-cleanup
+        this.addEventListener(this.game.app.stage, 'pointermove', this.onPointerMove);
+        this.addEventListener(document, 'click', this.onClick);
     }
 
     /**
-     * Unbind event listeners
+     * Unbind event listeners (called by base class)
      */
     unbindEvents() {
-        if (this.onPointerMoveBound) {
-            this.game.app.stage.off('pointermove', this.onPointerMoveBound);
-        }
-        if (this.onClickBound) {
-            document.removeEventListener('click', this.onClickBound);
-        }
+        // Base class unbindAllEvents() will handle cleanup
+        // This method kept for compatibility
     }
 
     /**

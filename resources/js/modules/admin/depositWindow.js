@@ -207,9 +207,7 @@ export class DepositWindow {
         this.selectedDeposit = this.game.depositTypes[depositTypeId];
         if (!this.selectedDeposit) return;
 
-        this.close();
-
-        // Enter deposit build mode
+        // Enter deposit build mode (switchMode will close this window via deactivateDepositSelectionWindow)
         this.game.gameModeManager.switchMode(GameMode.DEPOSIT_BUILD, {
             depositType: this.selectedDeposit,
             minAmount: this.minAmount,
@@ -234,9 +232,17 @@ export class DepositWindow {
      * Close window
      */
     close() {
+        // Prevent recursion - only close if actually open
+        if (!this.isOpen) return;
+
         this.element.style.display = 'none';
         this.isOpen = false;
-        this.game.gameModeManager.returnToNormalMode();
+
+        // Only return to normal mode if we're in DEPOSIT_SELECTION_WINDOW mode
+        // (avoid recursion with gameModeManager.deactivateDepositSelectionWindow)
+        if (this.game.gameModeManager.isMode(GameMode.DEPOSIT_SELECTION_WINDOW)) {
+            this.game.gameModeManager.returnToNormalMode();
+        }
     }
 
     /**

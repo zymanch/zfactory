@@ -2,15 +2,16 @@ import * as PIXI from 'pixi.js';
 import { tileKey, tileToWorld, getCSRFToken } from '../utils.js';
 import { BUILD_VALID_COLOR, BUILD_INVALID_COLOR, BUILD_VALID_ALPHA, BUILD_INVALID_ALPHA, PREVIEW_Z_OFFSET } from '../constants.js';
 import { EntityBehaviorFactory } from '../entityBehaviors.js';
+import { GameModeBase } from './gameModeBase.js';
 
 /**
  * BuildMode - handles building placement on the map
  * Supports rotation for entities with orientation variants (R or К key)
  */
-export class BuildMode {
+export class BuildMode extends GameModeBase {
     constructor(game) {
-        this.game = game;
-        this.isActive = false;
+        super(game); // Call GameModeBase constructor
+
         this.entityTypeId = null;
         this.previewSprite = null;
         this.errorText = null;
@@ -26,11 +27,12 @@ export class BuildMode {
     }
 
     /**
-     * Initialize build mode
+     * Initialize build mode (one-time setup)
      */
     init() {
-        this.game.app.canvas.addEventListener('click', (e) => this.onClick(e));
-        document.addEventListener('keydown', (e) => this.onKeyDown(e));
+        // Register event listeners using base class method (auto-cleanup)
+        this.addEventListener(this.game.app.canvas, 'click', this.onClick);
+        this.addEventListener(document, 'keydown', this.onKeyDown);
     }
 
     /**
@@ -117,13 +119,12 @@ export class BuildMode {
     /**
      * Activate build mode with selected entity type
      */
-    activate(entityTypeId) {
-        this.entityTypeId = entityTypeId;
-        this.isActive = true;
+    onActivate(data) {
+        this.entityTypeId = data.entityTypeId || data;
 
         // Initialize orientation variants
-        this.orientationVariants = this.getOrientationVariants(entityTypeId);
-        this.currentOrientationIndex = this.orientationVariants.indexOf(parseInt(entityTypeId));
+        this.orientationVariants = this.getOrientationVariants(this.entityTypeId);
+        this.currentOrientationIndex = this.orientationVariants.indexOf(parseInt(this.entityTypeId));
         if (this.currentOrientationIndex < 0) this.currentOrientationIndex = 0;
 
         this.createPreviewSprite();
@@ -133,8 +134,7 @@ export class BuildMode {
     /**
      * Deactivate build mode
      */
-    deactivate() {
-        this.isActive = false;
+    onDeactivate() {
         this.entityTypeId = null;
         this.removePreviewSprite();
         this.game.app.canvas.style.cursor = 'default';

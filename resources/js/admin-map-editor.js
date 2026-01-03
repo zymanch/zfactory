@@ -97,8 +97,8 @@ class AdminMapEditor extends ZFactoryGame {
                     e.preventDefault();
                     break;
 
-                case 'd':
-                    // Toggle deposit window
+                case 'r':
+                    // Toggle deposit window (Resources/Ресурсы)
                     this.depositWindow.toggle();
                     e.preventDefault();
                     break;
@@ -122,7 +122,7 @@ class AdminMapEditor extends ZFactoryGame {
             }
         });
 
-        console.log('Admin keyboard shortcuts initialized: L (landings), D (deposits), ESC (cancel)');
+        console.log('Admin keyboard shortcuts initialized: L (landings), R (deposits), ESC (cancel)');
     }
 
     drawShipAreaMarker() {

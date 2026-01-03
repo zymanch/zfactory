@@ -564,8 +564,12 @@ time_seconds = (ticks / 60) * (100 / power)
 ## Module Descriptions
 
 ### GameModeManager (`modes/gameModeManager.js`)
-Centralized game mode controller - ensures only one mode is active at a time:
-- **7 game modes**: NORMAL, BUILD, DELETE, ENTITY_INFO, ENTITY_SELECTION_WINDOW, LANDING_SELECTION_WINDOW, LANDING_EDIT
+Centralized game mode controller - ensures only one mode is active at a time.
+
+**Refactored 2026-01**: Mode logic extracted into separate classes extending GameModeBase.
+
+**Game Modes:**
+- **9 modes**: NORMAL, BUILD, DELETE, ENTITY_INFO, ENTITY_SELECTION_WINDOW, LANDING_SELECTION_WINDOW, LANDING_EDIT, DEPOSIT_SELECTION_WINDOW, DEPOSIT_BUILD
 - Mode switching with deactivation/activation lifecycle
 - Entity interactivity control (enable/disable hover based on mode)
 - Mode-specific visual indicators (delete mode red banner)
@@ -577,6 +581,47 @@ Centralized game mode controller - ensures only one mode is active at a time:
 - `returnToNormalMode()` - always return to NORMAL
 - `isMode(mode)` - check if specific mode is active
 - `setEntityInteractivity(enabled)` - enable/disable entity hover globally
+
+### GameModeBase (`modes/gameModeBase.js`)
+**Added 2026-01**: Base class for all game modes providing:
+
+**Lifecycle Management:**
+- `init()` - One-time initialization (setup DOM, register global handlers)
+- `activate(data)` - Activate mode with optional context data
+- `onActivate(data)` - Hook for subclass activation logic
+- `deactivate()` - Deactivate mode and cleanup
+- `onDeactivate()` - Hook for subclass deactivation logic
+
+**Event Management:**
+- `addEventListener(target, eventName, handler, options)` - Register event listener
+- `unbindAllEvents()` - Remove all registered event listeners (automatic on deactivate)
+- Prevents memory leaks from accumulated event listeners
+- Supports both DOM events and PIXI events (.on/.off)
+
+**State Tracking:**
+- `isActive` - Flag indicating if mode is currently active
+- `canActivate(data)` - Validation hook for activation requirements
+
+**Example Usage:**
+```javascript
+export class MyMode extends GameModeBase {
+    init() {
+        // One-time setup
+        this.createUI();
+        this.addEventListener(document, 'keydown', this.onKeyDown);
+    }
+
+    onActivate(data) {
+        // Activate mode with data
+        this.showUI();
+    }
+
+    onDeactivate() {
+        // Cleanup (unbindAllEvents called automatically)
+        this.hideUI();
+    }
+}
+```
 
 ### Camera (`camera.js`)
 Handles camera movement and zoom:

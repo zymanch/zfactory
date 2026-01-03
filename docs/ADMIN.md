@@ -179,9 +179,11 @@ class AdminMapEditor extends ZFactoryGame {
 | Кнопка | Действие |
 |--------|----------|
 | `L` / `Д` | Открыть окно выбора ландшафта |
-| `D` / `В` | Открыть окно выбора депозита |
+| `R` / `К` | Открыть окно выбора депозита (Resources) |
 | `Click` | Разместить выбранный ландшафт/депозит |
 | `Esc` | Отмена / закрыть окно |
+
+**Примечание**: Клавиша для депозитов была изменена с `D` на `R` (2026-01), чтобы не конфликтовать с клавишей движения камеры направо.
 
 ---
 
@@ -233,7 +235,7 @@ class AdminMapEditor extends ZFactoryGame {
 
 ### Workflow
 
-1. Нажать `D` → открывается DepositWindow
+1. Нажать `R` → открывается DepositWindow
 2. Выбрать категорию: **Trees** / **Rocks** / **Ores**
 3. Выбрать тип депозита (oak, stone, iron_ore, etc.)
 4. Настроить диапазон ресурсов:
@@ -297,6 +299,15 @@ class AdminMapEditor extends ZFactoryGame {
 - **Без валидации**: Депозит создается без проверок (как указано в требованиях)
 - **Рандомный amount**: Генерируется в диапазоне [minAmount, maxAmount]
 - **Только на landing**: Можно разместить только на тайлах с ландшафтом
+
+### Исправления (2026-01)
+
+**Recursion Fix**: Исправлена бесконечная рекурсия в `depositWindow.close()`:
+- Проблема: `selectDeposit()` → `close()` → `returnToNormalMode()` → `deactivateDepositSelectionWindow()` → `close()` снова
+- Решение:
+  - `selectDeposit()` больше не вызывает `close()` напрямую
+  - `close()` проверяет `if (!this.isOpen) return;`
+  - `close()` вызывает `returnToNormalMode()` только если режим `DEPOSIT_SELECTION_WINDOW`
 
 ---
 

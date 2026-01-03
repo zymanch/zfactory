@@ -186,9 +186,12 @@ zfactory.local/
 │       ├── game.js        # Main game class
 │       └── modules/       # Game modules
 │           ├── modes/                  # Game mode management
-│           │   ├── gameModeManager.js
-│           │   ├── buildMode.js
-│           │   └── landingEditMode.js
+│           │   ├── gameModeBase.js     # Base class for all modes (2026-01)
+│           │   ├── gameModeManager.js  # Mode controller
+│           │   ├── normalMode.js       # Default gameplay mode
+│           │   ├── deleteMode.js       # Entity deletion mode
+│           │   ├── buildMode.js        # Building placement
+│           │   └── landingEditMode.js  # Landing editing (admin)
 │           ├── windows/                # UI windows
 │           │   ├── buildingWindow.js
 │           │   ├── landingWindow.js
@@ -509,7 +512,7 @@ public/assets/tiles/entities/{entity_name}/
 
 ## Game Modes
 
-The game uses **GameModeManager** to ensure only one mode is active at a time:
+The game uses **GameModeManager** to ensure only one mode is active at a time. After refactoring (2026-01), the mode system uses a base class pattern with automatic event cleanup:
 
 | Mode                         | Description                           | Activate                  |
 |------------------------------|---------------------------------------|---------------------------|
@@ -518,8 +521,26 @@ The game uses **GameModeManager** to ensure only one mode is active at a time:
 | DELETE                       | Entity deletion                       | Delete key                |
 | ENTITY_INFO                  | Entity information window             | Click entity in NORMAL    |
 | ENTITY_SELECTION_WINDOW      | Building selection window             | B key                     |
-| LANDING_SELECTION_WINDOW     | Landing selection window              | L key                     |
-| LANDING_EDIT                 | Landing editing                       | Edit mode activation      |
+| LANDING_SELECTION_WINDOW     | Landing selection window (admin)      | L key (admin panel)       |
+| LANDING_EDIT                 | Landing editing (admin)               | Admin edit mode           |
+| DEPOSIT_SELECTION_WINDOW     | Deposit selection window (admin)      | R key (admin panel)       |
+| DEPOSIT_BUILD                | Deposit placement (admin)             | Admin build mode          |
+
+### Mode System Architecture (2026-01 Refactoring)
+
+All game modes extend **GameModeBase** class which provides:
+- Automatic event listener cleanup (prevents memory leaks)
+- Consistent lifecycle: `init()` → `activate(data)` → `deactivate()`
+- Support for both DOM and PIXI events
+- Mode state management (`isActive` flag)
+
+**Mode Classes:**
+- `resources/js/modules/modes/gameModeBase.js` - Base class for all modes
+- `resources/js/modules/modes/normalMode.js` - Default gameplay mode
+- `resources/js/modules/modes/deleteMode.js` - Entity deletion mode
+- `resources/js/modules/modes/buildMode.js` - Building placement mode
+- `resources/js/modules/modes/landingEditMode.js` - Landing editing (admin)
+- `resources/js/modules/admin/depositBuildMode.js` - Deposit placement (admin)
 
 ### Mode-Specific Controls
 

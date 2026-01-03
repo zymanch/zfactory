@@ -7,6 +7,8 @@ import { CameraInfo } from './modules/ui/CameraInfo.js';
 import { ControlsHint } from './modules/ui/ControlsHint.js';
 import { BuildingWindow } from './modules/windows/buildingWindow.js';
 import { BuildMode } from './modules/modes/buildMode.js';
+import { NormalMode } from './modules/modes/normalMode.js';
+import { DeleteMode } from './modules/modes/deleteMode.js';
 import { FogOfWar } from './modules/fogOfWar.js';
 import { TileLayerManager } from './modules/tileLayerManager.js';
 import { EntityTooltip } from './modules/entityTooltip.js';
@@ -104,6 +106,12 @@ class ZFactoryGame {
      * Initialize all game modules
      */
     initModules() {
+        // Create mode instances first
+        this.normalMode = new NormalMode(this);
+        this.deleteMode = new DeleteMode(this);
+        this.buildMode = new BuildMode(this);
+
+        // Create GameModeManager (will access modes via this.game)
         this.gameModeManager = new GameModeManager(this);
         this.camera = new Camera(this);
         this.input = new InputManager(this);
@@ -115,7 +123,6 @@ class ZFactoryGame {
         this.controlsHint = new ControlsHint(this);
 
         this.buildingWindow = new BuildingWindow(this);
-        this.buildMode = new BuildMode(this);
         this.fogOfWar = new FogOfWar(this);
         this.tileManager = new TileLayerManager(this);
         this.depositManager = new DepositLayerManager(this);
@@ -204,8 +211,12 @@ class ZFactoryGame {
         this.cameraInfo.init();
         this.controlsHint.init();
 
-        this.buildingWindow.init();
+        // Initialize game modes
+        this.normalMode.init();
+        this.deleteMode.init();
         this.buildMode.init();
+
+        this.buildingWindow.init();
         this.fogOfWar.init();
         this.depositManager.init();
         this.entityTooltip.init();
