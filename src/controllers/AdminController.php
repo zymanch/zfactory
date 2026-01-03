@@ -43,7 +43,7 @@ class AdminController extends Controller
     public function beforeAction($action)
     {
         // Disable CSRF for AJAX actions
-        if (in_array($action->id, ['update-landing', 'create-deposit'])) {
+        if (in_array($action->id, ['update-landing', 'create-deposit', 'save-technology', 'delete-technology'])) {
             $this->enableCsrfValidation = false;
         }
         return parent::beforeAction($action);
@@ -60,6 +60,9 @@ class AdminController extends Controller
             'tiles' => \actions\admin\Tiles::class,
             'update-landing' => \actions\admin\UpdateLanding::class,
             'create-deposit' => \actions\admin\CreateDeposit::class,
+            'technologies' => \actions\admin\Technologies::class,
+            'save-technology' => \actions\admin\SaveTechnology::class,
+            'delete-technology' => \actions\admin\DeleteTechnology::class,
         ];
     }
 }
