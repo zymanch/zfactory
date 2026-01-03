@@ -44,6 +44,12 @@ class ArController extends \yii\console\Controller
                 'user',
                 'user_region_visit',
                 'user_resource',
+                'technology',
+                'technology_dependency',
+                'technology_cost',
+                'technology_unlock_recipe',
+                'technology_unlock_entity_type',
+                'user_technology',
             ],
 
         ];

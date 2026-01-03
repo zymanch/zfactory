@@ -19,6 +19,7 @@ import { CloudManager } from './modules/cloudManager.js';
 import { ConveyorManager } from './modules/conveyorManager.js';
 import { GameModeManager, GameMode } from './modules/modes/gameModeManager.js';
 import { EntityInfoWindow } from './modules/windows/entityInfoWindow.js';
+import { TechnologyWindow } from './modules/windows/technologyWindow.js';
 import { ConstructionManager } from './modules/constructionManager.js';
 import { DepositLayerManager } from './modules/depositLayerManager.js';
 import { DepositTooltip } from './modules/tooltips/DepositTooltip.js';
@@ -85,6 +86,7 @@ class ZFactoryGame {
         this.conveyorManager = null;
         this.gameModeManager = null;
         this.entityInfoWindow = null;
+        this.technologyWindow = null;
     }
 
     /**
@@ -134,6 +136,7 @@ class ZFactoryGame {
         this.cloudManager = new CloudManager(this);
         this.conveyorManager = new ConveyorManager(this);
         this.entityInfoWindow = new EntityInfoWindow(this);
+        this.technologyWindow = new TechnologyWindow(this);
         this.constructionManager = new ConstructionManager(this);
     }
 
@@ -222,6 +225,7 @@ class ZFactoryGame {
         this.entityTooltip.init();
         this.depositTooltip.init();
         this.entityInfoWindow.init();
+        this.technologyWindow.init();
 
         if (this.cloudManager) {
             await this.cloudManager.init();
@@ -699,14 +703,20 @@ class ZFactoryGame {
         if (!entity) return;
 
         const mode = this.gameModeManager;
+        const entityType = this.entityTypes[entity.entity_type_id];
 
         // Handle different game modes
         if (mode.isMode(GameMode.DELETE)) {
             // Delete mode - delete entity
             this.deleteEntity(entity);
         } else if (mode.isMode(GameMode.NORMAL)) {
-            // Normal mode - open entity info window
-            mode.switchMode(GameMode.ENTITY_INFO, { entityId: entity.entity_id });
+            // HQ - open technology window
+            if (entityType && entityType.type === 'hq') {
+                mode.switchMode(GameMode.TECHNOLOGY_WINDOW);
+            } else {
+                // Normal mode - open entity info window
+                mode.switchMode(GameMode.ENTITY_INFO, { entityId: entity.entity_id });
+            }
         }
     }
 

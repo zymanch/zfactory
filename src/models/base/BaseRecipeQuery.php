@@ -50,6 +50,10 @@ use models\RecipeQuery;
   * @method RecipeQuery joinWithInput3Resource($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method RecipeQuery withOutputResource($params = [])
   * @method RecipeQuery joinWithOutputResource($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method RecipeQuery withTechnologyUnlockRecipes($params = [])
+  * @method RecipeQuery joinWithTechnologyUnlockRecipes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method RecipeQuery withTechnologies($params = [])
+  * @method RecipeQuery joinWithTechnologies($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseRecipeQuery extends \yii\db\ActiveQuery
 {

@@ -10,7 +10,8 @@ export const GameMode = {
     LANDING_SELECTION_WINDOW: 'LANDING_SELECTION_WINDOW', // Окно выбора landing
     LANDING_EDIT: 'LANDING_EDIT',              // Режим редактирования landing
     DEPOSIT_SELECTION_WINDOW: 'DEPOSIT_SELECTION_WINDOW', // Окно выбора deposit (admin)
-    DEPOSIT_BUILD: 'DEPOSIT_BUILD'             // Режим размещения deposit (admin)
+    DEPOSIT_BUILD: 'DEPOSIT_BUILD',             // Режим размещения deposit (admin)
+    TECHNOLOGY_WINDOW: 'TECHNOLOGY_WINDOW'     // Окно дерева технологий
 };
 
 /**
@@ -99,6 +100,9 @@ export class GameModeManager {
             case GameMode.DEPOSIT_BUILD:
                 this.deactivateDepositBuildMode();
                 break;
+            case GameMode.TECHNOLOGY_WINDOW:
+                this.deactivateTechnologyWindow();
+                break;
         }
     }
 
@@ -133,6 +137,9 @@ export class GameModeManager {
                 break;
             case GameMode.DEPOSIT_BUILD:
                 this.activateDepositBuildMode();
+                break;
+            case GameMode.TECHNOLOGY_WINDOW:
+                this.activateTechnologyWindow();
                 break;
         }
     }
@@ -382,6 +389,23 @@ export class GameModeManager {
     deactivateDepositBuildMode() {
         if (this.game.depositBuildMode) {
             this.game.depositBuildMode.deactivate();
+        }
+    }
+
+    // ================ TECHNOLOGY_WINDOW MODE ================
+    activateTechnologyWindow() {
+        // Отключить hover на entity
+        this.setEntityInteractivity(false);
+
+        // Открыть окно технологий
+        if (this.game.technologyWindow) {
+            this.game.technologyWindow.open();
+        }
+    }
+
+    deactivateTechnologyWindow() {
+        if (this.game.technologyWindow) {
+            this.game.technologyWindow.close();
         }
     }
 

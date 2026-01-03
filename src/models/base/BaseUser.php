@@ -14,6 +14,7 @@ namespace models\base;
  * @property string $username
  * @property string $password
  * @property string $email
+ * @property integer $is_admin
  * @property string $build_panel
  * @property integer $camera_x
  * @property integer $camera_y
@@ -28,6 +29,8 @@ namespace models\base;
  * @property \models\BaseRegion[] $regions
  * @property \models\UserResource[] $userResources
  * @property \models\BaseResource[] $resources
+ * @property \models\UserTechnology[] $userTechnologies
+ * @property \models\BaseTechnology[] $technologies
  */
 class BaseUser extends \yii\db\ActiveRecord
 {
@@ -45,7 +48,7 @@ class BaseUser extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseUserPeer::CURRENT_REGION_ID, BaseUserPeer::SHIP_VIEW_RADIUS, BaseUserPeer::SHIP_JUMP_DISTANCE, BaseUserPeer::CAMERA_X, BaseUserPeer::CAMERA_Y], 'integer'],
+            [[BaseUserPeer::CURRENT_REGION_ID, BaseUserPeer::SHIP_VIEW_RADIUS, BaseUserPeer::SHIP_JUMP_DISTANCE, BaseUserPeer::IS_ADMIN, BaseUserPeer::CAMERA_X, BaseUserPeer::CAMERA_Y], 'integer'],
             [[BaseUserPeer::USERNAME, BaseUserPeer::PASSWORD, BaseUserPeer::EMAIL], 'required'],
             [[BaseUserPeer::BUILD_PANEL], 'string'],
             [[BaseUserPeer::ZOOM], 'number'],
@@ -72,6 +75,7 @@ class BaseUser extends \yii\db\ActiveRecord
             BaseUserPeer::USERNAME => 'Username',
             BaseUserPeer::PASSWORD => 'Password',
             BaseUserPeer::EMAIL => 'Email',
+            BaseUserPeer::IS_ADMIN => 'Is Admin',
             BaseUserPeer::BUILD_PANEL => 'Build Panel',
             BaseUserPeer::CAMERA_X => 'Camera X',
             BaseUserPeer::CAMERA_Y => 'Camera Y',
@@ -122,6 +126,18 @@ class BaseUser extends \yii\db\ActiveRecord
     public function getResources() {
         return $this->hasMany(BaseResource::className(), [BaseResourcePeer::RESOURCE_ID => BaseUserResourcePeer::RESOURCE_ID])->viaTable('user_resource', [BaseUserResourcePeer::USER_ID => BaseUserPeer::USER_ID]);
     }
+        /**
+     * @return \models\UserTechnologyQuery
+     */
+    public function getUserTechnologies() {
+        return $this->hasMany(\models\UserTechnology::className(), [BaseUserTechnologyPeer::USER_ID => BaseUserPeer::USER_ID])->inverseOf('user');
+    }
+        /**
+     * @return \models\BaseTechnologyQuery
+     */
+    public function getTechnologies() {
+        return $this->hasMany(BaseTechnology::className(), [BaseTechnologyPeer::TECHNOLOGY_ID => BaseUserTechnologyPeer::TECHNOLOGY_ID])->viaTable('user_technology', [BaseUserTechnologyPeer::USER_ID => BaseUserPeer::USER_ID]);
+    }
     
     /**
      * @inheritdoc
@@ -147,6 +163,7 @@ class BaseUser extends \yii\db\ActiveRecord
             'username' => BaseUserPeer::USERNAME,
             'password' => BaseUserPeer::PASSWORD,
             'email' => BaseUserPeer::EMAIL,
+            'is_admin' => BaseUserPeer::IS_ADMIN,
             'build_panel' => BaseUserPeer::BUILD_PANEL,
             'camera_x' => BaseUserPeer::CAMERA_X,
             'camera_y' => BaseUserPeer::CAMERA_Y,
@@ -171,6 +188,8 @@ class BaseUser extends \yii\db\ActiveRecord
             'regions' => 'regions',
             'userResources' => 'userResources',
             'resources' => 'resources',
+            'userTechnologies' => 'userTechnologies',
+            'technologies' => 'technologies',
         ];
         */
     }

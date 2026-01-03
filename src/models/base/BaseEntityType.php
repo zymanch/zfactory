@@ -30,6 +30,8 @@ namespace models\base;
  * @property \models\EntityTypeRecipe[] $entityTypeRecipes
  * @property \models\BaseRecipe[] $recipes
  * @property \models\ShipEntity[] $shipEntities
+ * @property \models\TechnologyUnlockEntityType[] $technologyUnlockEntityTypes
+ * @property \models\BaseTechnology[] $technologies
  */
 class BaseEntityType extends \yii\db\ActiveRecord
 {
@@ -118,6 +120,18 @@ class BaseEntityType extends \yii\db\ActiveRecord
     public function getShipEntities() {
         return $this->hasMany(\models\ShipEntity::className(), [BaseShipEntityPeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID])->inverseOf('entityType');
     }
+        /**
+     * @return \models\TechnologyUnlockEntityTypeQuery
+     */
+    public function getTechnologyUnlockEntityTypes() {
+        return $this->hasMany(\models\TechnologyUnlockEntityType::className(), [BaseTechnologyUnlockEntityTypePeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID])->inverseOf('entityType');
+    }
+        /**
+     * @return \models\BaseTechnologyQuery
+     */
+    public function getTechnologies() {
+        return $this->hasMany(BaseTechnology::className(), [BaseTechnologyPeer::TECHNOLOGY_ID => BaseTechnologyUnlockEntityTypePeer::TECHNOLOGY_ID])->viaTable('technology_unlock_entity_type', [BaseTechnologyUnlockEntityTypePeer::ENTITY_TYPE_ID => BaseEntityTypePeer::ENTITY_TYPE_ID]);
+    }
     
     /**
      * @inheritdoc
@@ -169,6 +183,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'entityTypeRecipes' => 'entityTypeRecipes',
             'recipes' => 'recipes',
             'shipEntities' => 'shipEntities',
+            'technologyUnlockEntityTypes' => 'technologyUnlockEntityTypes',
+            'technologies' => 'technologies',
         ];
         */
     }

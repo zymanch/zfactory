@@ -11,6 +11,7 @@ class BaseUserPeer  {
     const USERNAME = "username";
     const PASSWORD = "password";
     const EMAIL = "email";
+    const IS_ADMIN = "is_admin";
     const BUILD_PANEL = "build_panel";
     const CAMERA_X = "camera_x";
     const CAMERA_Y = "camera_y";

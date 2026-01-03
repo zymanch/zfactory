@@ -25,6 +25,8 @@ namespace models\base;
  * @property \models\Resource $input2Resource
  * @property \models\Resource $input3Resource
  * @property \models\Resource $outputResource
+ * @property \models\TechnologyUnlockRecipe[] $technologyUnlockRecipes
+ * @property \models\BaseTechnology[] $technologies
  */
 class BaseRecipe extends \yii\db\ActiveRecord
 {
@@ -111,6 +113,18 @@ class BaseRecipe extends \yii\db\ActiveRecord
     public function getOutputResource() {
         return $this->hasOne(\models\Resource::className(), [BaseResourcePeer::RESOURCE_ID => BaseRecipePeer::OUTPUT_RESOURCE_ID]);
     }
+        /**
+     * @return \models\TechnologyUnlockRecipeQuery
+     */
+    public function getTechnologyUnlockRecipes() {
+        return $this->hasMany(\models\TechnologyUnlockRecipe::className(), [BaseTechnologyUnlockRecipePeer::RECIPE_ID => BaseRecipePeer::RECIPE_ID])->inverseOf('recipe');
+    }
+        /**
+     * @return \models\BaseTechnologyQuery
+     */
+    public function getTechnologies() {
+        return $this->hasMany(BaseTechnology::className(), [BaseTechnologyPeer::TECHNOLOGY_ID => BaseTechnologyUnlockRecipePeer::TECHNOLOGY_ID])->viaTable('technology_unlock_recipe', [BaseTechnologyUnlockRecipePeer::RECIPE_ID => BaseRecipePeer::RECIPE_ID]);
+    }
     
     /**
      * @inheritdoc
@@ -157,6 +171,8 @@ class BaseRecipe extends \yii\db\ActiveRecord
             'input2Resource' => 'input2Resource',
             'input3Resource' => 'input3Resource',
             'outputResource' => 'outputResource',
+            'technologyUnlockRecipes' => 'technologyUnlockRecipes',
+            'technologies' => 'technologies',
         ];
         */
     }

@@ -38,8 +38,8 @@ class BaseLanding extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [[BaseLandingPeer::TYPE, BaseLandingPeer::NAME, BaseLandingPeer::FOLDER], 'required'],
             [[BaseLandingPeer::TYPE, BaseLandingPeer::IS_BUILDABLE], 'string'],
-            [[BaseLandingPeer::NAME, BaseLandingPeer::FOLDER], 'required'],
             [[BaseLandingPeer::VARIATIONS_COUNT, BaseLandingPeer::AI_SEED], 'integer'],
             [[BaseLandingPeer::NAME], 'string', 'max' => 64],
             [[BaseLandingPeer::FOLDER], 'string', 'max' => 256],

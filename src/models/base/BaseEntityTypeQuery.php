@@ -66,6 +66,10 @@ use models\EntityTypeQuery;
   * @method EntityTypeQuery joinWithRecipes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method EntityTypeQuery withShipEntities($params = [])
   * @method EntityTypeQuery joinWithShipEntities($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method EntityTypeQuery withTechnologyUnlockEntityTypes($params = [])
+  * @method EntityTypeQuery joinWithTechnologyUnlockEntityTypes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method EntityTypeQuery withTechnologies($params = [])
+  * @method EntityTypeQuery joinWithTechnologies($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseEntityTypeQuery extends \yii\db\ActiveQuery
 {

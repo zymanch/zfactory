@@ -13,6 +13,7 @@ use models\UserQuery;
  * @method UserQuery filterByUsername($value, $criteria = null)
  * @method UserQuery filterByPassword($value, $criteria = null)
  * @method UserQuery filterByEmail($value, $criteria = null)
+ * @method UserQuery filterByIsAdmin($value, $criteria = null)
  * @method UserQuery filterByBuildPanel($value, $criteria = null)
  * @method UserQuery filterByCameraX($value, $criteria = null)
  * @method UserQuery filterByCameraY($value, $criteria = null)
@@ -26,6 +27,7 @@ use models\UserQuery;
   * @method UserQuery andJoinOnConditionByUsername($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByPassword($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByEmail($value, $criteria = null)
+  * @method UserQuery andJoinOnConditionByIsAdmin($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByBuildPanel($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByCameraX($value, $criteria = null)
   * @method UserQuery andJoinOnConditionByCameraY($value, $criteria = null)
@@ -39,6 +41,7 @@ use models\UserQuery;
   * @method UserQuery orderByUsername($order = Criteria::ASC)
   * @method UserQuery orderByPassword($order = Criteria::ASC)
   * @method UserQuery orderByEmail($order = Criteria::ASC)
+  * @method UserQuery orderByIsAdmin($order = Criteria::ASC)
   * @method UserQuery orderByBuildPanel($order = Criteria::ASC)
   * @method UserQuery orderByCameraX($order = Criteria::ASC)
   * @method UserQuery orderByCameraY($order = Criteria::ASC)
@@ -59,6 +62,10 @@ use models\UserQuery;
   * @method UserQuery joinWithUserResources($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method UserQuery withResources($params = [])
   * @method UserQuery joinWithResources($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method UserQuery withUserTechnologies($params = [])
+  * @method UserQuery joinWithUserTechnologies($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
+  * @method UserQuery withTechnologies($params = [])
+  * @method UserQuery joinWithTechnologies($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseUserQuery extends \yii\db\ActiveQuery
 {

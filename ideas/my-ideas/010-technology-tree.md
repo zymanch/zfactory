@@ -6,16 +6,16 @@
 - Рецепты
 - Новые типы зданий (entity_type)
 
-Каждая технология имеет стоимость (ресурсы для исследования).
+Исследование происходит через HQ (главное здание). Клик на HQ открывает окно исследований.
+Изучение моментальное - нужны научные пакеты (Science Packs).
 
 ## Оценка сложности
-**Высокая (8/10)**
+**Средняя (6/10)**
 
-- Множество таблиц для связей
+- Таблицы для технологий и связей
 - UI для дерева технологий (граф, визуализация)
 - Логика разблокировки
-- Система "научных пакетов" (science packs)
-- Прогресс исследований
+- Научные пакеты как крафтящиеся ресурсы
 
 ## Оценка интересности
 **Очень высокая (10/10)**
@@ -24,75 +24,257 @@
 
 ## Краткий план реализации
 
-1. **База данных**:
-   - Таблица `technology`:
-     - id, name, description, research_time, icon
+### 1. Научные пакеты (Science Packs)
 
-   - Таблица `technology_dependency`:
-     - technology_id, required_technology_id
+Научные пакеты - это обычные ресурсы, которые крафтятся в зданиях.
+Добавляются в таблицу `resource` с типом "science".
 
-   - Таблица `technology_cost`:
-     - technology_id, resource_id, quantity
+| Пакет | Рецепт | Tier технологий |
+|-------|--------|-----------------|
+| Red Science | 1 Iron Gear + 1 Copper Wire | Tier 1 |
+| Green Science | 1 Circuit + 1 Manipulator | Tier 2 |
+| Blue Science | 2 Steel + 1 Advanced Circuit | Tier 3 |
+| Purple Science | 3 Steel + 2 Advanced Circuit + 1 Engine | Tier 4 |
 
-   - Таблица `technology_unlock_recipe`:
-     - technology_id, recipe_id
+Крафтятся в обычных Assembler'ах (или специальном Science Assembler).
 
-   - Таблица `technology_unlock_entity_type`:
-     - technology_id, entity_type_id
+### 2. База данных
 
-   - Таблица `user_technology`:
-     - user_id, technology_id, researched, progress (0-100%)
+**Таблица `technology`:**
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | int | PK |
+| name | string | Название |
+| description | text | Описание |
+| icon | string | Путь к иконке |
+| tier | int | Уровень (для визуализации) |
 
-2. **Научные пакеты** (Science Packs):
-   - **Red Science**: 1 Iron Gear + 1 Copper Wire (базовые технологии)
-   - **Green Science**: сложнее (автоматизация)
-   - **Blue Science**: ещё сложнее (продвинутое производство)
-   - **Purple/Yellow**: поздняя игра
+**Таблица `technology_dependency`:**
+| Поле | Тип | Описание |
+|------|-----|----------|
+| technology_id | int | FK → technology |
+| required_technology_id | int | FK → technology (зависимость) |
 
-3. **Лаборатория** (Lab):
-   - Новый entity_type "Лаборатория"
-   - Принимает научные пакеты
-   - Производит research points
-   - Несколько лабораторий → быстрее исследование
+**Таблица `technology_cost`:**
+| Поле | Тип | Описание |
+|------|-----|----------|
+| technology_id | int | FK → technology |
+| resource_id | int | FK → resource (научный пакет) |
+| quantity | int | Количество |
 
-4. **Примеры технологий**:
-   - **Автоматизация 1**: разблокирует Assembler, Conveyor
-   - **Логистика 1**: разблокирует Manipulator
-   - **Сталь**: разблокирует рецепт Steel Ingot
-   - **Электричество**: разблокирует генераторы, столбы
-   - **Военное дело**: разблокирует башни
-   - **Продвинутая обработка**: разблокирует Пресс
+**Таблица `technology_unlock_recipe`:**
+| Поле | Тип | Описание |
+|------|-----|----------|
+| technology_id | int | FK → technology |
+| recipe_id | int | FK → recipe |
 
-5. **Frontend - UI дерева**:
-   - ResearchWindow.js: модальное окно с деревом
-   - Узлы технологий: иконка, название, статус
-     - Серый = не доступна (нет зависимостей)
-     - Жёлтый = доступна
-     - Зелёный = исследуется
-     - Синий = исследована
-   - Линии связей между технологиями
-   - Клик на технологию: показать детали, кнопка "Исследовать"
+**Таблица `technology_unlock_entity_type`:**
+| Поле | Тип | Описание |
+|------|-----|----------|
+| technology_id | int | FK → technology |
+| entity_type_id | int | FK → entity_type |
 
-6. **Backend API**:
-   - `research/tree`: получить все технологии + статус
-   - `research/start`: начать исследование (проверка ресурсов, зависимостей)
-   - `research/progress`: текущий прогресс
+**Таблица `user_technology`:**
+| Поле | Тип | Описание |
+|------|-----|----------|
+| user_id | int | FK → user |
+| technology_id | int | FK → technology |
+| researched_at | datetime | Когда изучено |
 
-7. **Процесс исследования**:
-   - Игрок выбирает технологию → списываются ресурсы
-   - Лаборатории потребляют научные пакеты → прогресс растёт
-   - При 100%: технология researched, разблокировка контента
+### 3. HQ (Главное здание)
 
-8. **Структура дерева**:
-   ```
-   [Автоматизация 1]
-        ↓
-   [Логистика 1] → [Автоматизация 2]
-        ↓                ↓
-   [Логистика 2]    [Продвинутая обработка]
-   ```
+- Уже существующий entity_type "hq" (или создать новый)
+- При клике на HQ → открывается TechnologyWindow
+- HQ должен быть уникальным на карте (1 на игрока)
 
-9. **Балансировка**:
-   - Ранние технологии: дешёвые, быстрые (1-2 минуты)
-   - Поздние: дорогие, долгие (10-30 минут)
-   - Всего ~30-50 технологий для начала
+### 4. Примеры технологий
+
+**Tier 1 (Red Science):**
+- **Автоматизация**: 10 Red → разблокирует Conveyor, Manipulator
+- **Обработка камня**: 10 Red → разблокирует Stone Furnace
+
+**Tier 2 (Green Science):**
+- **Логистика** (требует: Автоматизация): 20 Green → Fast Conveyor
+- **Металлургия** (требует: Обработка камня): 20 Green → Iron Furnace
+
+**Tier 3 (Blue Science):**
+- **Продвинутая логистика** (требует: Логистика): 30 Blue → Express Conveyor
+- **Сталь** (требует: Металлургия): 30 Blue → рецепт Steel Ingot
+
+**Tier 4 (Purple Science):**
+- **Электричество** (требует: Сталь): 50 Purple → генераторы, столбы
+- **Военное дело** (требует: Сталь): 50 Purple → башни
+
+### 5. Frontend - TechnologyWindow
+
+**Файл:** `resources/js/modules/windows/TechnologyWindow.js`
+
+**Открытие:**
+- Клик на HQ → проверка entity_type === 'hq' → открыть окно
+- Или добавить в EntityInfoWindow кнопку "Research" для HQ
+
+**UI элементы:**
+- Граф технологий (canvas или DOM)
+- Узлы технологий с иконками
+- Линии связей между узлами
+- Статусы узлов:
+  - Серый = не доступна (нет зависимостей)
+  - Жёлтый = доступна для изучения
+  - Синий = изучена
+- При наведении: tooltip с описанием и стоимостью (научные пакеты)
+- При клике: кнопка "Изучить" (если доступна и хватает пакетов)
+
+**Расположение узлов:**
+- Tier 1 слева, Tier 4 справа
+- Или сверху вниз по уровням
+
+### 6. Backend API
+
+**`GET /research/tree`**
+Возвращает все технологии + статус для текущего пользователя:
+```json
+{
+  "technologies": [
+    {
+      "id": 1,
+      "name": "Автоматизация",
+      "description": "...",
+      "icon": "automation.svg",
+      "tier": 1,
+      "cost": [
+        {"resource_id": 101, "name": "Red Science", "icon": "red_science.svg", "quantity": 10}
+      ],
+      "requires": [],
+      "unlocks": {
+        "recipes": [1, 2],
+        "entity_types": [5, 6]
+      },
+      "status": "available"
+    }
+  ],
+  "sciencePacks": [
+    {"id": 101, "name": "Red Science", "icon": "red_science.svg", "userQuantity": 25},
+    {"id": 102, "name": "Green Science", "icon": "green_science.svg", "userQuantity": 0}
+  ]
+}
+```
+
+**`POST /research/unlock`**
+Изучить технологию:
+```json
+{"technology_id": 1}
+```
+Ответ:
+```json
+{
+  "success": true,
+  "unlocked": {
+    "recipes": [...],
+    "entity_types": [...]
+  },
+  "resourcesSpent": [
+    {"resource_id": 101, "quantity": 10}
+  ]
+}
+```
+
+### 7. Процесс изучения
+
+1. Игрок производит научные пакеты (крафт в Assembler)
+2. Пакеты складируются в HQ или на складе
+3. Игрок кликает на HQ → TechnologyWindow
+4. Видит дерево, доступные технологии подсвечены
+5. Кликает на технологию → видит стоимость в пакетах
+6. Нажимает "Изучить":
+   - Сервер проверяет зависимости
+   - Сервер проверяет наличие пакетов
+   - Списывает пакеты
+   - Добавляет запись в user_technology
+7. UI обновляется моментально
+
+### 8. Интеграция с существующим кодом
+
+**Новые ресурсы (resource):**
+- Red Science Pack
+- Green Science Pack
+- Blue Science Pack
+- Purple Science Pack
+
+**Новые рецепты (recipe):**
+- Крафт каждого научного пакета
+
+**BuildingWindow:**
+- Фильтровать entity_types по изученным технологиям
+- Добавить поле `required_technology_id` в entity_type
+
+**Recipe система:**
+- Фильтровать рецепты по изученным технологиям
+- Добавить поле `required_technology_id` в recipe
+
+**EntityInfoWindow:**
+- Для HQ: добавить кнопку "Research" или сразу открывать TechnologyWindow
+
+### 9. Структура дерева (пример)
+
+```
+[Автоматизация]──────────────────┐
+   (10 Red)                      │
+      │                          ▼
+      ▼                   [Обработка камня]
+[Логистика]                  (10 Red)
+ (20 Green)                      │
+      │                          ▼
+      ▼                   [Металлургия]
+[Быстрая логистика]          (20 Green)
+   (30 Blue)                     │
+                                 ▼
+                              [Сталь]
+                             (30 Blue)
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+             [Электричество]           [Военное дело]
+              (50 Purple)               (50 Purple)
+```
+
+### 10. Балансировка стоимости
+
+| Tier | Пакет | Стоимость | Сложность крафта пакета |
+|------|-------|-----------|------------------------|
+| 1 | Red | 10-20 шт | Простой (базовые ресурсы) |
+| 2 | Green | 20-40 шт | Средний (обработанные) |
+| 3 | Blue | 30-60 шт | Сложный (сталь, схемы) |
+| 4 | Purple | 50-100 шт | Очень сложный (двигатели) |
+
+### 11. Файлы для создания
+
+```
+# Миграции
+src/migrations/m_create_technology_tables.php
+src/migrations/m_add_science_pack_resources.php
+src/migrations/m_add_science_pack_recipes.php
+
+# Модели
+src/models/Technology.php
+src/models/TechnologyDependency.php
+src/models/TechnologyCost.php
+src/models/TechnologyUnlockRecipe.php
+src/models/TechnologyUnlockEntityType.php
+src/models/UserTechnology.php
+
+# API
+src/controllers/ResearchController.php
+src/actions/research/Tree.php
+src/actions/research/Unlock.php
+
+# Frontend
+resources/js/modules/windows/TechnologyWindow.js
+resources/css/technology.css
+
+# Иконки
+public/assets/tiles/resources/red_science.svg
+public/assets/tiles/resources/green_science.svg
+public/assets/tiles/resources/blue_science.svg
+public/assets/tiles/resources/purple_science.svg
+public/assets/tiles/technologies/*.svg
+```

@@ -22,6 +22,8 @@ namespace models\base;
  * @property \models\Recipe[] $recipes0
  * @property \models\Recipe[] $recipes1
  * @property \models\Recipe[] $recipes2
+ * @property \models\TechnologyCost[] $technologyCosts
+ * @property \models\BaseTechnology[] $technologies
  * @property \models\UserResource[] $userResources
  * @property \models\BaseUser[] $users
  */
@@ -117,6 +119,18 @@ class BaseResource extends \yii\db\ActiveRecord
         return $this->hasMany(\models\Recipe::className(), [BaseRecipePeer::OUTPUT_RESOURCE_ID => BaseResourcePeer::RESOURCE_ID])->inverseOf('outputResource');
     }
         /**
+     * @return \models\TechnologyCostQuery
+     */
+    public function getTechnologyCosts() {
+        return $this->hasMany(\models\TechnologyCost::className(), [BaseTechnologyCostPeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID])->inverseOf('resource');
+    }
+        /**
+     * @return \models\BaseTechnologyQuery
+     */
+    public function getTechnologies() {
+        return $this->hasMany(BaseTechnology::className(), [BaseTechnologyPeer::TECHNOLOGY_ID => BaseTechnologyCostPeer::TECHNOLOGY_ID])->viaTable('technology_cost', [BaseTechnologyCostPeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]);
+    }
+        /**
      * @return \models\UserResourceQuery
      */
     public function getUserResources() {
@@ -171,6 +185,8 @@ class BaseResource extends \yii\db\ActiveRecord
             'recipes0' => 'recipes0',
             'recipes1' => 'recipes1',
             'recipes2' => 'recipes2',
+            'technologyCosts' => 'technologyCosts',
+            'technologies' => 'technologies',
             'userResources' => 'userResources',
             'users' => 'users',
         ];
