@@ -8,6 +8,7 @@
 docs/PROJECT.md      - Описание проекта, структура, команды
 docs/DATABASE.md     - Схема БД, таблицы, поля
 docs/GAME_ENGINE.md  - PixiJS, камера, рендеринг, API
+docs/ADMIN.md        - Admin Panel: редактор карты, депозиты, регионы
 ```
 
 Используй Read tool для всех файлов в папке `docs/` перед началом работы.

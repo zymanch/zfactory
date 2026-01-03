@@ -207,7 +207,6 @@ class Config extends JsonAction
                 'depositsUrl' => \yii\helpers\Url::to(['game/deposits'], true),
                 'createEntityUrl' => \yii\helpers\Url::to(['map/create-entity'], true),
                 'deleteEntityUrl' => \yii\helpers\Url::to(['map/delete-entity'], true),
-                'updateLandingUrl' => \yii\helpers\Url::to(['map/update-landing'], true),
                 'saveBuildPanelUrl' => \yii\helpers\Url::to(['user/save-build-panel'], true),
                 'savePositionUrl' => \yii\helpers\Url::to(['user/save-position'], true),
                 'saveStateUrl' => \yii\helpers\Url::to(['game/save-state'], true),

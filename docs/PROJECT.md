@@ -621,3 +621,11 @@ mysql zfactory < docs/sql/insert_map_extended.sql
 mysql zfactory < docs/sql/insert_entity_extended.sql
 mysql zfactory < docs/sql/update_entity_type_folders.sql
 ```
+
+---
+
+## Documentation
+
+- **[ADMIN.md](ADMIN.md)** - Admin Panel: управление регионами, пользователями, редактор карты
+- **[DATABASE.md](DATABASE.md)** - Database Schema: таблицы, поля, связи
+- **[GAME_ENGINE.md](GAME_ENGINE.md)** - Game Engine: PixiJS, камера, рендеринг, API

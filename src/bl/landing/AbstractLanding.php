@@ -2,6 +2,8 @@
 
 namespace bl\landing;
 
+use bl\landing\generators\base\AbstractLandingGenerator;
+use bl\landing\generators\LandingGeneratorFactory;
 use models\Landing;
 
 /**
@@ -45,5 +47,38 @@ abstract class AbstractLanding extends Landing
     public function getRandomVariation(): int
     {
         return mt_rand(0, ($this->variations_count ?: 5) - 1);
+    }
+
+    /**
+     * Get a generator instance for this landing type
+     * @return AbstractLandingGenerator|null
+     */
+    abstract public function getGenerator(): ?AbstractLandingGenerator;
+
+    /**
+     * Whether this is an island terrain (grass, dirt, sand, etc.)
+     * @return bool
+     */
+    public function isIslandTerrain(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Whether this is a sky terrain (sky, island_edge)
+     * @return bool
+     */
+    public function isSkyTerrain(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Whether this is a ship terrain (ship floors, edges)
+     * @return bool
+     */
+    public function isShipTerrain(): bool
+    {
+        return false;
     }
 }

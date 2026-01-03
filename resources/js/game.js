@@ -13,8 +13,6 @@ import { EntityTooltip } from './modules/entityTooltip.js';
 import { BuildingRules } from './modules/buildingRules.js';
 import { ResourceTransportManager } from './modules/resourceTransport/ResourceTransportManager.js';
 import { ResourceRenderer } from './modules/resourceTransport/ResourceRenderer.js';
-import { LandingWindow } from './modules/windows/landingWindow.js';
-import { LandingEditMode } from './modules/modes/landingEditMode.js';
 import { CloudManager } from './modules/cloudManager.js';
 import { ConveyorManager } from './modules/conveyorManager.js';
 import { GameModeManager, GameMode } from './modules/modes/gameModeManager.js';
@@ -37,7 +35,6 @@ class ZFactoryGame {
         this.zoom = 1;
         this.textures = {};
         this.landingTypes = {};
-        this.landingAdjacencies = [];
         this.entityTypes = {};
         this.depositTypes = {};
         this.resources = {};
@@ -82,8 +79,6 @@ class ZFactoryGame {
         this.buildingRules = null;
         this.resourceTransport = null;
         this.resourceRenderer = null;
-        this.landingWindow = null;
-        this.landingEditMode = null;
         this.cloudManager = null;
         this.conveyorManager = null;
         this.gameModeManager = null;
@@ -129,8 +124,6 @@ class ZFactoryGame {
         this.buildingRules = new BuildingRules(this);
         this.resourceTransport = new ResourceTransportManager(this);
         this.resourceRenderer = new ResourceRenderer(this);
-        this.landingWindow = new LandingWindow(this);
-        this.landingEditMode = new LandingEditMode(this);
         this.cloudManager = new CloudManager(this);
         this.conveyorManager = new ConveyorManager(this);
         this.entityInfoWindow = new EntityInfoWindow(this);
@@ -217,8 +210,6 @@ class ZFactoryGame {
         this.depositManager.init();
         this.entityTooltip.init();
         this.depositTooltip.init();
-        this.landingWindow.init();
-        this.landingEditMode.init();
         this.entityInfoWindow.init();
 
         if (this.cloudManager) {
@@ -256,7 +247,6 @@ class ZFactoryGame {
         this.LANDING_SHIP_EDGE_ID = this.config.landingShipEdgeId;
 
         this.landingTypes = data.landing;
-        this.landingAdjacencies = data.landingAdjacencies || [];
         this.entityTypes = data.entityTypes;
         this.depositTypes = data.depositTypes || {};
         this.resources = data.resources || {};
@@ -338,14 +328,6 @@ class ZFactoryGame {
         }
 
         console.log('All atlases loaded.');
-    }
-
-    /**
-     * Check if two landing types have an adjacency relationship
-     */
-    hasLandingAdjacency(landingId1, landingId2) {
-        if (!this.adjacencySet) return false;
-        return this.adjacencySet.has(`${landingId1}_${landingId2}`);
     }
 
     /**

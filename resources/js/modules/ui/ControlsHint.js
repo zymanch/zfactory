@@ -58,7 +58,6 @@ export class ControlsHint {
                 return [
                     ...common,
                     '<kbd>B</kbd> buildings',
-                    '<kbd>L</kbd> landing',
                     '<kbd>1</kbd>-<kbd>0</kbd> build',
                     '<kbd>Delete</kbd> delete mode',
                     '<kbd>Click</kbd> entity info'
@@ -87,19 +86,10 @@ export class ControlsHint {
                 ];
 
             case GameMode.ENTITY_SELECTION_WINDOW:
-            case GameMode.LANDING_SELECTION_WINDOW:
                 return [
                     ...common,
                     '<kbd>Click</kbd> select',
                     '<kbd>Esc</kbd> close'
-                ];
-
-            case GameMode.LANDING_EDIT:
-                return [
-                    ...common,
-                    '<kbd>Click</kbd> paint tile',
-                    '<kbd>L</kbd> exit edit mode',
-                    '<kbd>Esc</kbd> cancel'
                 ];
 
             default:

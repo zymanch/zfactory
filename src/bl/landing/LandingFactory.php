@@ -10,6 +10,7 @@ class LandingFactory
 {
     /** @var array Map of landing_id to Landing class */
     private static $classMap = [
+        // Island landings (1-8)
         GrassLanding::LANDING_ID => GrassLanding::class,
         DirtLanding::LANDING_ID => DirtLanding::class,
         SandLanding::LANDING_ID => SandLanding::class,
@@ -18,8 +19,18 @@ class LandingFactory
         LavaLanding::LANDING_ID => LavaLanding::class,
         SnowLanding::LANDING_ID => SnowLanding::class,
         SwampLanding::LANDING_ID => SwampLanding::class,
+
+        // Sky landings (9-10)
         SkyLanding::LANDING_ID => SkyLanding::class,
         IslandEdgeLanding::LANDING_ID => IslandEdgeLanding::class,
+
+        // Ship landings (11-16)
+        ShipEdgeLanding::LANDING_ID => ShipEdgeLanding::class,
+        ShipFloorWoodLanding::LANDING_ID => ShipFloorWoodLanding::class,
+        ShipFloorIronLanding::LANDING_ID => ShipFloorIronLanding::class,
+        ShipFloorSteelLanding::LANDING_ID => ShipFloorSteelLanding::class,
+        ShipFloorTitaniumLanding::LANDING_ID => ShipFloorTitaniumLanding::class,
+        ShipFloorCrystalLanding::LANDING_ID => ShipFloorCrystalLanding::class,
     ];
 
     /**

@@ -73,17 +73,6 @@ export class InputManager {
             }
         }
 
-        // L/Д key - toggle landing window (admin tool)
-        if (key === 'l' || key === 'д') {
-            if (mode.isMode(GameMode.LANDING_SELECTION_WINDOW)) {
-                // Close window, return to normal mode
-                mode.returnToNormalMode();
-            } else if (mode.isMode(GameMode.NORMAL)) {
-                // Open window
-                mode.switchMode(GameMode.LANDING_SELECTION_WINDOW);
-            }
-        }
-
         // Delete key - toggle DELETE mode
         if (key === 'delete') {
             if (mode.isMode(GameMode.DELETE)) {

@@ -8,7 +8,9 @@ export const GameMode = {
     ENTITY_INFO: 'ENTITY_INFO',                 // Окно информации о выбранном entity
     ENTITY_SELECTION_WINDOW: 'ENTITY_SELECTION_WINDOW',  // Окно выбора entity для строительства
     LANDING_SELECTION_WINDOW: 'LANDING_SELECTION_WINDOW', // Окно выбора landing
-    LANDING_EDIT: 'LANDING_EDIT'               // Режим редактирования landing
+    LANDING_EDIT: 'LANDING_EDIT',              // Режим редактирования landing
+    DEPOSIT_SELECTION_WINDOW: 'DEPOSIT_SELECTION_WINDOW', // Окно выбора deposit (admin)
+    DEPOSIT_BUILD: 'DEPOSIT_BUILD'             // Режим размещения deposit (admin)
 };
 
 /**
@@ -91,6 +93,12 @@ export class GameModeManager {
             case GameMode.LANDING_EDIT:
                 this.deactivateLandingEditMode();
                 break;
+            case GameMode.DEPOSIT_SELECTION_WINDOW:
+                this.deactivateDepositSelectionWindow();
+                break;
+            case GameMode.DEPOSIT_BUILD:
+                this.deactivateDepositBuildMode();
+                break;
         }
     }
 
@@ -119,6 +127,12 @@ export class GameModeManager {
                 break;
             case GameMode.LANDING_EDIT:
                 this.activateLandingEditMode();
+                break;
+            case GameMode.DEPOSIT_SELECTION_WINDOW:
+                this.activateDepositSelectionWindow();
+                break;
+            case GameMode.DEPOSIT_BUILD:
+                this.activateDepositBuildMode();
                 break;
         }
     }
@@ -312,6 +326,54 @@ export class GameModeManager {
     deactivateLandingEditMode() {
         if (this.game.landingEditMode) {
             this.game.landingEditMode.deactivate();
+        }
+    }
+
+    // ================ DEPOSIT_SELECTION_WINDOW MODE (admin) ================
+    activateDepositSelectionWindow() {
+        // Отключить hover на entity
+        this.setEntityInteractivity(false);
+
+        // Открыть окно выбора deposit
+        if (this.game.depositWindow) {
+            this.game.depositWindow.open();
+        }
+    }
+
+    deactivateDepositSelectionWindow() {
+        if (this.game.depositWindow) {
+            this.game.depositWindow.close();
+        }
+    }
+
+    // ================ DEPOSIT_BUILD MODE (admin) ================
+    activateDepositBuildMode() {
+        const depositType = this.modeData.depositType;
+        const minAmount = this.modeData.minAmount;
+        const maxAmount = this.modeData.maxAmount;
+
+        if (!depositType) {
+            console.error('DEPOSIT_BUILD mode activated without depositType');
+            this.returnToNormalMode();
+            return;
+        }
+
+        // Отключить hover на entity
+        this.setEntityInteractivity(false);
+
+        // Активировать режим размещения deposit
+        if (this.game.depositBuildMode) {
+            this.game.depositBuildMode.activate({
+                depositType,
+                minAmount,
+                maxAmount
+            });
+        }
+    }
+
+    deactivateDepositBuildMode() {
+        if (this.game.depositBuildMode) {
+            this.game.depositBuildMode.deactivate();
         }
     }
 
