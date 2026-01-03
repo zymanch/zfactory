@@ -143,7 +143,7 @@ class m251220_235000_insert_missing_entity_types extends Migration
             }
         }
 
-        $this->execute("INSERT INTO `landing` (`landing_id`, `is_buildable`, `name`, `folder`) VALUES
+        $this->execute("INSERT IGNORE INTO `landing` (`landing_id`, `is_buildable`, `name`, `folder`) VALUES
             (1, 'yes', 'Grass', 'grass'),
             (2, 'yes', 'Dirt', 'dirt'),
             (3, 'yes', 'Sand', 'sand'),

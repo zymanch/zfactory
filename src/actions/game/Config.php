@@ -24,29 +24,40 @@ use Yii;
  */
 class Config extends JsonAction
 {
-    public function run()
+    protected function getCurrentRegionId()
     {
-        // Get landing types
-        $landingTypes = $this->castNumericFieldsIndexed(
+        if (!$this->isGuest()) {
+            return (int)$this->getUser()->current_region_id;
+        }
+        return 1;
+    }
+
+    protected function getLandingTypes()
+    {
+        return $this->castNumericFieldsIndexed(
             Landing::find()->indexBy('landing_id')->asArray()->all(),
             ['landing_id']
         );
+    }
 
-        // Landing adjacencies not needed - using landing_id directly in atlas coordinates
-
-        // Get entity types
-        $entityTypes = $this->castNumericFieldsIndexed(
+    protected function getEntityTypes()
+    {
+        return $this->castNumericFieldsIndexed(
             EntityType::find()->indexBy('entity_type_id')->asArray()->all(),
             ['entity_type_id', 'power', 'max_durability', 'width', 'height']
         );
+    }
 
-        // Get deposit types
-        $depositTypes = $this->castNumericFieldsIndexed(
+    protected function getDepositTypes()
+    {
+        return $this->castNumericFieldsIndexed(
             DepositType::find()->indexBy('deposit_type_id')->asArray()->all(),
             ['deposit_type_id', 'resource_id', 'resource_amount', 'width', 'height']
         );
+    }
 
-        // Get all eye entity type IDs
+    protected function getEyeEntities($entityTypes, $currentRegionId)
+    {
         $eyeTypeIds = [];
         foreach ($entityTypes as $et) {
             if ($et['type'] === 'eye') {
@@ -54,58 +65,57 @@ class Config extends JsonAction
             }
         }
 
-        // Get current region ID
-        $currentRegionId = 1; // Default
-        if (!$this->isGuest()) {
-            $currentRegionId = (int)$this->getUser()->current_region_id;
+        if (empty($eyeTypeIds)) {
+            return [];
         }
 
-        // Get region data (including ship_attach coordinates)
+        return $this->castNumericFieldsArray(
+            Entity::find()
+                ->select(['entity_id', 'entity_type_id', 'state', 'x', 'y'])
+                ->where(['entity_type_id' => $eyeTypeIds])
+                ->andWhere(['state' => 'built'])
+                ->andWhere(['region_id' => $currentRegionId])
+                ->asArray()
+                ->all(),
+            ['entity_id', 'entity_type_id', 'x', 'y']
+        );
+    }
+
+    protected function getRegion($currentRegionId)
+    {
         $region = \models\Region::findOne($currentRegionId);
-        $regionData = null;
-        if ($region) {
-            $regionData = [
-                'region_id' => (int)$region->region_id,
-                'name' => $region->name,
-                'ship_attach_x' => (int)$region->ship_attach_x,
-                'ship_attach_y' => (int)$region->ship_attach_y,
-            ];
+        if (!$region) {
+            return null;
         }
 
-        // Get ALL eye entities (for fog of war) - not cached, need fresh data
-        // Filter by current region
-        $eyeEntities = [];
-        if (!empty($eyeTypeIds)) {
-            $eyeEntities = $this->castNumericFieldsArray(
-                Entity::find()
-                    ->select(['entity_id', 'entity_type_id', 'state', 'x', 'y'])
-                    ->where(['entity_type_id' => $eyeTypeIds])
-                    ->andWhere(['state' => 'built'])
-                    ->andWhere(['region_id' => $currentRegionId])
-                    ->asArray()
-                    ->all(),
-                ['entity_id', 'entity_type_id', 'x', 'y']
-            );
-        }
+        return [
+            'region_id' => (int)$region->region_id,
+            'name' => $region->name,
+            'ship_attach_x' => (int)$region->ship_attach_x,
+            'ship_attach_y' => (int)$region->ship_attach_y,
+        ];
+    }
 
-        // Get resources
-        $resources = $this->castNumericFieldsIndexed(
+    protected function getResources()
+    {
+        return $this->castNumericFieldsIndexed(
             Resource::find()->indexBy('resource_id')->asArray()->all(),
             ['resource_id', 'max_stack']
         );
+    }
 
-        // Get recipes
-        $recipes = $this->castNumericFieldsIndexed(
+    protected function getRecipes()
+    {
+        return $this->castNumericFieldsIndexed(
             Recipe::find()->indexBy('recipe_id')->asArray()->all(),
             ['recipe_id', 'ticks', 'input1_resource_id', 'input1_amount', 'input2_resource_id', 'input2_amount', 'input3_resource_id', 'input3_amount', 'output_resource_id', 'output_amount']
         );
+    }
 
-        // Get entity type recipes (which recipes are available for which entity types)
-        $entityTypeRecipesRaw = EntityTypeRecipe::find()
-            ->asArray()
-            ->all();
+    protected function getEntityTypeRecipes()
+    {
+        $entityTypeRecipesRaw = EntityTypeRecipe::find()->asArray()->all();
 
-        // Group by entity_type_id for easy lookup
         $entityTypeRecipes = [];
         foreach ($entityTypeRecipesRaw as $etr) {
             $typeId = (int) $etr['entity_type_id'];
@@ -115,34 +125,64 @@ class Config extends JsonAction
             $entityTypeRecipes[$typeId][] = (int) $etr['recipe_id'];
         }
 
-        // Get all entity resources (for buildings, mining, storage)
-        // Only records without transport state (position IS NULL)
-        $entityResources = $this->castNumericFieldsArray(
-            EntityResource::find()->where(['position' => null])->asArray()->all(),
+        return $entityTypeRecipes;
+    }
+
+    protected function getEntityResources($currentRegionId)
+    {
+        return $this->castNumericFieldsArray(
+            EntityResource::find()
+                ->alias('er')
+                ->innerJoin('entity e', 'e.entity_id = er.entity_id')
+                ->where(['er.position' => null])
+                ->andWhere(['e.region_id' => $currentRegionId])
+                ->select(['er.entity_id', 'er.resource_id', 'er.amount'])
+                ->asArray()
+                ->all(),
             ['entity_id', 'resource_id', 'amount']
         );
+    }
 
-        // Get all crafting states
-        $craftingStates = $this->castNumericFieldsArray(
-            EntityCrafting::find()->asArray()->all(),
+    protected function getCraftingStates($currentRegionId)
+    {
+        return $this->castNumericFieldsArray(
+            EntityCrafting::find()
+                ->alias('ec')
+                ->innerJoin('entity e', 'e.entity_id = ec.entity_id')
+                ->where(['e.region_id' => $currentRegionId])
+                ->select(['ec.entity_id', 'ec.recipe_id', 'ec.ticks_remaining'])
+                ->asArray()
+                ->all(),
             ['entity_id', 'recipe_id', 'ticks_remaining']
         );
+    }
 
-        // Get all transport states (conveyors, manipulators)
-        // Only records with transport state (position IS NOT NULL)
-        $transportStates = $this->castNumericFieldsArray(
-            EntityResource::find()->where(['not', ['position' => null]])->asArray()->all(),
+    protected function getTransportStates($currentRegionId)
+    {
+        return $this->castNumericFieldsArray(
+            EntityResource::find()
+                ->alias('er')
+                ->innerJoin('entity e', 'e.entity_id = er.entity_id')
+                ->where(['not', ['er.position' => null]])
+                ->andWhere(['e.region_id' => $currentRegionId])
+                ->select(['er.entity_id', 'er.resource_id', 'er.amount', 'er.position', 'er.lateral_offset', 'er.arm_position'])
+                ->asArray()
+                ->all(),
             ['entity_id', 'resource_id', 'amount'],
-            ['position', 'lateral_offset', 'arm_position']  // floats
+            ['position', 'lateral_offset', 'arm_position']
         );
+    }
 
-        // Get all deposits (trees, rocks, ores) - filter by current region
-        $deposits = $this->castNumericFieldsArray(
+    protected function getDeposits($currentRegionId)
+    {
+        return $this->castNumericFieldsArray(
             \models\Deposit::find()->where(['region_id' => $currentRegionId])->asArray()->all(),
             ['deposit_id', 'deposit_type_id', 'x', 'y', 'resource_amount']
         );
+    }
 
-        // Get entity type costs
+    protected function getEntityTypeCosts()
+    {
         $entityTypeCostsRaw = EntityTypeCost::find()->asArray()->all();
         $entityTypeCosts = [];
         foreach ($entityTypeCostsRaw as $cost) {
@@ -153,82 +193,109 @@ class Config extends JsonAction
             $entityTypeCosts[$typeId][(int)$cost['resource_id']] = (int)$cost['quantity'];
         }
 
-        // Get user resources
+        return $entityTypeCosts;
+    }
+
+    protected function getUserResources()
+    {
+        if ($this->isGuest()) {
+            return [];
+        }
+
+        $userResourcesRaw = UserResource::find()
+            ->where(['user_id' => $this->getUser()->user_id])
+            ->asArray()
+            ->all();
+
         $userResources = [];
-        if (!$this->isGuest()) {
-            $userResourcesRaw = UserResource::find()
-                ->where(['user_id' => $this->getUser()->user_id])
-                ->asArray()
-                ->all();
-
-            foreach ($userResourcesRaw as $ur) {
-                $userResources[(int)$ur['resource_id']] = (int)$ur['quantity'];
-            }
+        foreach ($userResourcesRaw as $ur) {
+            $userResources[(int)$ur['resource_id']] = (int)$ur['quantity'];
         }
 
-        // Get user's build panel and camera position
-        $buildPanel = array_fill(0, 10, null);
-        $cameraX = 0;
-        $cameraY = 0;
-        $zoom = 1;
-        if (!$this->isGuest()) {
-            /** @var \models\User $user */
-            $user = $this->getUser();
-            $buildPanel = $user->getBuildPanelArray();
-            $cameraX = (int)$user->camera_x;
-            $cameraY = (int)$user->camera_y;
-            $zoom = (float)$user->zoom;
+        return $userResources;
+    }
+
+    protected function getBuildPanel()
+    {
+        if ($this->isGuest()) {
+            return array_fill(0, 10, null);
         }
+
+        return $this->getUser()->getBuildPanelArray();
+    }
+
+    protected function getCameraPosition()
+    {
+        if ($this->isGuest()) {
+            return ['x' => 0, 'y' => 0, 'zoom' => 1];
+        }
+
+        $user = $this->getUser();
+        return [
+            'x' => (int)$user->camera_x,
+            'y' => (int)$user->camera_y,
+            'zoom' => (float)$user->zoom,
+        ];
+    }
+
+    protected function getConfig($currentRegionId)
+    {
+        return [
+            'mapUrl' => \yii\helpers\Url::to(['map/tiles'], true),
+            'entitiesUrl' => \yii\helpers\Url::to(['game/entities'], true),
+            'depositsUrl' => \yii\helpers\Url::to(['game/deposits'], true),
+            'createEntityUrl' => \yii\helpers\Url::to(['map/create-entity'], true),
+            'deleteEntityUrl' => \yii\helpers\Url::to(['map/delete-entity'], true),
+            'saveBuildPanelUrl' => \yii\helpers\Url::to(['user/save-build-panel'], true),
+            'savePositionUrl' => \yii\helpers\Url::to(['user/save-position'], true),
+            'saveStateUrl' => \yii\helpers\Url::to(['game/save-state'], true),
+            'finishConstructionUrl' => \yii\helpers\Url::to(['game/finish-construction'], true),
+            'addUserResourceUrl' => \yii\helpers\Url::to(['game/add-user-resource'], true),
+            'regionsMapUrl' => \yii\helpers\Url::to(['regions/index'], true),
+            'tilesPath' => '/assets/tiles/',
+            'currentRegionId' => $currentRegionId,
+            'tileWidth' => Yii::$app->params['tile_width'],
+            'tileHeight' => Yii::$app->params['tile_height'],
+            'assetVersion' => Yii::$app->params['asset_version'],
+            'autoSaveInterval' => Yii::$app->params['auto_save_interval'] ?? 60,
+            'debug' => Yii::$app->params['debug'] ?? false,
+            'landingSkyId' => Yii::$app->params['landing_sky_id'],
+            'landingBridgeId' => Yii::$app->params['landing_bridge_id'],
+            'landingIslandEdgeId' => Yii::$app->params['landing_island_edge_id'],
+            'landingShipEdgeId' => Yii::$app->params['landing_ship_edge_id'],
+            'cameraSpeed' => 8,
+        ];
+    }
+
+    protected function getBuildingRules()
+    {
+        return BuildingRules::getClientRules();
+    }
+
+    public function run()
+    {
+        $currentRegionId = $this->getCurrentRegionId();
+        $entityTypes = $this->getEntityTypes();
 
         return $this->success([
-            'landing' => $landingTypes,
+            'landing' => $this->getLandingTypes(),
             'entityTypes' => $entityTypes,
-            'depositTypes' => $depositTypes,
-            'eyeEntities' => $eyeEntities,
-            'deposits' => $deposits,
-            'resources' => $resources,
-            'recipes' => $recipes,
-            'entityTypeRecipes' => $entityTypeRecipes,
-            'entityTypeCosts' => $entityTypeCosts,
-            'userResources' => $userResources,
-            'entityResources' => $entityResources,
-            'craftingStates' => $craftingStates,
-            'transportStates' => $transportStates,
-            'region' => $regionData,
-            'buildPanel' => $buildPanel,
-            'cameraPosition' => [
-                'x' => $cameraX,
-                'y' => $cameraY,
-                'zoom' => $zoom,
-            ],
-            'config' => [
-                'mapUrl' => \yii\helpers\Url::to(['map/tiles'], true),
-                'entitiesUrl' => \yii\helpers\Url::to(['game/entities'], true),
-                'depositsUrl' => \yii\helpers\Url::to(['game/deposits'], true),
-                'createEntityUrl' => \yii\helpers\Url::to(['map/create-entity'], true),
-                'deleteEntityUrl' => \yii\helpers\Url::to(['map/delete-entity'], true),
-                'saveBuildPanelUrl' => \yii\helpers\Url::to(['user/save-build-panel'], true),
-                'savePositionUrl' => \yii\helpers\Url::to(['user/save-position'], true),
-                'saveStateUrl' => \yii\helpers\Url::to(['game/save-state'], true),
-                'finishConstructionUrl' => \yii\helpers\Url::to(['game/finish-construction'], true),
-                'addUserResourceUrl' => \yii\helpers\Url::to(['game/add-user-resource'], true),
-                'regionsMapUrl' => \yii\helpers\Url::to(['regions/index'], true),
-                'tilesPath' => '/assets/tiles/',
-                'currentRegionId' => $currentRegionId,
-                'tileWidth' => Yii::$app->params['tile_width'],
-                'tileHeight' => Yii::$app->params['tile_height'],
-                'assetVersion' => Yii::$app->params['asset_version'],
-                'autoSaveInterval' => Yii::$app->params['auto_save_interval'] ?? 60,
-                'debug' => Yii::$app->params['debug'] ?? false,
-
-                // Landing IDs constants
-                'landingSkyId' => Yii::$app->params['landing_sky_id'],
-                'landingBridgeId' => Yii::$app->params['landing_bridge_id'],
-                'landingIslandEdgeId' => Yii::$app->params['landing_island_edge_id'],
-                'landingShipEdgeId' => Yii::$app->params['landing_ship_edge_id'],
-                'cameraSpeed' => 8,
-            ],
-            'buildingRules' => BuildingRules::getClientRules(),
+            'depositTypes' => $this->getDepositTypes(),
+            'eyeEntities' => $this->getEyeEntities($entityTypes, $currentRegionId),
+            'deposits' => $this->getDeposits($currentRegionId),
+            'resources' => $this->getResources(),
+            'recipes' => $this->getRecipes(),
+            'entityTypeRecipes' => $this->getEntityTypeRecipes(),
+            'entityTypeCosts' => $this->getEntityTypeCosts(),
+            'userResources' => $this->getUserResources(),
+            'entityResources' => $this->getEntityResources($currentRegionId),
+            'craftingStates' => $this->getCraftingStates($currentRegionId),
+            'transportStates' => $this->getTransportStates($currentRegionId),
+            'region' => $this->getRegion($currentRegionId),
+            'buildPanel' => $this->getBuildPanel(),
+            'cameraPosition' => $this->getCameraPosition(),
+            'config' => $this->getConfig($currentRegionId),
+            'buildingRules' => $this->getBuildingRules(),
         ]);
     }
 }

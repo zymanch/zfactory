@@ -471,7 +471,7 @@ class ZFactoryGame {
             this.depositsLoaded = true;
         }
 
-        if (!this.entitiesLoaded) {
+        if (!this.entitiesLoaded && this.config.entitiesUrl) {
             await this.loadAllEntities();
             this.entitiesLoaded = true;
 

@@ -56,6 +56,8 @@ class AdminController extends Controller
             'regions' => \actions\admin\Regions::class,
             'users' => \actions\admin\Users::class,
             'edit-map' => \actions\admin\EditMap::class,
+            'config' => \actions\admin\Config::class,
+            'tiles' => \actions\admin\Tiles::class,
             'update-landing' => \actions\admin\UpdateLanding::class,
             'create-deposit' => \actions\admin\CreateDeposit::class,
         ];

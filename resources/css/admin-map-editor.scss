@@ -40,6 +40,32 @@ body {
     }
 }
 
+.controls-hint {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 5px;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    z-index: 1000;
+
+    kbd {
+        display: inline-block;
+        padding: 3px 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 3px;
+        font-family: monospace;
+        font-size: 12px;
+        font-weight: bold;
+        margin: 0 3px;
+    }
+}
+
 #deposit-window {
     position: fixed;
     top: 50%;

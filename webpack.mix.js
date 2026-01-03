@@ -1,4 +1,5 @@
 let mix = require('laravel-mix');
+const path = require('path');
 
 mix
     .js('resources/js/game.js', 'public/js')
@@ -16,9 +17,19 @@ mix
     .webpackConfig({
         target: ['web', 'es5'],
         optimization: {
-            splitChunks: false,
+            splitChunks: {
+                cacheGroups: {
+                    default: false,
+                    defaultVendors: false
+                }
+            },
             runtimeChunk: false,
             concatenateModules: true
+        },
+        resolve: {
+            alias: {
+                'pixi.js': path.resolve(__dirname, 'node_modules/pixi.js/dist/pixi.mjs')
+            }
         },
         module: {
             rules: [
@@ -29,10 +40,5 @@ mix
                     }
                 }
             ]
-        },
-        plugins: [
-            new (require('webpack').optimize.LimitChunkCountPlugin)({
-                maxChunks: 1
-            })
-        ]
+        }
     });

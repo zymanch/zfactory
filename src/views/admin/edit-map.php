@@ -12,6 +12,10 @@ use yii\helpers\Json;
 <body>
     <div id="sprite-coords" class="sprite-coords">X: 0, Y: 0</div>
     <a href="<?= Url::to(['/admin/index']) ?>" id="back-button" class="back-button">← Back to Admin</a>
+    <div id="admin-controls-hint" class="controls-hint">
+        <strong>Горячие клавиши:</strong><br>
+        <kbd>L</kbd> Ландшафты | <kbd>D</kbd> Депозиты | <kbd>ESC</kbd> Отмена
+    </div>
     <div id="game-container"></div>
 
     <script>

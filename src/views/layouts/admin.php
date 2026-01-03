@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZFactory - Admin Panel</title>
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/admin.css?v=<?= Yii::$app->params['asset_version'] ?? 1 ?>" rel="stylesheet">
 </head>
@@ -12,7 +15,6 @@
         <div class="container-fluid">
             <span class="navbar-brand">ZFactory Admin</span>
             <div class="d-flex">
-                <span class="text-white me-3"><?= Yii::$app->user->identity->username ?></span>
                 <a href="<?= \yii\helpers\Url::to(['/game/index']) ?>" class="btn btn-sm btn-outline-light me-2">Game</a>
                 <a href="<?= \yii\helpers\Url::to(['/site/logout']) ?>" class="btn btn-sm btn-outline-light">Logout</a>
             </div>
