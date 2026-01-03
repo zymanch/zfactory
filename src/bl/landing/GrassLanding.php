@@ -2,6 +2,7 @@
 
 namespace bl\landing;
 
+use bl\landing\generators\base\AbstractLandingGenerator;
 use bl\landing\generators\island\GrassLandingGenerator;
 
 /**
