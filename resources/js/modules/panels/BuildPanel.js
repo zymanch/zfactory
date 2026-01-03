@@ -1,3 +1,4 @@
+import { BasePanel } from './BasePanel.js';
 import { getEntityIconUrl } from '../utils.js';
 import { SAVE_DEBOUNCE_DELAY } from '../constants.js';
 import { GameMode } from '../modes/gameModeManager.js';
@@ -5,12 +6,11 @@ import { GameMode } from '../modes/gameModeManager.js';
 /**
  * BuildPanel - 10-slot hotbar for quick building access
  */
-export class BuildPanel {
+export class BuildPanel extends BasePanel {
     constructor(game) {
-        this.game = game;
+        super(game);
         this.slots = new Array(10).fill(null);
         this.activeSlot = -1;
-        this.element = null;
         this.slotElements = [];
         this.saveTimeout = null;
     }

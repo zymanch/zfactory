@@ -1,10 +1,12 @@
+import { BasePanel } from './BasePanel.js';
+
 /**
- * CameraInfo - displays camera position and game stats (top-left corner)
+ * DebugPanel - displays camera position, FPS, and game stats (top-left corner)
+ * Previously known as CameraInfo
  */
-export class CameraInfo {
+export class DebugPanel extends BasePanel {
     constructor(game) {
-        this.game = game;
-        this.element = null;
+        super(game);
         this.cameraEl = null;
         this.tilesEl = null;
         this.entitiesEl = null;
@@ -15,12 +17,12 @@ export class CameraInfo {
     }
 
     /**
-     * Initialize camera info display
+     * Initialize debug panel display
      */
     init() {
         this.element = document.getElementById('debug-info');
         if (!this.element) {
-            console.warn('CameraInfo: #debug-info element not found');
+            console.warn('DebugPanel: #debug-info element not found');
             return;
         }
 
@@ -32,7 +34,7 @@ export class CameraInfo {
     }
 
     /**
-     * Update camera info display
+     * Update debug panel display (called each frame)
      */
     update() {
         if (!this.element) return;
@@ -84,13 +86,16 @@ export class CameraInfo {
     }
 
     /**
-     * Show/hide camera info
+     * Show/hide debug panel
      */
     setVisible(visible) {
+        this.isVisible = visible;
         if (this.element) {
             this.element.style.display = visible ? 'block' : 'none';
         }
     }
 }
 
-export default CameraInfo;
+// Alias for backwards compatibility
+export { DebugPanel as CameraInfo };
+export default DebugPanel;

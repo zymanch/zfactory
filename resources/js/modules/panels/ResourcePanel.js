@@ -1,10 +1,11 @@
+import { BasePanel } from './BasePanel.js';
+
 /**
  * ResourcePanel - displays player's current resources at the top of screen
  */
-export class ResourcePanel {
+export class ResourcePanel extends BasePanel {
     constructor(game) {
-        this.game = game;
-        this.element = null;
+        super(game);
         this.resourceElements = {};
     }
 

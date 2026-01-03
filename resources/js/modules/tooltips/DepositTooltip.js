@@ -1,37 +1,37 @@
+import { BaseTooltip } from './BaseTooltip.js';
+
 /**
- * Manages tooltips for deposits (trees, rocks, ores)
- * Simplified compared to entity tooltips - only shows name, resource icon, and amount
+ * DepositTooltip - displays deposit info (trees, rocks, ores) on hover
+ * Shows name, resource icon, and amount
  */
-export class DepositTooltip {
+export class DepositTooltip extends BaseTooltip {
     constructor(game) {
-        this.game = game;
-        this.tooltipElement = null;
+        super(game);
         this.currentDeposit = null;
-        this.isVisible = false;
     }
 
     /**
      * Initialize tooltip
      */
     init() {
-        this.tooltipElement = document.getElementById('deposit-tooltip');
-        if (!this.tooltipElement) {
-            this.createTooltipElement();
+        this.element = document.getElementById('deposit-tooltip');
+        if (!this.element) {
+            this.createElement();
         }
     }
 
     /**
      * Create tooltip DOM element
      */
-    createTooltipElement() {
-        this.tooltipElement = document.createElement('div');
-        this.tooltipElement.id = 'deposit-tooltip';
-        this.tooltipElement.className = 'game-tooltip deposit-tooltip';
-        this.tooltipElement.style.position = 'absolute';
-        this.tooltipElement.style.display = 'none';
-        this.tooltipElement.style.pointerEvents = 'none';
-        this.tooltipElement.style.zIndex = '1000';
-        document.body.appendChild(this.tooltipElement);
+    createElement() {
+        this.element = document.createElement('div');
+        this.element.id = 'deposit-tooltip';
+        this.element.className = 'game-tooltip deposit-tooltip';
+        this.element.style.position = 'absolute';
+        this.element.style.display = 'none';
+        this.element.style.pointerEvents = 'none';
+        this.element.style.zIndex = '1000';
+        document.body.appendChild(this.element);
     }
 
     /**
@@ -66,9 +66,9 @@ export class DepositTooltip {
         html += `</div>`;
         html += `</div>`;
 
-        this.tooltipElement.innerHTML = html;
+        this.element.innerHTML = html;
         this.updatePosition(mouseX, mouseY);
-        this.tooltipElement.style.display = 'block';
+        this.element.style.display = 'block';
         this.isVisible = true;
     }
 
@@ -76,8 +76,8 @@ export class DepositTooltip {
      * Hide tooltip
      */
     hide() {
-        if (this.tooltipElement) {
-            this.tooltipElement.style.display = 'none';
+        if (this.element) {
+            this.element.style.display = 'none';
         }
         this.currentDeposit = null;
         this.isVisible = false;
@@ -87,7 +87,7 @@ export class DepositTooltip {
      * Update tooltip position
      */
     updatePosition(mouseX, mouseY) {
-        if (!this.isVisible || !this.tooltipElement) {
+        if (!this.isVisible || !this.element) {
             return;
         }
 
@@ -99,7 +99,7 @@ export class DepositTooltip {
         let y = mouseY + offsetY;
 
         // Get tooltip dimensions
-        const rect = this.tooltipElement.getBoundingClientRect();
+        const rect = this.element.getBoundingClientRect();
         const tooltipWidth = rect.width;
         const tooltipHeight = rect.height;
 
@@ -112,8 +112,8 @@ export class DepositTooltip {
             y = mouseY - tooltipHeight - offsetY;
         }
 
-        this.tooltipElement.style.left = `${x}px`;
-        this.tooltipElement.style.top = `${y}px`;
+        this.element.style.left = `${x}px`;
+        this.element.style.top = `${y}px`;
     }
 
     /**
@@ -128,15 +128,6 @@ export class DepositTooltip {
             this.hide();
         }
     }
-
-    /**
-     * Destroy tooltip
-     */
-    destroy() {
-        this.hide();
-        if (this.tooltipElement && this.tooltipElement.parentNode) {
-            this.tooltipElement.parentNode.removeChild(this.tooltipElement);
-        }
-        this.tooltipElement = null;
-    }
 }
+
+export default DepositTooltip;

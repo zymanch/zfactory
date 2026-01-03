@@ -1,13 +1,13 @@
+import { BasePanel } from './BasePanel.js';
 import { GameMode } from '../modes/gameModeManager.js';
 
 /**
  * ControlsHint - displays keyboard shortcuts (bottom-left corner)
  * Shows different hints depending on current game mode
  */
-export class ControlsHint {
+export class ControlsHint extends BasePanel {
     constructor(game) {
-        this.game = game;
-        this.element = null;
+        super(game);
         this.currentMode = null;
     }
 
@@ -101,6 +101,7 @@ export class ControlsHint {
      * Show/hide controls hint
      */
     setVisible(visible) {
+        this.isVisible = visible;
         if (this.element) {
             this.element.style.display = visible ? 'block' : 'none';
         }

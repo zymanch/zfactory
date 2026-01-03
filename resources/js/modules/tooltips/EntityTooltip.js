@@ -1,32 +1,24 @@
-import { EntityBehaviorFactory } from './entityBehaviors.js';
+import { BaseTooltip } from './BaseTooltip.js';
+import { EntityBehaviorFactory } from '../entityBehaviors.js';
 
 /**
  * EntityTooltip - displays entity info, durability and resources on hover
  * Uses EntityBehavior to determine if tooltip should be shown
  */
-export class EntityTooltip {
+export class EntityTooltip extends BaseTooltip {
     constructor(game) {
-        this.game = game;
-        this.tooltipEl = null;
+        super(game);
         this.currentEntityKey = null;
-        this.hideTimeout = null;
-    }
-
-    /**
-     * Initialize tooltip
-     */
-    init() {
-        this.createTooltipElement();
     }
 
     /**
      * Create tooltip DOM element
      */
-    createTooltipElement() {
-        this.tooltipEl = document.createElement('div');
-        this.tooltipEl.id = 'entity-tooltip';
-        this.tooltipEl.className = 'entity-tooltip';
-        this.tooltipEl.style.cssText = `
+    createElement() {
+        this.element = document.createElement('div');
+        this.element.id = 'entity-tooltip';
+        this.element.className = 'entity-tooltip';
+        this.element.style.cssText = `
             position: fixed;
             display: none;
             background: rgba(20, 20, 30, 0.95);
@@ -41,7 +33,7 @@ export class EntityTooltip {
             max-width: 250px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.5);
         `;
-        document.body.appendChild(this.tooltipEl);
+        document.body.appendChild(this.element);
     }
 
     /**
@@ -134,33 +126,10 @@ export class EntityTooltip {
             html += recipesHtml;
         }
 
-        this.tooltipEl.innerHTML = html;
-        this.tooltipEl.style.display = 'block';
+        this.element.innerHTML = html;
+        this.element.style.display = 'block';
+        this.isVisible = true;
         this.updatePosition(screenX, screenY);
-    }
-
-    /**
-     * Update tooltip position
-     */
-    updatePosition(screenX, screenY) {
-        if (!this.tooltipEl || this.tooltipEl.style.display === 'none') return;
-
-        const rect = this.tooltipEl.getBoundingClientRect();
-        const padding = 15;
-
-        let x = screenX + padding;
-        let y = screenY + padding;
-
-        // Keep within viewport
-        if (x + rect.width > window.innerWidth) {
-            x = screenX - rect.width - padding;
-        }
-        if (y + rect.height > window.innerHeight) {
-            y = screenY - rect.height - padding;
-        }
-
-        this.tooltipEl.style.left = x + 'px';
-        this.tooltipEl.style.top = y + 'px';
     }
 
     /**
@@ -168,9 +137,10 @@ export class EntityTooltip {
      */
     hide() {
         this.hideTimeout = setTimeout(() => {
-            if (this.tooltipEl) {
-                this.tooltipEl.style.display = 'none';
+            if (this.element) {
+                this.element.style.display = 'none';
             }
+            this.isVisible = false;
             this.currentEntityKey = null;
         }, 100);
     }
