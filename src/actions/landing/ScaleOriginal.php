@@ -3,7 +3,6 @@
 namespace actions\landing;
 
 use actions\ConsoleAction;
-use bl\landing\generators\LandingGeneratorFactory;
 use models\Landing;
 use Yii;
 use yii\helpers\Console;
@@ -14,9 +13,6 @@ use yii\helpers\Console;
  */
 class ScaleOriginal extends ConsoleAction
 {
-    /** @var LandingGeneratorFactory */
-    private $factory;
-
     /** @var string */
     private $basePath;
 
@@ -25,18 +21,14 @@ class ScaleOriginal extends ConsoleAction
         parent::init();
 
         $this->basePath = Yii::getAlias('@app/..');
-        $this->factory = new LandingGeneratorFactory(null, null, $this->basePath);
     }
 
     public function run()
     {
         $this->stdout("=== Scaling Landing Original Images ===\n\n");
 
-        // Get all landings that have generators
-        $registeredFolders = $this->factory->getRegisteredFolders();
-        $landings = Landing::find()
-            ->where(['in', 'folder', $registeredFolders])
-            ->all();
+        // Get all landings
+        $landings = Landing::find()->all();
 
         if (empty($landings)) {
             $this->stdout("No landings to process.\n", Console::FG_YELLOW);
@@ -49,7 +41,8 @@ class ScaleOriginal extends ConsoleAction
         $failCount = 0;
 
         foreach ($landings as $landing) {
-            $generator = $this->factory->getGenerator($landing);
+            $landingBL = \bl\landing\LandingFactory::create($landing->landing_id);
+            $generator = $landingBL->getGenerator();
 
             if (!$generator) {
                 $this->stdout("Warning: No generator for '{$landing->folder}'\n", Console::FG_YELLOW);

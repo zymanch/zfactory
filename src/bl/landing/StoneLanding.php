@@ -13,7 +13,6 @@ class StoneLanding extends AbstractIslandLanding
 
     public function getGenerator(): ?\bl\landing\generators\base\AbstractLandingGenerator
     {
-        $factory = new \bl\landing\generators\LandingGeneratorFactory();
-        return $factory->getGenerator($this);
+        return new StoneLandingGenerator();
     }
 }

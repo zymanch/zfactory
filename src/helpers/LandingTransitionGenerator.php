@@ -255,24 +255,50 @@ class LandingTransitionGenerator
 
         $isShip = $this->isShipLanding($baseLandingId);
 
+        // Helper callables for generator methods
+        $cloneImage = [$this, 'cloneImage'];
+        $drawOutline = [$this, 'drawOutline'];
+        $drawLShapedOutline = [$this, 'drawLShapedOutline'];
+
         if ($topIsSame && $rightIsSame) {
             // Оба соседа совпадают - просто возвращаем копию базы
             return $this->cloneImage($base);
         } elseif (!$topIsSame && $rightIsSame) {
             // Только сверху другой - TOP transition
             return $isShip
-                ? $this->generateShipTopTransition($base, $outlineColor)
-                : $this->generateTopTransition($base, $top, $outlineColor);
+                ? \bl\landing\generators\ship\AbstractShipLandingGenerator::generateTransitionTop(
+                    $base, $outlineColor, $this->tileWidth, $this->tileHeight,
+                    $this->waveAmplitude, $cloneImage, $drawOutline
+                )
+                : \bl\landing\generators\island\AbstractIslandLandingGenerator::generateTransitionTop(
+                    $base, $top, $outlineColor, $this->tileWidth, $this->tileHeight,
+                    $this->waveAmplitude, $this->waveFrequency, $this->outlineWidth,
+                    $cloneImage, $drawOutline
+                );
         } elseif ($topIsSame && !$rightIsSame) {
             // Только справа другой - RIGHT transition
             return $isShip
-                ? $this->generateShipRightTransition($base, $outlineColor)
-                : $this->generateRightTransition($base, $right, $outlineColor);
+                ? \bl\landing\generators\ship\AbstractShipLandingGenerator::generateTransitionRight(
+                    $base, $outlineColor, $this->tileWidth, $this->tileHeight,
+                    $this->waveAmplitude, $cloneImage, $drawOutline
+                )
+                : \bl\landing\generators\island\AbstractIslandLandingGenerator::generateTransitionRight(
+                    $base, $right, $outlineColor, $this->tileWidth, $this->tileHeight,
+                    $this->waveAmplitude, $this->waveFrequency, $this->outlineWidth,
+                    $cloneImage, $drawOutline
+                );
         } else {
             // Оба соседа разные - CORNER transition
             return $isShip
-                ? $this->generateShipCornerTransition($base, $outlineColor)
-                : $this->generateCornerTransition($base, $top, $right, $outlineColor);
+                ? \bl\landing\generators\ship\AbstractShipLandingGenerator::generateTransitionCorner(
+                    $base, $outlineColor, $this->tileWidth, $this->tileHeight,
+                    $this->waveAmplitude, $cloneImage, $drawLShapedOutline
+                )
+                : \bl\landing\generators\island\AbstractIslandLandingGenerator::generateTransitionCorner(
+                    $base, $top, $right, $outlineColor, $this->tileWidth, $this->tileHeight,
+                    $this->waveAmplitude, $this->waveFrequency, $this->outlineWidth,
+                    $cloneImage, $drawLShapedOutline
+                );
         }
     }
 

@@ -31,6 +31,16 @@ export class ManipulatorState {
         // Links (set during link calculation)
         this.sourceEntityId = null;  // Where to pick from (behind)
         this.targetEntityId = null;  // Where to place (in front)
+
+        // Filter configuration (for filtered manipulators)
+        this.filterResourceIds = [];         // Array of resource IDs to filter
+        this.maxTransferCount = null;        // Max items to transfer (for counting manipulator)
+        this.currentTransferCount = 0;       // Current transfer count
+
+        // Check if this is a filtered manipulator
+        const entityTypeId = entityType.entity_type_id;
+        const baseTypeId = entityTypeId % 100;
+        this.isFilteredManipulator = [216, 220, 221].includes(baseTypeId);
     }
 
     /**
@@ -65,6 +75,53 @@ export class ManipulatorState {
         this.resourceAmount = data.amount || 1;
         this.position_px = parseInt(data.position_px) || 0;
         this.status = data.status || 'idle';
+
+        // Load filter configuration if present
+        if (data.config) {
+            this.filterResourceIds = data.config.filter_resource_ids || [];
+            this.maxTransferCount = data.config.max_transfer_count || null;
+            this.currentTransferCount = data.config.current_transfer_count || 0;
+        }
+    }
+
+    /**
+     * Check if manipulator can pick a specific resource (based on filter and counter)
+     */
+    canPickResource(resourceId) {
+        // Non-filtered manipulators can pick anything
+        if (!this.isFilteredManipulator) {
+            return true;
+        }
+
+        // Check filter
+        if (this.filterResourceIds.length > 0) {
+            if (!this.filterResourceIds.includes(resourceId)) {
+                return false;
+            }
+        }
+
+        // Check counter limit
+        if (this.maxTransferCount !== null && this.currentTransferCount >= this.maxTransferCount) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Increment transfer counter after successful transfer
+     */
+    onTransferComplete() {
+        if (this.maxTransferCount !== null) {
+            this.currentTransferCount++;
+        }
+    }
+
+    /**
+     * Reset transfer counter
+     */
+    resetCounter() {
+        this.currentTransferCount = 0;
     }
 
     /**

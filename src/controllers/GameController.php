@@ -49,6 +49,7 @@ class GameController extends Controller
             'save-state' => \actions\game\SaveState::class,
             'finish-construction' => \actions\game\FinishConstruction::class,
             'add-user-resource' => \actions\game\AddUserResource::class,
+            'save-manipulator-config' => \actions\game\SaveManipulatorConfig::class,
         ];
     }
 }

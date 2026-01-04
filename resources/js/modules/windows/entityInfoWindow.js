@@ -175,6 +175,9 @@ export class EntityInfoWindow {
         html += `<div id="entity-type-specific-content"></div>`;
 
         this.element.querySelector('.window-content').innerHTML = html;
+
+        // Add manipulator configuration UI if applicable
+        this.renderManipulatorConfigIfNeeded(entity, entityType);
     }
 
     /**
@@ -456,6 +459,166 @@ export class EntityInfoWindow {
             return (amount / 1000).toFixed(1) + 'K';
         }
         return amount.toString();
+    }
+
+    /**
+     * Render manipulator configuration UI if entity is a filtered manipulator
+     */
+    renderManipulatorConfigIfNeeded(entity, entityType) {
+        // Check if entity is a filtered manipulator (types 216, 220, 221 + orientations)
+        const entityTypeId = entityType.entity_type_id;
+        const baseTypeId = entityTypeId % 100; // Remove orientation offset
+
+        const isFilteredManipulator = [216, 220, 221].includes(baseTypeId);
+
+        if (!isFilteredManipulator) {
+            return;
+        }
+
+        // Render configuration UI
+        this.renderManipulatorConfig(entity, entityType, baseTypeId);
+    }
+
+    /**
+     * Render manipulator configuration UI
+     */
+    async renderManipulatorConfig(entity, entityType, baseTypeId) {
+        const container = this.element.querySelector('#entity-type-specific-content');
+        if (!container) return;
+
+        // Determine filter count
+        const filterCount = baseTypeId === 220 ? 5 : 1;
+        const hasCounter = baseTypeId === 221;
+
+        // Fetch current configuration
+        let config = null;
+        try {
+            const response = await fetch(`/game/entity-resources?entity_id=${entity.entity_id}`);
+            const data = await response.json();
+            config = data?.config || null;
+        } catch (error) {
+            console.error('Failed to fetch manipulator config:', error);
+        }
+
+        const filterResourceIds = config?.filter_resource_ids || [];
+        const maxTransferCount = config?.max_transfer_count || '';
+
+        // Build HTML
+        let html = `
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #4a4a5a;">
+                <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #fff;">Конфигурация фильтра</div>
+        `;
+
+        // Resource filters
+        const resources = Object.values(this.game.resources || {});
+        for (let i = 0; i < filterCount; i++) {
+            const currentValue = filterResourceIds[i] || '';
+            html += `
+                <div style="margin-bottom: 8px;">
+                    <label style="display: block; font-size: 12px; margin-bottom: 4px; color: #aaa;">Ресурс ${i + 1}:</label>
+                    <select class="manipulator-filter-select" data-index="${i}" style="width: 100%; padding: 6px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 4px; color: #fff; font-size: 12px;">
+                        <option value="">-- Не выбран --</option>
+                        ${resources.map(res => `
+                            <option value="${res.resource_id}" ${res.resource_id == currentValue ? 'selected' : ''}>
+                                ${res.name}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+            `;
+        }
+
+        // Counter input (for counting manipulator only)
+        if (hasCounter) {
+            html += `
+                <div style="margin-bottom: 8px;">
+                    <label style="display: block; font-size: 12px; margin-bottom: 4px; color: #aaa;">Макс. количество передач:</label>
+                    <input type="number" id="manipulator-max-count" min="1" value="${maxTransferCount}" placeholder="Без ограничений" style="width: 100%; padding: 6px; background: #2a2a3a; border: 1px solid #4a4a5a; border-radius: 4px; color: #fff; font-size: 12px;">
+                </div>
+            `;
+        }
+
+        // Save button
+        html += `
+                <button id="save-manipulator-config" style="width: 100%; margin-top: 10px; padding: 8px; background: #4a9; border: none; border-radius: 4px; color: #fff; font-size: 13px; font-weight: bold; cursor: pointer;">
+                    Сохранить
+                </button>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+        // Attach event listener to save button
+        const saveButton = container.querySelector('#save-manipulator-config');
+        if (saveButton) {
+            saveButton.addEventListener('click', () => {
+                this.saveManipulatorConfig(entity, filterCount, hasCounter);
+            });
+        }
+    }
+
+    /**
+     * Save manipulator configuration
+     */
+    async saveManipulatorConfig(entity, filterCount, hasCounter) {
+        const container = this.element.querySelector('#entity-type-specific-content');
+        if (!container) return;
+
+        // Collect filter resource IDs
+        const filterResourceIds = [];
+        const selects = container.querySelectorAll('.manipulator-filter-select');
+        selects.forEach(select => {
+            const value = parseInt(select.value);
+            if (value) {
+                filterResourceIds.push(value);
+            }
+        });
+
+        // Collect max transfer count (if applicable)
+        let maxTransferCount = null;
+        if (hasCounter) {
+            const input = container.querySelector('#manipulator-max-count');
+            if (input && input.value) {
+                maxTransferCount = parseInt(input.value);
+            }
+        }
+
+        // Send to server
+        try {
+            const response = await fetch('/game/save-manipulator-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    entity_id: entity.entity_id,
+                    'filter_resource_ids[]': filterResourceIds,
+                    max_transfer_count: maxTransferCount || '',
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.result === 'success') {
+                console.log('Manipulator config saved successfully');
+                // Update UI to show success
+                const saveButton = container.querySelector('#save-manipulator-config');
+                if (saveButton) {
+                    saveButton.textContent = 'Сохранено!';
+                    saveButton.style.background = '#4a4';
+                    setTimeout(() => {
+                        saveButton.textContent = 'Сохранить';
+                        saveButton.style.background = '#4a9';
+                    }, 2000);
+                }
+            } else {
+                console.error('Failed to save manipulator config:', data.error);
+                alert('Ошибка сохранения: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Failed to save manipulator config:', error);
+            alert('Ошибка сохранения конфигурации');
+        }
     }
 }
 

@@ -4,7 +4,6 @@ namespace actions\landing;
 
 use actions\ConsoleAction;
 use app\client\ComfyUIClient;
-use bl\landing\generators\LandingGeneratorFactory;
 use models\Landing;
 use Yii;
 use yii\helpers\Console;
@@ -25,9 +24,6 @@ class GenerateAiFlux extends ConsoleAction
     /** @var ComfyUIClient */
     private $fluxClient;
 
-    /** @var LandingGeneratorFactory */
-    private $factory;
-
     /** @var string */
     private $basePath;
 
@@ -37,7 +33,6 @@ class GenerateAiFlux extends ConsoleAction
 
         $this->basePath = Yii::getAlias('@app/..');
         $this->fluxClient = new ComfyUIClient();
-        $this->factory = new LandingGeneratorFactory($this->fluxClient, null, $this->basePath);
     }
 
     public function run($landingName = 'all', $testMode = false)
@@ -77,7 +72,8 @@ class GenerateAiFlux extends ConsoleAction
         $failCount = 0;
 
         foreach ($landingsToProcess as $landing) {
-            $generator = $this->factory->getGenerator($landing);
+            $landingBL = \bl\landing\LandingFactory::create($landing->landing_id);
+            $generator = $landingBL->getGenerator();
 
             if (!$generator) {
                 $this->stdout("Warning: No generator for '{$landing->folder}'\n", Console::FG_YELLOW);
@@ -132,13 +128,9 @@ class GenerateAiFlux extends ConsoleAction
      */
     private function getLandingsToProcess(string $landingName): array
     {
-        $registeredFolders = $this->factory->getRegisteredFolders();
-
         if ($landingName === 'all') {
-            // Get all landings that have generators
-            return Landing::find()
-                ->where(['in', 'folder', $registeredFolders])
-                ->all();
+            // Get all landings
+            return Landing::find()->all();
         } else {
             // Get specific landing
             $landing = Landing::find()
@@ -147,11 +139,6 @@ class GenerateAiFlux extends ConsoleAction
 
             if (!$landing) {
                 $this->stdout("Error: Landing '{$landingName}' not found.\n", Console::FG_RED);
-                return [];
-            }
-
-            if (!$this->factory->hasGenerator($landingName)) {
-                $this->stdout("Error: No generator for landing '{$landingName}'.\n", Console::FG_RED);
                 return [];
             }
 

@@ -18,6 +18,7 @@ namespace models\base;
  * @property integer $height
  * @property string $icon_url
  * @property integer $power
+ * @property integer $center_position_px
  * @property integer $parent_entity_type_id
  * @property string $orientation
  * @property string $animation_fps
@@ -50,7 +51,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         return [
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::IMAGE_URL], 'required'],
-            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS], 'integer'],
+            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::CENTER_POSITION_PX, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS], 'integer'],
             [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION], 'string'],
             [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
@@ -77,6 +78,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::HEIGHT => 'Height',
             BaseEntityTypePeer::ICON_URL => 'Icon Url',
             BaseEntityTypePeer::POWER => 'Power',
+            BaseEntityTypePeer::CENTER_POSITION_PX => 'Center Position Px',
             BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID => 'Parent Entity Type ID',
             BaseEntityTypePeer::ORIENTATION => 'Orientation',
             BaseEntityTypePeer::ANIMATION_FPS => 'Animation Fps',
@@ -161,6 +163,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'height' => BaseEntityTypePeer::HEIGHT,
             'icon_url' => BaseEntityTypePeer::ICON_URL,
             'power' => BaseEntityTypePeer::POWER,
+            'center_position_px' => BaseEntityTypePeer::CENTER_POSITION_PX,
             'parent_entity_type_id' => BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID,
             'orientation' => BaseEntityTypePeer::ORIENTATION,
             'animation_fps' => BaseEntityTypePeer::ANIMATION_FPS,
