@@ -9,6 +9,11 @@ use yii\helpers\Console;
 /**
  * Conveyor sprite processing commands
  * Handles animation frames, connection variants, and atlas generation
+ *
+ * Supports 3 conveyor types:
+ * - basic: conveyor, conveyor_up, conveyor_down, conveyor_left
+ * - dual: conveyor_dual, conveyor_dual_up, conveyor_dual_down, conveyor_dual_left
+ * - fast_dual: conveyor_fast_dual, conveyor_fast_dual_up, conveyor_fast_dual_down, conveyor_fast_dual_left
  */
 class ConveyorController extends Controller
 {
@@ -18,6 +23,13 @@ class ConveyorController extends Controller
     const CONNECTION_VARIANTS = 16;  // Вариантов соединений (4-bit = 2^4)
     const TILE_WIDTH = 64;           // Размер тайла в пикселях
     const TILE_HEIGHT = 64;
+
+    // Типы конвейеров
+    const CONVEYOR_TYPES = [
+        'basic' => 'conveyor',
+        'dual' => 'conveyor_dual',
+        'fast_dual' => 'conveyor_fast_dual',
+    ];
 
     private $basePath;
     private $entityDir;
@@ -30,14 +42,86 @@ class ConveyorController extends Controller
     }
 
     /**
-     * Делает спрайт конвейера симметричным (зеркалирует нижнюю половину наверх)
-     * Usage: php yii conveyor/mirror-normal
+     * Get folder name for conveyor type
      */
-    public function actionMirrorNormal()
+    private function getConveyorFolder($type)
+    {
+        return self::CONVEYOR_TYPES[$type] ?? 'conveyor';
+    }
+
+    /**
+     * Get orientation folders for conveyor type
+     */
+    private function getOrientationFolders($type)
+    {
+        $base = $this->getConveyorFolder($type);
+        return [
+            $base . '_up' => -90,    // 90° против часовой (CCW): RIGHT -> UP
+            $base . '_down' => 90,   // 90° по часовой (CW): RIGHT -> DOWN
+            $base . '_left' => 180   // 180°: RIGHT -> LEFT
+        ];
+    }
+
+    /**
+     * Get all orientation folders including base
+     */
+    private function getAllOrientationFolders($type)
+    {
+        $base = $this->getConveyorFolder($type);
+        return [$base, $base . '_up', $base . '_down', $base . '_left'];
+    }
+
+    /**
+     * Shows available conveyor types and usage examples
+     * Usage: php yii conveyor/list-types
+     */
+    public function actionListTypes()
+    {
+        $this->stdout("=== Available Conveyor Types ===\n\n", Console::FG_CYAN);
+
+        foreach (self::CONVEYOR_TYPES as $type => $folder) {
+            $this->stdout("Type: {$type}\n", Console::FG_GREEN);
+            $this->stdout("  Base folder: {$folder}\n");
+            $this->stdout("  Orientations: {$folder}, {$folder}_up, {$folder}_down, {$folder}_left\n");
+            $this->stdout("\n");
+        }
+
+        $this->stdout("=== Usage Examples ===\n\n", Console::FG_CYAN);
+        $this->stdout("Generate basic conveyor:\n");
+        $this->stdout("  php yii conveyor/generate-animation-frames basic\n");
+        $this->stdout("  php yii conveyor/rotate-animation-frames basic\n");
+        $this->stdout("  php yii conveyor/generate-connection-variants basic\n");
+        $this->stdout("  php yii conveyor/rotate-connection-variants basic\n");
+        $this->stdout("  php yii conveyor/generate-atlases basic\n\n");
+
+        $this->stdout("Generate dual-lane conveyor:\n");
+        $this->stdout("  php yii conveyor/generate-animation-frames dual\n");
+        $this->stdout("  php yii conveyor/rotate-animation-frames dual\n");
+        $this->stdout("  php yii conveyor/generate-connection-variants dual\n");
+        $this->stdout("  php yii conveyor/rotate-connection-variants dual\n");
+        $this->stdout("  php yii conveyor/generate-atlases dual\n\n");
+
+        $this->stdout("Generate fast dual-lane conveyor:\n");
+        $this->stdout("  php yii conveyor/generate-animation-frames fast_dual\n");
+        $this->stdout("  php yii conveyor/rotate-animation-frames fast_dual\n");
+        $this->stdout("  php yii conveyor/generate-connection-variants fast_dual\n");
+        $this->stdout("  php yii conveyor/rotate-connection-variants fast_dual\n");
+        $this->stdout("  php yii conveyor/generate-atlases fast_dual\n\n");
+
+        return 0;
+    }
+
+    /**
+     * Делает спрайт конвейера симметричным (зеркалирует нижнюю половину наверх)
+     * Usage: php yii conveyor/mirror-normal [type]
+     * @param string $type Conveyor type: basic, dual, fast_dual (default: basic)
+     */
+    public function actionMirrorNormal($type = 'basic')
     {
         $this->stdout("=== Mirror Conveyor Sprite (Make Symmetrical) ===\n\n", Console::FG_CYAN);
+        $this->stdout("Type: {$type}\n\n");
 
-        $conveyorPath = $this->entityDir . '/conveyor';
+        $conveyorPath = $this->entityDir . '/' . $this->getConveyorFolder($type);
         $normalPath = $conveyorPath . '/normal.png';
 
         if (!file_exists($normalPath)) {
@@ -101,13 +185,15 @@ class ConveyorController extends Controller
 
     /**
      * Generates 8 animation frames for conveyor belt
-     * Usage: php yii conveyor/generate-animation-frames
+     * Usage: php yii conveyor/generate-animation-frames [type]
+     * @param string $type Conveyor type: basic, dual, fast_dual (default: basic)
      */
-    public function actionGenerateAnimationFrames()
+    public function actionGenerateAnimationFrames($type = 'basic')
     {
         $this->stdout("=== Generate Conveyor Animation Frames ===\n\n", Console::FG_CYAN);
+        $this->stdout("Type: {$type}\n\n");
 
-        $conveyorPath = $this->entityDir . '/conveyor';
+        $conveyorPath = $this->entityDir . '/' . $this->getConveyorFolder($type);
         $normalPath = $conveyorPath . '/normal.png';
 
         if (!file_exists($normalPath)) {
@@ -262,19 +348,16 @@ class ConveyorController extends Controller
 
     /**
      * Rotates animation frames for other orientations (up, down, left)
-     * Usage: php yii conveyor/rotate-animation-frames
+     * Usage: php yii conveyor/rotate-animation-frames [type]
+     * @param string $type Conveyor type: basic, dual, fast_dual (default: basic)
      */
-    public function actionRotateAnimationFrames()
+    public function actionRotateAnimationFrames($type = 'basic')
     {
         $this->stdout("=== Rotate Animation Frames for Other Orientations ===\n\n", Console::FG_CYAN);
+        $this->stdout("Type: {$type}\n\n");
 
-        $orientations = [
-            'conveyor_up' => -90,    // 90° против часовой (CCW): RIGHT -> UP
-            'conveyor_down' => 90,   // 90° по часовой (CW): RIGHT -> DOWN
-            'conveyor_left' => 180   // 180°: RIGHT -> LEFT
-        ];
-
-        $conveyorPath = $this->entityDir . '/conveyor';
+        $orientations = $this->getOrientationFolders($type);
+        $conveyorPath = $this->entityDir . '/' . $this->getConveyorFolder($type);
 
         // Проверяем что кадры существуют
         $frame001 = $conveyorPath . '/normal_001.png';
@@ -327,11 +410,7 @@ class ConveyorController extends Controller
                 $totalFrames++;
             }
 
-            if ($reverseFrames) {
-                $this->stdout("  ✓ Rotated " . self::ANIMATION_FRAMES . " frames (reversed)\n", Console::FG_GREEN);
-            } else {
-                $this->stdout("  ✓ Rotated " . self::ANIMATION_FRAMES . " frames\n", Console::FG_GREEN);
-            }
+            $this->stdout("  ✓ Rotated " . self::ANIMATION_FRAMES . " frames\n", Console::FG_GREEN);
         }
 
         $this->stdout("\n✓ Total frames rotated: {$totalFrames}\n", Console::FG_GREEN);
@@ -341,13 +420,15 @@ class ConveyorController extends Controller
 
     /**
      * Generates 16 connection variants for conveyors
-     * Usage: php yii conveyor/generate-connection-variants
+     * Usage: php yii conveyor/generate-connection-variants [type]
+     * @param string $type Conveyor type: basic, dual, fast_dual (default: basic)
      */
-    public function actionGenerateConnectionVariants()
+    public function actionGenerateConnectionVariants($type = 'basic')
     {
         $this->stdout("=== Generate Connection Variants (16 variants × 8 frames) ===\n\n", Console::FG_CYAN);
+        $this->stdout("Type: {$type}\n\n");
 
-        $conveyorPath = $this->entityDir . '/conveyor';
+        $conveyorPath = $this->entityDir . '/' . $this->getConveyorFolder($type);
 
         // Проверяем что кадры существуют
         $frame001 = $conveyorPath . '/normal_001.png';
@@ -653,19 +734,16 @@ class ConveyorController extends Controller
 
     /**
      * Rotates connection variants for other orientations (up, down, left)
-     * Usage: php yii conveyor/rotate-connection-variants
+     * Usage: php yii conveyor/rotate-connection-variants [type]
+     * @param string $type Conveyor type: basic, dual, fast_dual (default: basic)
      */
-    public function actionRotateConnectionVariants()
+    public function actionRotateConnectionVariants($type = 'basic')
     {
         $this->stdout("=== Rotate Connection Variants for Other Orientations ===\n\n", Console::FG_CYAN);
+        $this->stdout("Type: {$type}\n\n");
 
-        $orientations = [
-            'conveyor_up' => -90,    // 90° против часовой (CCW): RIGHT -> UP
-            'conveyor_down' => 90,   // 90° по часовой (CW): RIGHT -> DOWN
-            'conveyor_left' => 180   // 180°: RIGHT -> LEFT
-        ];
-
-        $conveyorPath = $this->entityDir . '/conveyor';
+        $orientations = $this->getOrientationFolders($type);
+        $conveyorPath = $this->entityDir . '/' . $this->getConveyorFolder($type);
 
         // Проверяем что варианты существуют
         $variant00_001 = $conveyorPath . '/variant_00_001.png';
@@ -728,8 +806,7 @@ class ConveyorController extends Controller
                 }
             }
 
-            $suffix = $reverseFrames ? " (reversed)" : "";
-            $this->stdout("  ✓ Rotated " . (self::CONNECTION_VARIANTS * self::ANIMATION_FRAMES) . " variants{$suffix}\n", Console::FG_GREEN);
+            $this->stdout("  ✓ Rotated " . (self::CONNECTION_VARIANTS * self::ANIMATION_FRAMES) . " variants\n", Console::FG_GREEN);
         }
 
         $this->stdout("\n✓ Total variants rotated: {$totalRotated}\n", Console::FG_GREEN);
@@ -782,17 +859,20 @@ class ConveyorController extends Controller
 
     /**
      * Добавляет отладочный текст на спрайты конвейеров (ориентация + вариант)
-     * Usage: php yii conveyor/add-debug-text
+     * Usage: php yii conveyor/add-debug-text [type]
+     * @param string $type Conveyor type: basic, dual, fast_dual (default: basic)
      */
-    public function actionAddDebugText()
+    public function actionAddDebugText($type = 'basic')
     {
         $this->stdout("=== Add Debug Text to Conveyor Sprites ===\n\n", Console::FG_CYAN);
+        $this->stdout("Type: {$type}\n\n");
 
+        $base = $this->getConveyorFolder($type);
         $orientations = [
-            'conveyor' => 'R',       // Right
-            'conveyor_up' => 'U',    // Up
-            'conveyor_down' => 'D',  // Down
-            'conveyor_left' => 'L'   // Left
+            $base => 'R',       // Right
+            $base . '_up' => 'U',    // Up
+            $base . '_down' => 'D',  // Down
+            $base . '_left' => 'L'   // Left
         ];
 
         $totalProcessed = 0;
@@ -894,13 +974,15 @@ class ConveyorController extends Controller
     /**
      * Generates texture atlases for conveyors
      * Creates 5 atlases per orientation (normal, damaged, blueprint, selected)
-     * Usage: php yii conveyor/generate-atlases
+     * Usage: php yii conveyor/generate-atlases [type]
+     * @param string $type Conveyor type: basic, dual, fast_dual (default: basic)
      */
-    public function actionGenerateAtlases()
+    public function actionGenerateAtlases($type = 'basic')
     {
         $this->stdout("=== Generate Texture Atlases (512×192px) ===\n\n", Console::FG_CYAN);
+        $this->stdout("Type: {$type}\n\n");
 
-        $orientations = ['conveyor', 'conveyor_up', 'conveyor_down', 'conveyor_left'];
+        $orientations = $this->getAllOrientationFolders($type);
 
         $atlasGenerator = new \helpers\ConveyorAtlasGenerator($this->basePath);
 

@@ -3,7 +3,7 @@
 namespace bl\entity\types;
 
 use bl\entity\generators\base\AbstractEntityGenerator;
-use bl\entity\generators\EntityGeneratorFactory;
+use bl\entity\generators\deposit;
 use models\EntityType;
 
 /**
@@ -12,28 +12,39 @@ use models\EntityType;
  */
 abstract class AbstractEntityType extends EntityType
 {
-    /** @var EntityGeneratorFactory */
-    private static $generatorFactory;
-
     /**
      * Get the generator for this entity type
+     * Default implementation for deposits (no category subclass)
+     * Override in category subclasses (Building, Tree, etc.)
      * @return AbstractEntityGenerator|null
      */
     public function getGenerator(): ?AbstractEntityGenerator
     {
-        return self::getGeneratorFactory()->getGenerator($this->image_url);
-    }
+        // Handle deposits (they don't have their own category subclass)
+        $generatorClass = null;
 
-    /**
-     * Get generator factory instance (singleton)
-     * @return EntityGeneratorFactory
-     */
-    protected static function getGeneratorFactory(): EntityGeneratorFactory
-    {
-        if (self::$generatorFactory === null) {
-            self::$generatorFactory = new EntityGeneratorFactory();
+        switch ($this->image_url) {
+            case 'ore_iron':
+                $generatorClass = deposit\IronOreGenerator::class;
+                break;
+            case 'ore_copper':
+                $generatorClass = deposit\CopperOreGenerator::class;
+                break;
+            case 'ore_aluminum':
+                $generatorClass = deposit\AluminumOreGenerator::class;
+                break;
+            case 'ore_titanium':
+                $generatorClass = deposit\TitaniumOreGenerator::class;
+                break;
+            case 'ore_silver':
+                $generatorClass = deposit\SilverOreGenerator::class;
+                break;
+            case 'ore_gold':
+                $generatorClass = deposit\GoldOreGenerator::class;
+                break;
         }
-        return self::$generatorFactory;
+
+        return $generatorClass ? new $generatorClass($this) : null;
     }
 
     /**

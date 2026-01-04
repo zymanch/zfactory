@@ -385,8 +385,7 @@ export class TechnologyWindow {
      * Get user's amount of a resource
      */
     getUserResourceAmount(resourceId) {
-        const userRes = this.game.userResources?.find(r => r.resource_id === resourceId);
-        return userRes?.quantity || 0;
+        return this.game.userResources?.[resourceId] || 0;
     }
 
     /**

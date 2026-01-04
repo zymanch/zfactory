@@ -62,8 +62,8 @@ export class BuildMode extends GameModeBase {
         this.entityTypeId = newTypeId;
         this.createPreviewSprite();
 
-        // Update preview position if we have a current tile
-        if (this.currentTile.x >= 0 && this.currentTile.y >= 0) {
+        // Update preview position if we have a current tile and preview sprite was created
+        if (this.previewSprite && this.currentTile.x >= 0 && this.currentTile.y >= 0) {
             const { tileWidth, tileHeight } = this.game.config;
             const pos = tileToWorld(this.currentTile.x, this.currentTile.y, tileWidth, tileHeight);
             this.previewSprite.x = pos.x;
@@ -196,12 +196,33 @@ export class BuildMode extends GameModeBase {
     }
 
     /**
+     * Adjust tile coordinates based on building size
+     * Places cursor at bottom-center of building
+     */
+    adjustTileForBuildingSize(mouseTileX, mouseTileY) {
+        const entityType = this.game.entityTypes[this.entityTypeId];
+        if (!entityType) return { x: mouseTileX, y: mouseTileY };
+
+        const width = parseInt(entityType.width) || 1;
+        const height = parseInt(entityType.height) || 1;
+
+        // Formula:
+        // x = mouseX - floor(width / 2)
+        // y = mouseY - height + 1
+        const adjustedX = mouseTileX - Math.floor(width / 2);
+        const adjustedY = mouseTileY - height + 1;
+
+        return { x: adjustedX, y: adjustedY };
+    }
+
+    /**
      * Update preview position based on mouse
      */
     updatePreview(screenX, screenY) {
         if (!this.isActive || !this.previewSprite) return;
 
-        const tile = this.game.input.screenToTile(screenX, screenY);
+        const mouseTile = this.game.input.screenToTile(screenX, screenY);
+        const tile = this.adjustTileForBuildingSize(mouseTile.x, mouseTile.y);
 
         if (tile.x === this.currentTile.x && tile.y === this.currentTile.y) {
             return;
@@ -305,7 +326,8 @@ export class BuildMode extends GameModeBase {
         if (!this.isActive || !this.canPlace) return;
         if (e.target !== this.game.app.canvas) return;
 
-        const tile = this.game.input.screenToTile(e.clientX, e.clientY);
+        const mouseTile = this.game.input.screenToTile(e.clientX, e.clientY);
+        const tile = this.adjustTileForBuildingSize(mouseTile.x, mouseTile.y);
         this.placeBuilding(tile.x, tile.y);
     }
 
@@ -377,6 +399,18 @@ export class BuildMode extends GameModeBase {
                 if (data.depositsRemoved && data.depositsRemoved.length > 0) {
                     const depositIds = data.depositsRemoved.map(d => d.deposit_id);
                     this.game.depositManager.removeDeposits(depositIds);
+                }
+
+                // Remove old HQ from client if it was replaced by new HQ
+                if (data.oldHqRemoved) {
+                    const oldHqKey = `entity_${data.oldHqRemoved.entity_id}`;
+                    this.game.entityData.delete(oldHqKey);
+                    const oldHqSprite = this.game.loadedEntities.get(oldHqKey);
+                    if (oldHqSprite) {
+                        this.game.entityLayer.removeChild(oldHqSprite);
+                        oldHqSprite.destroy();
+                        this.game.loadedEntities.delete(oldHqKey);
+                    }
                 }
 
                 this.game.renderEntities([data.entity]);

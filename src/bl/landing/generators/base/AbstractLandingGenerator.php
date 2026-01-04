@@ -54,7 +54,7 @@ abstract class AbstractLandingGenerator
      * Get positive prompt for Stable Diffusion generation
      * @return string
      */
-    public function getStableDiffusionPositivePrompt(): string
+    protected function getStableDiffusionPositivePrompt(): string
     {
         return $this->getFluxPositivePrompt();
     }
@@ -63,7 +63,7 @@ abstract class AbstractLandingGenerator
      * Get negative prompt for Stable Diffusion generation
      * @return string
      */
-    public function getStableDiffusionNegativePrompt(): string
+    protected function getStableDiffusionNegativePrompt(): string
     {
         return $this->getFluxNegativePrompt();
     }
@@ -87,7 +87,7 @@ abstract class AbstractLandingGenerator
      * Get generation width for AI
      * @return int
      */
-    public function getFluxGenerationWidth(): int
+    protected function getFluxGenerationWidth(): int
     {
         return 512;
     }
@@ -96,7 +96,7 @@ abstract class AbstractLandingGenerator
      * Get generation height for AI
      * @return int
      */
-    public function getFluxGenerationHeight(): int
+    protected function getFluxGenerationHeight(): int
     {
         return 384;
     }
@@ -105,7 +105,7 @@ abstract class AbstractLandingGenerator
      * Get FLUX generation steps
      * @return int
      */
-    public function getFluxSteps(): int
+    protected function getFluxSteps(): int
     {
         return 28;
     }
@@ -114,7 +114,7 @@ abstract class AbstractLandingGenerator
      * Get FLUX CFG scale
      * @return float
      */
-    public function getFluxCfgScale(): float
+    protected function getFluxCfgScale(): float
     {
         return 1.5;
     }
@@ -123,7 +123,7 @@ abstract class AbstractLandingGenerator
      * Whether to apply seamless tiling post-processing
      * @return bool
      */
-    public function shouldMakeSeamless(): bool
+    protected function shouldMakeSeamless(): bool
     {
         return true;
     }
@@ -132,7 +132,7 @@ abstract class AbstractLandingGenerator
      * Whether to apply bottom transparency (for edge types)
      * @return bool
      */
-    public function shouldMakeBottomTransparent(): bool
+    protected function shouldMakeBottomTransparent(): bool
     {
         return false;
     }
@@ -141,7 +141,7 @@ abstract class AbstractLandingGenerator
      * Get bottom transparency percentage (0.0-1.0)
      * @return float
      */
-    public function getBottomTransparencyHeight(): float
+    protected function getBottomTransparencyHeight(): float
     {
         return 0.5;
     }
@@ -246,6 +246,103 @@ abstract class AbstractLandingGenerator
     }
 
     /**
+     * Load sprite variation as GD resource
+     * @param int $variation Variation number (0-4)
+     * @return resource GD image resource
+     */
+    protected function loadSpriteVariation(int $variation)
+    {
+        $path = $this->getOriginalPath($variation);
+        if (!file_exists($path)) {
+            throw new \RuntimeException("Sprite variation {$variation} not found at {$path}");
+        }
+
+        $gd = imagecreatefrompng($path);
+        if (!$gd) {
+            throw new \RuntimeException("Failed to load sprite variation {$variation}");
+        }
+
+        imagealphablending($gd, false);
+        imagesavealpha($gd, true);
+
+        return $gd;
+    }
+
+    /**
+     * Save GD resource as sprite variation
+     * @param resource $gd GD image resource
+     * @param int $variation Variation number (0-4)
+     * @return bool Success
+     */
+    protected function saveSpriteVariation($gd, int $variation): bool
+    {
+        $path = $this->getOriginalPath($variation);
+        $result = imagepng($gd, $path, 9);
+
+        if ($result && $this->shouldMakeBottomTransparent()) {
+            LandingImageProcessor::makeBottomTransparent($path, $this->getBottomTransparencyHeight());
+        }
+
+        return $result;
+    }
+
+    /**
+     * Generate single sprite variation using Stable Diffusion img2img
+     * @param int $variation Variation number (1-4, 0 is base sprite)
+     * @return resource|false GD image resource or false on failure
+     */
+    public function generateSpriteVariation(int $variation)
+    {
+        if (!$this->sdClient) {
+            echo "  Error: Stable Diffusion client not available\n";
+            return false;
+        }
+
+        $originalPath = $this->getOriginalPath(0);
+        if (!file_exists($originalPath)) {
+            echo "  Error: Base image not found\n";
+            return false;
+        }
+
+        $baseImageBase64 = base64_encode(file_get_contents($originalPath));
+        $variationPrompts = $this->getVariationPrompts();
+
+        // Build prompt for this variation
+        $modifier = $variationPrompts[$variation - 1] ?? '';
+        $varPrompt = $this->getStableDiffusionPositivePrompt();
+        if (!empty($modifier)) {
+            $varPrompt .= ', ' . $modifier;
+        }
+
+        // Generate with Stable Diffusion
+        $result = $this->sdClient->img2img(
+            $baseImageBase64,
+            $varPrompt,
+            $this->getStableDiffusionNegativePrompt(),
+            $this->getFluxGenerationWidth(),
+            $this->getFluxGenerationHeight(),
+            ['denoising_strength' => 0.25]
+        );
+
+        if (!$result) {
+            return false;
+        }
+
+        // Convert base64 to GD resource
+        $imageData = base64_decode($result->imageBase64);
+        $gd = imagecreatefromstring($imageData);
+
+        if (!$gd) {
+            return false;
+        }
+
+        imagealphablending($gd, false);
+        imagesavealpha($gd, true);
+
+        return $gd;
+    }
+
+    /**
      * Generate variations using Stable Diffusion img2img
      * @param Landing $landing
      * @return bool
@@ -263,41 +360,28 @@ abstract class AbstractLandingGenerator
             return false;
         }
 
-        $baseImageBase64 = base64_encode(file_get_contents($originalPath));
         $variationPrompts = $this->getVariationPrompts();
         $variationsCount = min($this->getVariationsCount() - 1, count($variationPrompts));
 
         echo "  Generating {$variationsCount} variations with Stable Diffusion...\n";
 
         for ($i = 0; $i < $variationsCount; $i++) {
-            $modifier = $variationPrompts[$i] ?? '';
-            $varPrompt = $this->getStableDiffusionPositivePrompt();
-            if (!empty($modifier)) {
-                $varPrompt .= ', ' . $modifier;
-            }
+            $variationNumber = $i + 1;
+            $gd = $this->generateSpriteVariation($variationNumber);
 
-            $result = $this->sdClient->img2img(
-                $baseImageBase64,
-                $varPrompt,
-                $this->getStableDiffusionNegativePrompt(),
-                $this->getFluxGenerationWidth(),
-                $this->getFluxGenerationHeight(),
-                ['denoising_strength' => 0.25]
-            );
-
-            if (!$result) {
-                echo "    Warning: Failed to generate variation " . ($i + 1) . "\n";
+            if (!$gd) {
+                echo "    Warning: Failed to generate variation {$variationNumber}\n";
                 continue;
             }
 
-            $varPath = $this->getOriginalPath($i + 1);
-            file_put_contents($varPath, base64_decode($result->imageBase64));
+            $success = $this->saveSpriteVariation($gd, $variationNumber);
+            imagedestroy($gd);
 
-            if ($this->shouldMakeBottomTransparent()) {
-                LandingImageProcessor::makeBottomTransparent($varPath, $this->getBottomTransparencyHeight());
+            if ($success) {
+                echo "    Saved variation {$variationNumber}\n";
+            } else {
+                echo "    Warning: Failed to save variation {$variationNumber}\n";
             }
-
-            echo "    Saved variation " . ($i + 1) . "\n";
         }
 
         return true;

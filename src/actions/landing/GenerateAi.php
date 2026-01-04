@@ -76,11 +76,35 @@ class GenerateAi extends ConsoleAction
             $this->stdout("Landing: {$landing->folder} ({$landing->name})\n");
 
             try {
-                $success = $generator->generateVariationsWithStableDiffusion($landing);
+                $variationPrompts = $generator->getVariationPrompts();
+                $variationsCount = min($generator->getVariationsCount() - 1, count($variationPrompts));
 
-                if ($success) {
+                $this->stdout("  Generating {$variationsCount} variations with Stable Diffusion...\n");
+
+                $generatedCount = 0;
+                for ($i = 0; $i < $variationsCount; $i++) {
+                    $variationNumber = $i + 1;
+                    $gd = $generator->generateSpriteVariation($variationNumber);
+
+                    if (!$gd) {
+                        $this->stdout("    Warning: Failed to generate variation {$variationNumber}\n", Console::FG_YELLOW);
+                        continue;
+                    }
+
+                    $saved = $generator->saveSpriteVariation($gd, $variationNumber);
+                    imagedestroy($gd);
+
+                    if ($saved) {
+                        $generatedCount++;
+                        $this->stdout("    Saved variation {$variationNumber}\n");
+                    } else {
+                        $this->stdout("    Warning: Failed to save variation {$variationNumber}\n", Console::FG_YELLOW);
+                    }
+                }
+
+                if ($generatedCount > 0) {
                     $successCount++;
-                    $this->stdout("  Success\n", Console::FG_GREEN);
+                    $this->stdout("  Success ({$generatedCount}/{$variationsCount} variations)\n", Console::FG_GREEN);
                 } else {
                     $failCount++;
                     $this->stdout("  Failed\n", Console::FG_RED);

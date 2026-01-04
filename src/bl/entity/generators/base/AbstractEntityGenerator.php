@@ -12,15 +12,19 @@ use Yii;
  */
 abstract class AbstractEntityGenerator
 {
+    /** @var EntityType */
+    protected $entityType;
+
     /** @var ComfyUIClient */
     protected $fluxClient;
 
     /** @var string */
     protected $basePath;
 
-    public function __construct(?ComfyUIClient $fluxClient = null, ?string $basePath = null)
+    public function __construct(EntityType $entityType, ?string $basePath = null)
     {
-        $this->fluxClient = $fluxClient ?? new ComfyUIClient();
+        $this->entityType = $entityType;
+        $this->fluxClient = new ComfyUIClient();
         $this->basePath = $basePath ?? Yii::getAlias('@app/..');
     }
 
@@ -47,7 +51,7 @@ abstract class AbstractEntityGenerator
      * Higher values = more detail but slower generation
      * @return int
      */
-    public function getFluxGenerationScale(): int
+    protected function getFluxGenerationScale(): int
     {
         return 4;
     }
@@ -57,7 +61,7 @@ abstract class AbstractEntityGenerator
      * Override to false for deposits, trees, etc.
      * @return bool
      */
-    public function shouldGenerateStates(): bool
+    protected function shouldGenerateStates(): bool
     {
         return true;
     }
@@ -66,7 +70,7 @@ abstract class AbstractEntityGenerator
      * Whether to remove white background after generation
      * @return bool
      */
-    public function shouldRemoveBackground(): bool
+    protected function shouldRemoveBackground(): bool
     {
         return true;
     }
@@ -76,7 +80,7 @@ abstract class AbstractEntityGenerator
      * If true, only base orientation is generated, others are rotated
      * @return bool
      */
-    public function isRotational(): bool
+    protected function isRotational(): bool
     {
         return false;
     }
@@ -85,7 +89,7 @@ abstract class AbstractEntityGenerator
      * Get rotation angles for rotational variants
      * @return array ['_up' => 270, '_down' => 90, '_left' => 180]
      */
-    public function getRotationAngles(): array
+    protected function getRotationAngles(): array
     {
         return [
             '_up' => 270,
@@ -98,7 +102,7 @@ abstract class AbstractEntityGenerator
      * Background brightness threshold for removal (0-255)
      * @return int
      */
-    public function getBackgroundThreshold(): int
+    protected function getBackgroundThreshold(): int
     {
         return 200;
     }

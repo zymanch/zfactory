@@ -183,7 +183,7 @@ export class GameModeManager {
     // ================ BUILD MODE ================
     activateBuildMode() {
         const entityTypeId = this.modeData.entityTypeId;
-        if (!entityTypeId) {
+        if (entityTypeId === null || entityTypeId === undefined) {
             console.error('BUILD mode activated without entityTypeId');
             this.returnToNormalMode();
             return;

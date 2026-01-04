@@ -47,6 +47,9 @@ class CreateEntity extends JsonAction
             return $this->error('Invalid entity_type_id');
         }
 
+        // Special rules for HQ building
+        $isHqBuilding = ($entityType->type === 'hq');
+
         // Get current region and user
         $userId = Yii::$app->user->id;
         $currentRegionId = (int)$this->getUser()->current_region_id;
@@ -81,6 +84,11 @@ class CreateEntity extends JsonAction
             return $this->error('Not enough resources to build this');
         }
 
+        // HQ Rule 2: Can only build HQ on ship landing
+        if ($isHqBuilding && !$isShipPlacement) {
+            return $this->error('HQ can only be built on ship floors');
+        }
+
         // Check building rules using behavior system (world coordinates)
         // This checks: fog of war, landing buildability, entity collision, resource target
         $ruleCheck = BuildingRules::canPlace($entityTypeId, $worldX, $worldY, null, $currentRegionId);
@@ -91,6 +99,27 @@ class CreateEntity extends JsonAction
             return $this->error($ruleCheck['error'] ?? 'Cannot place here');
         }
 
+        // HQ Rule 1: Delete old HQ when building new one
+        if ($isHqBuilding) {
+            // Find existing HQ for this user
+            $existingHq = null;
+            if ($isShipPlacement) {
+                $existingHq = ShipEntity::find()
+                    ->joinWith('entityType')
+                    ->where(['ship_entity.user_id' => $userId])
+                    ->andWhere(['entity_type.type' => 'hq'])
+                    ->one();
+            } else {
+                $existingHq = Entity::find()
+                    ->joinWith('entityType')
+                    ->where(['entity.region_id' => $currentRegionId])
+                    ->andWhere(['entity_type.type' => 'hq'])
+                    ->one();
+            }
+
+            // We will delete the existing HQ in the transaction below
+        }
+
         // Validate target_entity_id matches the rule check (for mining entities)
         if ($targetEntityId && $targetEntity && $targetEntity->entity_id != $targetEntityId) {
             return $this->error('Target entity mismatch');
@@ -99,6 +128,21 @@ class CreateEntity extends JsonAction
         // Begin transaction
         $transaction = Yii::$app->db->beginTransaction();
         try {
+            // HQ Rule 1: Delete old HQ if exists (before creating new one)
+            $oldHqRemoved = null;
+            if ($isHqBuilding && isset($existingHq) && $existingHq) {
+                // Store info before deletion
+                $oldHqRemoved = [
+                    'entity_id' => $isShipPlacement ? 'ship_' . $existingHq->ship_entity_id : $existingHq->entity_id,
+                    'x' => $existingHq->x,
+                    'y' => $existingHq->y,
+                ];
+
+                if (!$existingHq->delete()) {
+                    throw new \Exception('Failed to remove existing HQ');
+                }
+            }
+
             // Deduct building cost from user resources
             EntityTypeCost::deductCost($userId, $entityTypeId);
 
@@ -227,6 +271,7 @@ class CreateEntity extends JsonAction
                 ],
                 'targetRemoved' => $targetRemoved,
                 'depositsRemoved' => $depositsRemoved,
+                'oldHqRemoved' => $oldHqRemoved,
                 'isShip' => $isShipPlacement,
             ]);
 
