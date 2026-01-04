@@ -92,11 +92,11 @@ export class ResourceTransportManager {
 
             switch (entityType.type) {
                 case 'transporter':
-                    this.transporters.set(entity.entity_id, new TransporterState(entity, entityType));
+                    this.transporters.set(entity.entity_id, new TransporterState(entity, entityType, this.game));
                     break;
 
                 case 'manipulator':
-                    this.manipulators.set(entity.entity_id, new ManipulatorState(entity, entityType));
+                    this.manipulators.set(entity.entity_id, new ManipulatorState(entity, entityType, this.game));
                     break;
 
                 case 'building':
@@ -251,20 +251,11 @@ export class ResourceTransportManager {
         for (const [entityId, state] of this.transporters) {
             if (state.isEmpty()) continue;
 
-            const speed = state.getSpeed();
+            const speed = state.getSpeed();  // pixels per frame
 
-            // Move towards center if entered from side
-            if (state.lateralOffset !== 0) {
-                if (state.lateralOffset > 0) {
-                    state.lateralOffset = Math.max(0, state.lateralOffset - speed);
-                } else {
-                    state.lateralOffset = Math.min(0, state.lateralOffset + speed);
-                }
-            }
-
-            // Move along the belt (stops at 1.0)
-            if (state.lateralOffset === 0 && state.resourcePosition < 1.0) {
-                state.resourcePosition = Math.min(1.0, state.resourcePosition + speed);
+            // Move from -centerPx (entry) to +centerPx (exit)
+            if (state.position_px < state.centerPositionPx) {
+                state.position_px = Math.min(state.centerPositionPx, state.position_px + speed);
             }
         }
     }
@@ -276,8 +267,8 @@ export class ResourceTransportManager {
         for (const [entityId, state] of this.transporters) {
             if (state.isEmpty()) continue;
 
-            // Check if reached end and should wait for transfer
-            if (state.resourcePosition >= 1.0 && state.status === 'carrying') {
+            // Check if reached end (+centerPx) and should wait for transfer
+            if (state.position_px >= state.centerPositionPx && state.status === 'carrying') {
                 state.status = 'waiting_transfer';
             }
         }
@@ -285,6 +276,10 @@ export class ResourceTransportManager {
 
     /**
      * Process transfers between conveyors (simultaneous for cycles)
+     * NOTE: Dual-lane conveyor support is DISABLED in this version.
+     * Dual-lane support requires storing 2 resources per conveyor as 2 separate entity_resource records.
+     * This would require significant backend changes and is deferred to future implementation.
+     * For now, all conveyors work as single-lane.
      */
     processTransporterTransfers() {
         // Phase 1: Determine who will transfer
@@ -316,8 +311,7 @@ export class ResourceTransportManager {
                 fromId: entityId,
                 toId: state.targetEntityId,
                 resourceId: state.resourceId,
-                resourceAmount: state.resourceAmount,
-                fromOrientation: state.orientation
+                resourceAmount: state.resourceAmount
             });
         }
 
@@ -338,11 +332,9 @@ export class ResourceTransportManager {
 
             if (targetState) {
                 // Target is a transporter
-                const lateralOffset = this.calculateLateralOffset(t.fromOrientation, targetState.orientation);
-                // If entering from side (perpendicular), start at center position (0.5)
-                // If entering from behind (same orientation), start at entry edge (0)
-                const startPosition = lateralOffset !== 0 ? 0.5 : 0;
-                targetState.setResource(t.resourceId, t.resourceAmount, startPosition, lateralOffset);
+                const fromDirection = this.calculateFromDirection(t.toId, t.fromId);
+                // Start at entry (-centerPx)
+                targetState.setResource(t.resourceId, t.resourceAmount, fromDirection, -targetState.centerPositionPx);
             } else {
                 // Target is a building
                 const buildingState = this.buildings.get(t.toId);
@@ -370,32 +362,26 @@ export class ResourceTransportManager {
     }
 
     /**
-     * Calculate lateral offset for resources entering from side
-     *
-     * Lateral offset is perpendicular to the conveyor's direction:
-     * - RIGHT/LEFT conveyors: lateral axis is Y (positive = below center, negative = above)
-     * - UP/DOWN conveyors: lateral axis is X (positive = right of center, negative = left)
-     *
-     * Source conveyor position relative to target:
-     * - UP source → below target (transfers upward)
-     * - DOWN source → above target (transfers downward)
-     * - LEFT source → right of target (transfers leftward)
-     * - RIGHT source → left of target (transfers rightward)
+     * Determine from_direction based on source entity position
+     * @param {number} targetEntityId - Target conveyor entity ID
+     * @param {number} fromEntityId - Source entity ID
+     * @returns {string} - 'up'|'down'|'left'|'right'
      */
-    calculateLateralOffset(fromOrientation, toOrientation) {
-        if (fromOrientation === toOrientation) return 0;
+    calculateFromDirection(targetEntityId, fromEntityId) {
+        const targetEntity = this.game.entities.get(targetEntityId);
+        const fromEntity = this.game.entities.get(fromEntityId);
 
-        // Map: [toOrientation][fromOrientation] = lateralOffset
-        // For RIGHT/LEFT targets: up source = below = +0.5, down source = above = -0.5
-        // For UP/DOWN targets: left source = right = +0.5, right source = left = -0.5
-        const lateralMap = {
-            'right': { 'up': 0.5, 'down': -0.5 },
-            'left':  { 'up': 0.5, 'down': -0.5 },
-            'up':    { 'left': 0.5, 'right': -0.5 },
-            'down':  { 'left': 0.5, 'right': -0.5 }
-        };
+        if (!targetEntity || !fromEntity) return 'down'; // default
 
-        return lateralMap[toOrientation]?.[fromOrientation] || 0;
+        const dx = targetEntity.x - fromEntity.x;
+        const dy = targetEntity.y - fromEntity.y;
+
+        // Determine direction based on coordinate difference
+        if (Math.abs(dx) > Math.abs(dy)) {
+            return dx > 0 ? 'left' : 'right'; // Source is to the left or right
+        } else {
+            return dy > 0 ? 'up' : 'down'; // Source is above or below
+        }
     }
 
     /**
@@ -435,10 +421,9 @@ export class ResourceTransportManager {
      * Transfer resource from one conveyor to another
      */
     doSingleTransfer(fromState, toState) {
-        const lateralOffset = this.calculateLateralOffset(fromState.orientation, toState.orientation);
-        // If entering from side (perpendicular), start at center position (0.5)
-        const startPosition = lateralOffset !== 0 ? 0.5 : 0;
-        toState.setResource(fromState.resourceId, fromState.resourceAmount, startPosition, lateralOffset);
+        const fromDirection = this.calculateFromDirection(toState.entityId, fromState.entityId);
+        // Resources start at entry (-centerPx)
+        toState.setResource(fromState.resourceId, fromState.resourceAmount, fromDirection, -toState.centerPositionPx);
         fromState.clear();
     }
 
@@ -448,17 +433,17 @@ export class ResourceTransportManager {
      */
     updateManipulatorAnimation() {
         for (const [entityId, state] of this.manipulators) {
-            const speed = state.getSpeed();
+            const speed = state.getArmSpeed();  // pixels per frame
 
             switch (state.status) {
                 case 'picking':
-                    // Move arm towards source
-                    state.armPosition = Math.max(0, state.armPosition - speed);
+                    // Move arm towards source (-centerPx)
+                    state.position_px = Math.max(-state.centerPositionPx, state.position_px - speed);
                     break;
 
                 case 'carrying':
-                    // Move arm towards target
-                    state.armPosition = Math.min(1.0, state.armPosition + speed);
+                    // Move arm towards target (+centerPx)
+                    state.position_px = Math.min(state.centerPositionPx, state.position_px + speed);
                     break;
             }
         }
@@ -476,8 +461,8 @@ export class ResourceTransportManager {
                     break;
 
                 case 'picking':
-                    // Check if arm reached source position
-                    if (state.armPosition <= 0) {
+                    // Check if arm reached source position (-centerPx)
+                    if (state.position_px <= -state.centerPositionPx) {
                         const pickedResource = this.takeResourceFrom(state.sourceEntityId, 'manipulator');
                         if (pickedResource) {
                             const resourceInfo = this.game.resources[pickedResource.resourceId];
@@ -486,14 +471,14 @@ export class ResourceTransportManager {
                             this.pendingSync = true;
                         } else {
                             state.status = 'idle';
-                            state.armPosition = 0.5;
+                            state.position_px = 0;
                         }
                     }
                     break;
 
                 case 'carrying':
-                    // Check if arm reached target position
-                    if (state.armPosition >= 1.0) {
+                    // Check if arm reached target position (+centerPx)
+                    if (state.position_px >= state.centerPositionPx) {
                         state.status = 'placing';
                     }
                     break;
@@ -515,7 +500,7 @@ export class ResourceTransportManager {
         const canGive = this.canEntityGive(state.sourceEntityId, 'manipulator');
         if (canGive) {
             state.status = 'picking';
-            state.armPosition = 0.5;
+            state.position_px = 0;  // Start from center
         }
     }
 
@@ -674,8 +659,8 @@ export class ResourceTransportManager {
             if (requesterType === 'manipulator') {
                 return { resourceId: transporter.resourceId, amount: transporter.resourceAmount };
             }
-            // Transporter can only take when at end
-            if (transporter.resourcePosition >= 1.0) {
+            // Transporter can only take when at end (+centerPx)
+            if (transporter.position_px >= transporter.centerPositionPx) {
                 return { resourceId: transporter.resourceId, amount: transporter.resourceAmount };
             }
             return null;
@@ -684,7 +669,7 @@ export class ResourceTransportManager {
         // Check manipulator
         const manipulator = this.manipulators.get(entityId);
         if (manipulator) {
-            if (manipulator.armPosition >= 1.0 && manipulator.resourceId) {
+            if (manipulator.position_px >= manipulator.centerPositionPx && manipulator.resourceId) {
                 return { resourceId: manipulator.resourceId, amount: manipulator.resourceAmount };
             }
             return null;
@@ -739,7 +724,8 @@ export class ResourceTransportManager {
         // Transporter
         const transporter = this.transporters.get(entityId);
         if (transporter) {
-            transporter.setResource(resourceId, amount, 0.5, 0); // Start at center
+            const fromDirection = 'down'; // Default direction for manipulator placement
+            transporter.setResource(resourceId, amount, fromDirection, 0); // Start at center (0)
             return true;
         }
 
@@ -950,10 +936,10 @@ export class ResourceTransportManager {
 
         switch (entityType.type) {
             case 'transporter':
-                this.transporters.set(entity.entity_id, new TransporterState(entity, entityType));
+                this.transporters.set(entity.entity_id, new TransporterState(entity, entityType, this.game));
                 break;
             case 'manipulator':
-                this.manipulators.set(entity.entity_id, new ManipulatorState(entity, entityType));
+                this.manipulators.set(entity.entity_id, new ManipulatorState(entity, entityType, this.game));
                 break;
             case 'building':
             case 'mining':

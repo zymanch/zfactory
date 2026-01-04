@@ -2,12 +2,13 @@
  * ManipulatorState - State of a manipulator (inserter)
  */
 export class ManipulatorState {
-    constructor(entity, entityType) {
+    constructor(entity, entityType, game) {
         this.entityId = entity.entity_id;
         this.x = parseInt(entity.x);
         this.y = parseInt(entity.y);
         this.orientation = entityType.orientation || 'right';
         this.power = parseInt(entityType.power) || 100;
+        this.game = game;
 
         // Reach: Long Manipulator = 2 tiles, Short = 1 tile
         this.reach = entityType.name.includes('Long') ? 2 : 1;
@@ -17,8 +18,15 @@ export class ManipulatorState {
         this.resourceId = null;
         this.resourceAmount = 0;
 
-        // Arm position (0.0 = at source, 0.5 = center, 1.0 = at target)
-        this.armPosition = 0.5;
+        // Arm position in pixels (centered: -centerPx to +centerPx, 0 = at manipulator center)
+        const tileWidth = game.config.tileWidth;
+        this.position_px = 0;
+
+        // Center position - calculated as reach * tileWidth * 1.5
+        this.centerPositionPx = this.reach * tileWidth * 1.5;
+
+        // Total reach distance in pixels (from -centerPx to +centerPx)
+        this.totalReachPx = this.centerPositionPx;
 
         // Links (set during link calculation)
         this.sourceEntityId = null;  // Where to pick from (behind)
@@ -40,11 +48,13 @@ export class ManipulatorState {
     }
 
     /**
-     * Calculate arm movement speed (position units per tick)
+     * Calculate arm movement speed (pixels per frame at 60 FPS)
      */
-    getSpeed() {
-        // power=100 means full swing in 30 ticks (0.5 seconds)
-        return (this.power / 100) / 30;
+    getArmSpeed() {
+        const tileWidth = this.game.config.tileWidth;
+        // power=100 means full swing in 30 frames (0.5 seconds at 60 FPS)
+        // Full swing = reach * tileWidth pixels
+        return (this.power / 100) * (tileWidth / 30);
     }
 
     /**
@@ -53,7 +63,7 @@ export class ManipulatorState {
     loadFromSaved(data) {
         this.resourceId = data.resource_id;
         this.resourceAmount = data.amount || 1;
-        this.armPosition = parseFloat(data.arm_position) || 0.5;
+        this.position_px = parseInt(data.position_px) || 0;
         this.status = data.status || 'idle';
     }
 
@@ -67,7 +77,7 @@ export class ManipulatorState {
             entity_id: this.entityId,
             resource_id: this.resourceId,
             amount: this.resourceAmount,
-            arm_position: this.armPosition,
+            position_px: this.position_px,
             status: this.status
         };
     }
@@ -79,7 +89,7 @@ export class ManipulatorState {
         this.resourceId = null;
         this.resourceAmount = 0;
         this.status = 'idle';
-        this.armPosition = 0.5;
+        this.position_px = 0;
     }
 
     /**

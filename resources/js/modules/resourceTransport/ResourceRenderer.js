@@ -110,33 +110,50 @@ export class ResourceRenderer {
         const centerX = state.x * tileWidth + tileWidth / 2;
         const centerY = state.y * tileHeight + tileHeight / 2;
 
-        // Movement progress: 0 = entry edge, 0.5 = center, 1 = exit edge
-        const progress = state.resourcePosition - 0.5;  // -0.5 to 0.5
-
-        // lateralOffset: -0.5 to 0.5, represents perpendicular offset from belt center
+        // position_px is already centered: 0 = center, negative = towards center, positive = from center
+        // Calculate main offset (along movement direction)
         let offsetX = 0;
         let offsetY = 0;
 
         switch (state.orientation) {
             case 'right':
-                // Movement along X (use tileWidth), lateral offset along Y
-                offsetX = progress * tileWidth;
-                offsetY = state.lateralOffset * tileHeight;
+                offsetX = state.position_px;  // Already centered!
+                // Perpendicular offset based on from_direction
+                if (state.fromDirection === 'down') {
+                    offsetY = tileHeight / 4;  // Bottom lane
+                } else if (state.fromDirection === 'up') {
+                    offsetY = -tileHeight / 4;  // Top lane
+                }
                 break;
-            case 'left':
-                // Movement along -X (use tileWidth), lateral offset along Y
-                offsetX = -progress * tileWidth;
-                offsetY = state.lateralOffset * tileHeight;
-                break;
-            case 'up':
-                // Movement along -Y (use tileHeight), lateral offset along X
-                offsetY = -progress * tileHeight;
-                offsetX = state.lateralOffset * tileWidth;
-                break;
+
             case 'down':
-                // Movement along Y (use tileHeight), lateral offset along X
-                offsetY = progress * tileHeight;
-                offsetX = state.lateralOffset * tileWidth;
+                offsetY = state.position_px;
+                // Perpendicular offset
+                if (state.fromDirection === 'left') {
+                    offsetX = -tileHeight / 4;  // Left lane
+                } else if (state.fromDirection === 'right') {
+                    offsetX = tileHeight / 4;  // Right lane
+                }
+                break;
+
+            case 'left':
+                offsetX = -state.position_px;  // Reverse for left movement
+                // Perpendicular offset
+                if (state.fromDirection === 'up') {
+                    offsetY = -tileHeight / 4;  // Top lane
+                } else if (state.fromDirection === 'down') {
+                    offsetY = tileHeight / 4;  // Bottom lane
+                }
+                break;
+
+            case 'up':
+                offsetY = -state.position_px;  // Reverse for up movement
+                // Perpendicular offset
+                if (state.fromDirection === 'right') {
+                    offsetX = tileHeight / 4;  // Right lane
+                } else if (state.fromDirection === 'left') {
+                    offsetX = -tileHeight / 4;  // Left lane
+                }
                 break;
         }
 
@@ -179,17 +196,18 @@ export class ResourceRenderer {
         const targetX = targetPos.x * tileWidth + tileWidth / 2;
         const targetY = targetPos.y * tileHeight + tileHeight / 2;
 
-        // Interpolate based on armPosition (0 = source, 0.5 = center, 1 = target)
+        // position_px is centered: -centerPx (source) to 0 (manipulator) to +centerPx (target)
+        const centerPx = state.centerPositionPx;
         let resourceX, resourceY;
 
-        if (state.armPosition <= 0.5) {
-            // Moving from source to center
-            const t = state.armPosition * 2;  // 0 to 1
+        if (state.position_px <= 0) {
+            // Moving from source (-centerPx) to center (0)
+            const t = (state.position_px + centerPx) / centerPx;  // 0 to 1
             resourceX = sourceX + (manipX - sourceX) * t;
             resourceY = sourceY + (manipY - sourceY) * t;
         } else {
-            // Moving from center to target
-            const t = (state.armPosition - 0.5) * 2;  // 0 to 1
+            // Moving from center (0) to target (+centerPx)
+            const t = state.position_px / centerPx;  // 0 to 1
             resourceX = manipX + (targetX - manipX) * t;
             resourceY = manipY + (targetY - manipY) * t;
         }

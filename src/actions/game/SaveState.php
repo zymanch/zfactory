@@ -66,7 +66,7 @@ class SaveState extends JsonAction
         EntityResource::deleteAll([
             'and',
             ['entity_id' => $entityIds],
-            ['position' => null]
+            ['position_px' => null]
         ]);
 
         // Insert new resources
@@ -77,9 +77,8 @@ class SaveState extends JsonAction
                     $r['entity_id'],
                     $r['resource_id'],
                     $r['amount'],
-                    null,  // position
-                    null,  // lateral_offset
-                    null,  // arm_position
+                    null,  // position_px
+                    null,  // from_direction
                     null   // status
                 ];
             }
@@ -88,7 +87,7 @@ class SaveState extends JsonAction
         if (!empty($rows)) {
             Yii::$app->db->createCommand()->batchInsert(
                 EntityResource::tableName(),
-                ['entity_id', 'resource_id', 'amount', 'position', 'lateral_offset', 'arm_position', 'status'],
+                ['entity_id', 'resource_id', 'amount', 'position_px', 'from_direction', 'status'],
                 $rows
             )->execute();
         }
@@ -138,18 +137,17 @@ class SaveState extends JsonAction
         foreach ($states as $s) {
             $entityId = $s['entity_id'];
 
-            // Find existing transport state (position IS NOT NULL)
+            // Find existing transport state (position_px IS NOT NULL)
             $existing = EntityResource::find()
                 ->where(['entity_id' => $entityId])
-                ->andWhere(['not', ['position' => null]])
+                ->andWhere(['not', ['position_px' => null]])
                 ->one();
 
             if ($existing) {
                 $existing->resource_id = $s['resource_id'] ?? null;
                 $existing->amount = $s['amount'] ?? 0;
-                $existing->position = $s['position'] ?? 0;
-                $existing->lateral_offset = $s['lateral_offset'] ?? 0;
-                $existing->arm_position = $s['arm_position'] ?? 0.5;
+                $existing->position_px = $s['position_px'] ?? 0;
+                $existing->from_direction = $s['from_direction'] ?? null;
                 $existing->status = $s['status'] ?? 'empty';
                 $existing->save(false);
             } else {
@@ -157,9 +155,8 @@ class SaveState extends JsonAction
                 $model->entity_id = $entityId;
                 $model->resource_id = $s['resource_id'] ?? null;
                 $model->amount = $s['amount'] ?? 0;
-                $model->position = $s['position'] ?? 0;
-                $model->lateral_offset = $s['lateral_offset'] ?? 0;
-                $model->arm_position = $s['arm_position'] ?? 0.5;
+                $model->position_px = $s['position_px'] ?? 0;
+                $model->from_direction = $s['from_direction'] ?? null;
                 $model->status = $s['status'] ?? 'empty';
                 $model->save(false);
             }

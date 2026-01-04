@@ -2,23 +2,27 @@
  * TransporterState - State of a conveyor belt
  */
 export class TransporterState {
-    constructor(entity, entityType) {
+    constructor(entity, entityType, game) {
         this.entityId = entity.entity_id;
         this.x = parseInt(entity.x);
         this.y = parseInt(entity.y);
         this.orientation = entityType.orientation || 'right';
         this.power = parseInt(entityType.power) || 100;
+        this.game = game;
 
         // Current state
         this.status = 'empty'; // 'empty' | 'carrying' | 'waiting_transfer'
         this.resourceId = null;
         this.resourceAmount = 0;
 
-        // Position of resource on belt (0.0 = start, 1.0 = end)
-        this.resourcePosition = 0.0;
+        // Position of resource on belt (centered: -centerPx to +centerPx, 0 = center)
+        this.position_px = null;
 
-        // Lateral offset when resource entered from side (-0.5 to 0.5, 0 = center)
-        this.lateralOffset = 0.0;
+        // Direction from which resource entered ('up'|'down'|'left'|'right')
+        this.fromDirection = null;
+
+        // Center position in pixels - calculated dynamically (tileWidth / 2)
+        this.centerPositionPx = game.config.tileWidth / 2;
 
         // Links (set during link calculation)
         this.targetEntityId = null;      // Where this conveyor sends resources
@@ -47,11 +51,13 @@ export class TransporterState {
     }
 
     /**
-     * Calculate movement speed (tiles per tick)
+     * Calculate movement speed (pixels per frame at 60 FPS)
      */
     getSpeed() {
-        // power=100 means 1 tile per 60 ticks (1 second)
-        return (this.power / 100) / 60;
+        const tileWidth = this.game.config.tileWidth;
+        // power=100 means 1 tile per 60 frames (1 second at 60 FPS)
+        // Returns pixels per frame
+        return (this.power / 100) * (tileWidth / 60);
     }
 
     /**
@@ -60,8 +66,8 @@ export class TransporterState {
     loadFromSaved(data) {
         this.resourceId = data.resource_id;
         this.resourceAmount = data.amount || 1;
-        this.resourcePosition = parseFloat(data.position) || 0;
-        this.lateralOffset = parseFloat(data.lateral_offset) || 0;
+        this.position_px = parseInt(data.position_px) || -this.centerPositionPx;
+        this.fromDirection = data.from_direction || 'down';
         this.status = data.status || (this.resourceId ? 'carrying' : 'empty');
     }
 
@@ -75,8 +81,8 @@ export class TransporterState {
             entity_id: this.entityId,
             resource_id: this.resourceId,
             amount: this.resourceAmount,
-            position: this.resourcePosition,
-            lateral_offset: this.lateralOffset,
+            position_px: this.position_px,
+            from_direction: this.fromDirection,
             status: this.status
         };
     }
@@ -87,8 +93,8 @@ export class TransporterState {
     clear() {
         this.resourceId = null;
         this.resourceAmount = 0;
-        this.resourcePosition = 0;
-        this.lateralOffset = 0;
+        this.position_px = null;
+        this.fromDirection = null;
         this.status = 'empty';
         this.willTransfer = false;
     }
@@ -96,11 +102,12 @@ export class TransporterState {
     /**
      * Set resource on conveyor
      */
-    setResource(resourceId, amount, position = 0, lateralOffset = 0) {
+    setResource(resourceId, amount, fromDirection, positionPx = null) {
         this.resourceId = resourceId;
         this.resourceAmount = amount;
-        this.resourcePosition = position;
-        this.lateralOffset = lateralOffset;
+        this.fromDirection = fromDirection || 'down';
+        // If no position specified, start at entry (-centerPositionPx)
+        this.position_px = positionPx !== null ? positionPx : -this.centerPositionPx;
         this.status = 'carrying';
     }
 }

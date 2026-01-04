@@ -231,6 +231,14 @@ Defines types of entities that can be placed on the map.
 | 120 | Conveyor Belt         | transporter | 100     | up          | 100    |
 | 121 | Conveyor Belt         | transporter | 100     | down        | 100    |
 | 122 | Conveyor Belt         | transporter | 100     | left        | 100    |
+| 123 | Conveyor Belt (Dual)  | transporter | 100     | right       | 100    |
+| 124 | Conveyor Belt (Dual)  | transporter | 100     | down        | 100    |
+| 125 | Conveyor Belt (Dual)  | transporter | 100     | left        | 100    |
+| 126 | Conveyor Belt (Dual)  | transporter | 100     | up          | 100    |
+| 127 | Fast Conveyor (Dual)  | transporter | 200     | right       | 100    |
+| 128 | Fast Conveyor (Dual)  | transporter | 200     | down        | 100    |
+| 129 | Fast Conveyor (Dual)  | transporter | 200     | left        | 100    |
+| 130 | Fast Conveyor (Dual)  | transporter | 200     | up          | 100    |
 | 101 | Small Furnace         | building    | 200     | none        | -      |
 | 102 | Mining Drill          | mining      | 300     | none        | -      |
 | 103 | Assembly Machine      | building    | 400     | none        | -      |
@@ -339,26 +347,31 @@ Links entities to their contained resources and transport state.
 | entity_id         | INT UNSIGNED         | FK to entity.entity_id (CASCADE)         |
 | resource_id       | INT UNSIGNED         | FK to resource.resource_id (CASCADE)     |
 | amount            | INT UNSIGNED         | Amount of resource                       |
-| position          | DECIMAL(5,4) NULL    | Resource position on conveyor (0-1)      |
-| lateral_offset    | DECIMAL(5,4) NULL    | Lateral offset on conveyor               |
-| arm_position      | DECIMAL(5,4) NULL    | Arm position for manipulators (0-1)      |
+| position_px       | INT NULL             | Resource position in pixels (centered)   |
+| from_direction    | ENUM('up','down','left','right') NULL | Entry direction for conveyors |
 | status            | ENUM NULL            | Transport status (empty, carrying, etc.) |
 
 **Unique constraint:** (entity_id, resource_id) — одна entity может иметь только одну запись для каждого ресурса.
 
 **Использование:**
 
-**For buildings, storage, mining (position IS NULL):**
+**For buildings, storage, mining (position_px IS NULL):**
 - Resource entities (Iron Ore, Copper Ore) содержат Iron Deposit / Copper Deposit
 - Mining Drill добывает из залежей руду через рецепты
 - Здания могут хранить и обрабатывать ресурсы (несколько записей на entity)
 
-**For conveyors, manipulators (position IS NOT NULL):**
+**For conveyors, manipulators (position_px IS NOT NULL):**
 - Транспортное состояние ресурса на конвейере/манипуляторе
 - Только одна запись на entity (текущий переносимый ресурс)
-- `position`: положение ресурса на конвейере (0-1)
-- `lateral_offset`: боковое смещение для визуального разнообразия
-- `arm_position`: положение руки манипулятора (0 = источник, 0.5 = центр, 1 = цель)
+- **Centered coordinate system:**
+  - `position_px = 0` - центр пути
+  - Отрицательные значения (-32 to 0 для tileWidth=64) - движение К центру
+  - Положительные значения (0 to +32) - движение ОТ центра
+- **For conveyors:** position_px от -32 до +32 (для 64px тайлов)
+- **For manipulators:**
+  - Short (reach=1): -96 to +96 (центр через 1.5 тайла)
+  - Long (reach=2): -192 to +192 (центр через 2.5 тайла)
+- `from_direction`: направление, откуда ресурс вошел на конвейер (влияет на визуальное смещение полосы)
 - `status`: состояние транспорта (empty, carrying, waiting_transfer, idle, picking, placing)
 
 ### recipe (crafting recipes)
@@ -432,13 +445,38 @@ Links entity types to available recipes.
 
 ## Coordinate System
 
+### World Coordinates (Map, Entity, Deposit)
 - **Map coordinates**: tile-based (x=0 means tile 0, x=1 means tile 1)
 - **Entity coordinates**: tile-based (same as map coordinates)
 - **Deposit coordinates**: tile-based (same as map/entity coordinates)
-- **Tile dimensions**: 64x64 pixels
-- **Conversion (JS rendering)**: `pixel_x = tile_x * 64`, `pixel_y = tile_y * 64`
+- **Tile dimensions**: 64x64 pixels (configurable via `tile_width`, `tile_height`)
+- **Conversion (JS rendering)**: `pixel_x = tile_x * tileWidth`, `pixel_y = tile_y * tileHeight`
 
 **Important**: All three tables (map, entity, deposit) use the same tile-based coordinate system for consistency.
+
+### Transport Coordinates (Conveyors, Manipulators)
+**Centered coordinate system** - используется для `position_px` в таблице `entity_resource`:
+
+- **Center = 0**: Центр пути (середина тайла или середина досягаемости манипулятора)
+- **Negative values**: Движение К центру (entry → center)
+- **Positive values**: Движение ОТ центра (center → exit)
+
+**Ranges by entity type:**
+| Entity Type        | Range           | Center Calculation       |
+|--------------------|-----------------|--------------------------|
+| Conveyor           | -32 to +32      | tileWidth / 2            |
+| Short Manipulator  | -96 to +96      | reach × tileWidth × 1.5  |
+| Long Manipulator   | -192 to +192    | reach × tileWidth × 1.5  |
+
+**Visual offsets:**
+- `from_direction` определяет перпендикулярное смещение для визуального эффекта двухполосных конвейеров
+- Смещение: ±tileHeight/4 (±16px для 64px тайлов)
+
+**Advantages:**
+- Symmetric: -center...0...+center
+- Simple rendering: `offsetX = position_px` (no subtraction needed)
+- Intuitive: 0 = always center
+- No redundant fields: same `position_px` for conveyors and manipulators
 
 ## SQL Files
 
@@ -508,6 +546,10 @@ Stores user accounts and their settings.
 | m251228_120000_add_extraction_buildings.php     | Add sawmills, quarries, mines entity types     |
 | m251228_130000_add_extraction_recipes.php       | Add extraction building recipes                |
 | m251228_140000_migrate_entities_to_deposits.php | Migrate tree/rock/ore entities to deposits     |
+| m260104_000005_add_center_position_px.php       | Add center_position_px to entity_type          |
+| m260104_000006_migrate_to_pixel_coordinates.php | Migrate to pixel-based coordinate system       |
+| m260104_000007_add_dual_lane_conveyors.php      | Add dual-lane conveyor types (IDs 123-130)    |
+| m260104_000008_unify_position_fields.php        | Unify position_px, remove arm_position_px      |
 
 ## Future Considerations
 

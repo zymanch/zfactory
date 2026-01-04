@@ -134,7 +134,7 @@ class Config extends JsonAction
             EntityResource::find()
                 ->alias('er')
                 ->innerJoin('entity e', 'e.entity_id = er.entity_id')
-                ->where(['er.position' => null])
+                ->where(['er.position_px' => null])
                 ->andWhere(['e.region_id' => $currentRegionId])
                 ->select(['er.entity_id', 'er.resource_id', 'er.amount'])
                 ->asArray()
@@ -163,13 +163,12 @@ class Config extends JsonAction
             EntityResource::find()
                 ->alias('er')
                 ->innerJoin('entity e', 'e.entity_id = er.entity_id')
-                ->where(['not', ['er.position' => null]])
+                ->where(['not', ['er.position_px' => null]])
                 ->andWhere(['e.region_id' => $currentRegionId])
-                ->select(['er.entity_id', 'er.resource_id', 'er.amount', 'er.position', 'er.lateral_offset', 'er.arm_position'])
+                ->select(['er.entity_id', 'er.resource_id', 'er.amount', 'er.position_px', 'er.from_direction', 'er.status'])
                 ->asArray()
                 ->all(),
-            ['entity_id', 'resource_id', 'amount'],
-            ['position', 'lateral_offset', 'arm_position']
+            ['entity_id', 'resource_id', 'amount', 'position_px']
         );
     }
 
