@@ -5,6 +5,7 @@ namespace actions\entity;
 use actions\ConsoleAction;
 use app\client\ComfyUIClient;
 use bl\entity\generators\EntityGeneratorFactory;
+use bl\entity\types\AbstractEntityType;
 use models\EntityType;
 use Yii;
 use yii\helpers\Console;
@@ -79,7 +80,7 @@ class GenerateAiFlux extends ConsoleAction
         $rotationalEntities = [];
 
         foreach ($entitiesToProcess as $entity) {
-            $generator = $this->factory->getGenerator($entity);
+            $generator = $entity->getGenerator();
 
             if (!$generator) {
                 $this->stdout("Warning: No generator for '{$entity->image_url}'\n", Console::FG_YELLOW);
@@ -142,7 +143,7 @@ class GenerateAiFlux extends ConsoleAction
     /**
      * Get entities to process based on entity name parameter
      * @param string $entityName
-     * @return EntityType[]
+     * @return AbstractEntityType[]
      */
     private function getEntitiesToProcess($entityName)
     {

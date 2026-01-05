@@ -4,7 +4,6 @@ namespace actions\deposit;
 
 use actions\ConsoleAction;
 use app\client\ComfyUIClient;
-use bl\entity\generators\DepositGeneratorFactory;
 use models\DepositType;
 use Yii;
 use yii\helpers\Console;
@@ -24,9 +23,6 @@ class GenerateAiFlux extends ConsoleAction
     /** @var ComfyUIClient */
     private $fluxClient;
 
-    /** @var DepositGeneratorFactory */
-    private $factory;
-
     /** @var string */
     private $basePath;
 
@@ -36,7 +32,6 @@ class GenerateAiFlux extends ConsoleAction
 
         $this->basePath = Yii::getAlias('@app/..');
         $this->fluxClient = new ComfyUIClient();
-        $this->factory = new DepositGeneratorFactory($this->fluxClient, $this->basePath);
     }
 
     public function run($depositName = 'all')
@@ -67,7 +62,9 @@ class GenerateAiFlux extends ConsoleAction
         $failCount = 0;
 
         foreach ($depositsToProcess as $deposit) {
-            $generator = $this->factory->getGenerator($deposit);
+
+            // Get generator from deposit instance
+            $generator = $deposit->getGenerator();
 
             if (!$generator) {
                 $this->stdout("Warning: No generator for '{$deposit->image_url}'\n", Console::FG_YELLOW);
@@ -110,7 +107,15 @@ class GenerateAiFlux extends ConsoleAction
      */
     private function getDepositsToProcess($depositName)
     {
-        $registeredUrls = $this->factory->getRegisteredImageUrls();
+        // Deposits with generators (hardcoded list matching instantiate() method)
+        $registeredUrls = [
+            'ore_iron',
+            'ore_copper',
+            'ore_aluminum',
+            'ore_titanium',
+            'ore_silver',
+            'ore_gold',
+        ];
 
         if ($depositName === 'all') {
             // All deposits that have generators
@@ -134,7 +139,7 @@ class GenerateAiFlux extends ConsoleAction
                 return [];
             }
 
-            if (!$this->factory->hasGenerator($depositName)) {
+            if (!in_array($depositName, $registeredUrls)) {
                 $this->stdout("Error: No generator for deposit '{$depositName}'.\n", Console::FG_RED);
                 return [];
             }

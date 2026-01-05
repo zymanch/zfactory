@@ -1,6 +1,6 @@
 <?php
 
-namespace bl\entity\generators\deposit;
+namespace bl\deposit\generators;
 
 class TitaniumOreGenerator extends AbstractDepositGenerator
 {

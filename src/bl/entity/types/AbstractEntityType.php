@@ -3,7 +3,7 @@
 namespace bl\entity\types;
 
 use bl\entity\generators\base\AbstractEntityGenerator;
-use bl\entity\generators\deposit;
+use bl\deposit\generators;
 use models\EntityType;
 
 /**
@@ -25,22 +25,22 @@ abstract class AbstractEntityType extends EntityType
 
         switch ($this->image_url) {
             case 'ore_iron':
-                $generatorClass = deposit\IronOreGenerator::class;
+                $generatorClass = generators\IronOreGenerator::class;
                 break;
             case 'ore_copper':
-                $generatorClass = deposit\CopperOreGenerator::class;
+                $generatorClass = generators\CopperOreGenerator::class;
                 break;
             case 'ore_aluminum':
-                $generatorClass = deposit\AluminumOreGenerator::class;
+                $generatorClass = generators\AluminumOreGenerator::class;
                 break;
             case 'ore_titanium':
-                $generatorClass = deposit\TitaniumOreGenerator::class;
+                $generatorClass = generators\TitaniumOreGenerator::class;
                 break;
             case 'ore_silver':
-                $generatorClass = deposit\SilverOreGenerator::class;
+                $generatorClass = generators\SilverOreGenerator::class;
                 break;
             case 'ore_gold':
-                $generatorClass = deposit\GoldOreGenerator::class;
+                $generatorClass = generators\GoldOreGenerator::class;
                 break;
         }
 

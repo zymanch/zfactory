@@ -1,6 +1,6 @@
 <?php
 
-namespace bl\entity\generators\deposit;
+namespace bl\deposit\generators;
 
 use app\client\ComfyUIClient;
 use bl\entity\generators\base\ImageProcessor;
