@@ -2,6 +2,7 @@ import { SpatialIndex } from './SpatialIndex.js';
 import { TransporterState } from './TransporterState.js';
 import { ManipulatorState } from './ManipulatorState.js';
 import { BuildingState } from './BuildingState.js';
+import { SplitterState } from './SplitterState.js';
 import { getCSRFToken } from '../utils.js';
 
 /**
@@ -15,7 +16,15 @@ export class ResourceTransportManager {
         // State maps
         this.transporters = new Map();  // entity_id → TransporterState
         this.manipulators = new Map();  // entity_id → ManipulatorState
+        this.splitters = new Map();     // entity_id → SplitterState
         this.buildings = new Map();     // entity_id → BuildingState
+
+        // Splitter entity type IDs (800-811)
+        this.SPLITTER_TYPE_IDS = new Set([
+            800, 801, 802, 803,  // Splitter Normal
+            804, 805, 806, 807,  // Splitter Dual
+            808, 809, 810, 811   // Fast Splitter
+        ]);
 
         // Spatial index for fast position lookups
         this.spatialIndex = new SpatialIndex();
@@ -50,14 +59,17 @@ export class ResourceTransportManager {
     loadInitialState() {
         const game = this.game;
 
-        // Split transport states into transporter and manipulator
+        // Split transport states into transporter, splitter, and manipulator
         const transporterStates = [];
+        const splitterStates = [];
         const manipulatorStates = [];
 
         for (const ts of (game.initialTransportStates || [])) {
             const entityId = ts.entity_id;
             if (this.transporters.has(entityId)) {
                 transporterStates.push(ts);
+            } else if (this.splitters.has(entityId)) {
+                splitterStates.push(ts);
             } else if (this.manipulators.has(entityId)) {
                 manipulatorStates.push(ts);
             }
@@ -68,6 +80,7 @@ export class ResourceTransportManager {
             entityResources: game.initialEntityResources || [],
             craftingStates: game.initialCraftingStates || [],
             transporterStates: transporterStates,
+            splitterStates: splitterStates,
             manipulatorStates: manipulatorStates
         });
     }
@@ -78,6 +91,7 @@ export class ResourceTransportManager {
     buildStateFromEntities() {
         this.transporters.clear();
         this.manipulators.clear();
+        this.splitters.clear();
         this.buildings.clear();
         this.spatialIndex.clear();
 
@@ -92,7 +106,12 @@ export class ResourceTransportManager {
 
             switch (entityType.type) {
                 case 'transporter':
-                    this.transporters.set(entity.entity_id, new TransporterState(entity, entityType, this.game));
+                    // Check if this is a splitter
+                    if (this.SPLITTER_TYPE_IDS.has(entity.entity_type_id)) {
+                        this.splitters.set(entity.entity_id, new SplitterState(entity, entityType, this.game));
+                    } else {
+                        this.transporters.set(entity.entity_id, new TransporterState(entity, entityType, this.game));
+                    }
                     break;
 
                 case 'manipulator':
@@ -118,6 +137,12 @@ export class ResourceTransportManager {
             state.targetEntityId = null;
             state.sourceEntityIds = [];
             state.straightSourceId = null;
+        }
+
+        for (const state of this.splitters.values()) {
+            state.inputEntityId = null;
+            state.leftOutputEntityId = null;
+            state.rightOutputEntityId = null;
         }
 
         for (const state of this.manipulators.values()) {
@@ -148,6 +173,21 @@ export class ResourceTransportManager {
                     }
                 }
             }
+        }
+
+        // Calculate splitter links
+        for (const [entityId, state] of this.splitters) {
+            // Input: opposite direction from orientation
+            const inputPos = state.getInputPosition();
+            state.inputEntityId = this.spatialIndex.getAt(inputPos.x, inputPos.y);
+
+            // Left output
+            const leftPos = state.getLeftOutputPosition();
+            state.leftOutputEntityId = this.spatialIndex.getAt(leftPos.x, leftPos.y);
+
+            // Right output
+            const rightPos = state.getRightOutputPosition();
+            state.rightOutputEntityId = this.spatialIndex.getAt(rightPos.x, rightPos.y);
         }
 
         // Calculate manipulator source/target
@@ -182,6 +222,7 @@ export class ResourceTransportManager {
 
         // Animation tick (every frame) - smooth visual movement
         this.updateTransporterAnimation();
+        this.updateSplitterAnimation();
         this.updateManipulatorAnimation();
 
         // Logic tick (every N frames) - state changes, transfers, crafting
@@ -257,6 +298,15 @@ export class ResourceTransportManager {
             if (state.position_px < state.centerPositionPx) {
                 state.position_px = Math.min(state.centerPositionPx, state.position_px + speed);
             }
+        }
+    }
+
+    /**
+     * Animation: Move resources along splitters (runs every tick)
+     */
+    updateSplitterAnimation() {
+        for (const [entityId, state] of this.splitters) {
+            state.update();
         }
     }
 
@@ -632,6 +682,12 @@ export class ResourceTransportManager {
             return 'no';
         }
 
+        // Check splitter
+        const splitter = this.splitters.get(entityId);
+        if (splitter) {
+            return splitter.isIdle() ? 'yes' : 'no';
+        }
+
         // Check manipulator
         const manipulator = this.manipulators.get(entityId);
         if (manipulator) {
@@ -821,6 +877,7 @@ export class ResourceTransportManager {
             entityResources: [],
             craftingStates: [],
             transporterStates: [],
+            splitterStates: [],
             manipulatorStates: []
         };
 
@@ -839,6 +896,14 @@ export class ResourceTransportManager {
             const saveData = state.getSaveData();
             if (saveData) {
                 data.transporterStates.push(saveData);
+            }
+        }
+
+        // Splitter states
+        for (const [entityId, state] of this.splitters) {
+            const saveData = state.getSaveData();
+            if (saveData) {
+                data.splitterStates.push(saveData);
             }
         }
 
@@ -911,6 +976,16 @@ export class ResourceTransportManager {
             }
         }
 
+        // Load splitter states
+        if (data.splitterStates) {
+            for (const ss of data.splitterStates) {
+                const state = this.splitters.get(ss.entity_id);
+                if (state) {
+                    state.loadFromSaved(ss);
+                }
+            }
+        }
+
         // Load manipulator states
         if (data.manipulatorStates) {
             for (const ms of data.manipulatorStates) {
@@ -936,7 +1011,12 @@ export class ResourceTransportManager {
 
         switch (entityType.type) {
             case 'transporter':
-                this.transporters.set(entity.entity_id, new TransporterState(entity, entityType, this.game));
+                // Check if this is a splitter
+                if (this.SPLITTER_TYPE_IDS.has(entity.entity_type_id)) {
+                    this.splitters.set(entity.entity_id, new SplitterState(entity, entityType, this.game));
+                } else {
+                    this.transporters.set(entity.entity_id, new TransporterState(entity, entityType, this.game));
+                }
                 break;
             case 'manipulator':
                 this.manipulators.set(entity.entity_id, new ManipulatorState(entity, entityType, this.game));
@@ -971,6 +1051,7 @@ export class ResourceTransportManager {
 
         // Remove from state maps
         this.transporters.delete(entityId);
+        this.splitters.delete(entityId);
         this.manipulators.delete(entityId);
         this.buildings.delete(entityId);
 
@@ -1001,6 +1082,25 @@ export class ResourceTransportManager {
      */
     getManipulatorState(entityId) {
         return this.manipulators.get(entityId);
+    }
+
+    /**
+     * Get splitter state
+     */
+    getSplitterState(entityId) {
+        return this.splitters.get(entityId);
+    }
+
+    /**
+     * Get state for any entity (transporter, splitter, manipulator, or building)
+     * Used by SplitterState to find target entities
+     */
+    getState(entityId) {
+        return this.transporters.get(entityId) ||
+               this.splitters.get(entityId) ||
+               this.manipulators.get(entityId) ||
+               this.buildings.get(entityId) ||
+               null;
     }
 }
 
