@@ -147,9 +147,10 @@ class SplitterController extends Controller
     }
 
     /**
-     * Creates Y-shaped splitter from conveyor sprite
+     * Creates splitter from conveyor sprite
+     * Takes full conveyor (input left, output right) and adds top/bottom outputs
      * @param string $srcFile Path to source conveyor sprite
-     * @return resource Y-shaped image
+     * @return resource Splitter image with 3 outputs
      */
     private function createYShaped($srcFile)
     {
@@ -157,46 +158,77 @@ class SplitterController extends Controller
         $width = imagesx($conveyor);
         $height = imagesy($conveyor);
 
-        // Create 64x64 canvas
-        $result = imagecreatetruecolor(64, 64);
+        // Copy full conveyor as base (input left → output right)
+        $result = imagecreatetruecolor($width, $height);
         imagealphablending($result, false);
         imagesavealpha($result, true);
+        imagecopy($result, $conveyor, 0, 0, 0, 0, $width, $height);
 
-        // Fill with transparent
-        $transparent = imagecolorallocatealpha($result, 0, 0, 0, 127);
-        imagefill($result, 0, 0, $transparent);
-
-        // Extract right half (input)
+        // Extract right half (output side) for additional outputs
         $halfWidth = intval($width / 2);
         $rightHalf = imagecreatetruecolor($halfWidth, $height);
         imagealphablending($rightHalf, false);
         imagesavealpha($rightHalf, true);
         imagecopy($rightHalf, $conveyor, 0, 0, $halfWidth, 0, $halfWidth, $height);
 
-        // Place input at top (rotated 180°)
-        $inputRotated = imagerotate($rightHalf, 180, $transparent);
-        imagealphablending($inputRotated, false);
-        imagesavealpha($inputRotated, true);
-        imagecopy($result, $inputRotated, 16, 0, 0, 0, imagesx($inputRotated), imagesy($inputRotated));
+        // Create transparent color for rotation
+        $transparent = imagecolorallocatealpha($rightHalf, 0, 0, 0, 127);
 
-        // Place left output (rotated 90° CCW)
-        $leftOutput = imagerotate($rightHalf, 90, $transparent);
-        imagealphablending($leftOutput, false);
-        imagesavealpha($leftOutput, true);
-        imagecopy($result, $leftOutput, 0, 32, 0, 0, imagesx($leftOutput), imagesy($leftOutput));
+        // Rotate right half for top output (-90° = clockwise)
+        $topOutput = imagerotate($rightHalf, -90, $transparent);
+        imagealphablending($topOutput, false);
+        imagesavealpha($topOutput, true);
 
-        // Place right output (rotated 90° CW)
-        $rightOutput = imagerotate($rightHalf, -90, $transparent);
-        imagealphablending($rightOutput, false);
-        imagesavealpha($rightOutput, true);
-        imagecopy($result, $rightOutput, 32, 32, 0, 0, imagesx($rightOutput), imagesy($rightOutput));
+        // Rotate right half for bottom output (90° = counter-clockwise)
+        $bottomOutput = imagerotate($rightHalf, 90, $transparent);
+        imagealphablending($bottomOutput, false);
+        imagesavealpha($bottomOutput, true);
+
+        // Overlay outputs on transparent parts only
+        $this->overlayOnTransparent($result, $topOutput, 0, 0);
+        $this->overlayOnTransparent($result, $bottomOutput, 0, $height - imagesy($bottomOutput));
 
         imagedestroy($conveyor);
         imagedestroy($rightHalf);
-        imagedestroy($inputRotated);
-        imagedestroy($leftOutput);
-        imagedestroy($rightOutput);
+        imagedestroy($topOutput);
+        imagedestroy($bottomOutput);
 
         return $result;
+    }
+
+    /**
+     * Overlay source image on destination, only on transparent pixels
+     * @param resource $dst Destination image
+     * @param resource $src Source image to overlay
+     * @param int $dstX Destination X coordinate
+     * @param int $dstY Destination Y coordinate
+     */
+    private function overlayOnTransparent($dst, $src, $dstX, $dstY)
+    {
+        $srcWidth = imagesx($src);
+        $srcHeight = imagesy($src);
+
+        for ($y = 0; $y < $srcHeight; $y++) {
+            for ($x = 0; $x < $srcWidth; $x++) {
+                $dstPixelX = $dstX + $x;
+                $dstPixelY = $dstY + $y;
+
+                // Skip if outside destination bounds
+                if ($dstPixelX < 0 || $dstPixelX >= imagesx($dst) ||
+                    $dstPixelY < 0 || $dstPixelY >= imagesy($dst)) {
+                    continue;
+                }
+
+                // Get destination pixel alpha
+                $dstColor = imagecolorat($dst, $dstPixelX, $dstPixelY);
+                $dstAlpha = ($dstColor >> 24) & 0x7F;
+
+                // Only overlay if destination is transparent (alpha > 64)
+                if ($dstAlpha > 64) {
+                    $srcColor = imagecolorat($src, $x, $y);
+                    imagesetpixel($dst, $dstPixelX, $dstPixelY, $srcColor);
+                }
+            }
+        }
     }
 }
