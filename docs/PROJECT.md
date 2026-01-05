@@ -372,6 +372,53 @@ Generator hierarchy in `bl\entity\generators\`:
 - `EntityGeneratorFactory` - Maps image_url to generator class
 - Individual generators: `building\FurnaceGenerator`, `tree\PineTreeGenerator`, etc.
 
+#### ConveyorGenerator (Advanced Generation Logic)
+
+`bl\entity\generators\transporter\ConveyorGenerator` implements specialized logic for conveyor belt sprites with **three generation scenarios**:
+
+**1. Rotational Variants (parent_entity_type_id exists)**
+- Rotates sprite from parent entity type
+- Used for `conveyor_up`, `conveyor_down`, `conveyor_left` orientations
+- No AI generation needed - pure image rotation
+
+**2. Base Conveyor (entity_type_id=100)**
+- Generates with FLUX.1 Dev AI model
+- Applies horizontal mirror effect (copies bottom half to top, flipped)
+- Creates symmetric conveyor belt appearance
+- Requires ComfyUI running
+
+**3. Color Variants (dual/fast_dual conveyors)**
+- **Works WITHOUT ComfyUI** - uses HSL hue shifting
+- Loads base conveyor (entity_type_id=100) sprite
+- Applies HSL color transformation:
+  - **conveyor_dual** (123-126): +240° hue shift → **Strong Blue**
+  - **conveyor_fast_dual** (127-130): +120° hue shift → **Strong Green**
+- Generates all 5 sprite states automatically
+- Rotational variants inherit parent's color
+
+**GD Resource Pattern:**
+ConveyorGenerator returns GD image resources instead of saving files directly:
+```php
+$generator = new ConveyorGenerator($entityType);
+$gdImage = $generator->generate($entity);  // Returns GD resource
+$entity->saveNormalSprite($gdImage);       // Caller saves it
+imagedestroy($gdImage);                     // Cleanup
+```
+
+**Commands:**
+```bash
+# Generate dual-lane conveyors (blue, no AI needed)
+php yii entity/generate-ai-flux conveyor_dual 0
+
+# Generate fast dual-lane conveyors (green, no AI needed)
+php yii entity/generate-ai-flux conveyor_fast_dual 0
+
+# Generate base conveyor (requires ComfyUI)
+php yii entity/generate-ai-flux conveyor 0
+```
+
+All rotational variants (_up, _down, _left) are generated automatically from base orientation.
+
 ## Standalone Action Classes
 
 All controller actions are implemented as standalone classes extending `yii\base\Action`. This pattern:

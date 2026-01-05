@@ -43,10 +43,9 @@ abstract class TransporterEntityType extends AbstractEntityType
     {
         $generatorClass = null;
 
-        switch ($this->image_url) {
-            case 'conveyor':
-                $generatorClass = transporter\ConveyorGenerator::class;
-                break;
+        // All conveyor variants use ConveyorGenerator
+        if (strpos($this->image_url, 'conveyor') === 0) {
+            $generatorClass = transporter\ConveyorGenerator::class;
         }
 
         return $generatorClass ? new $generatorClass($this) : null;

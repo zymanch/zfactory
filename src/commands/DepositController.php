@@ -12,7 +12,7 @@ class DepositController extends Controller
     public function actions()
     {
         return [
-            'generate-ai-flux' => \actions\deposit\GenerateAiFlux::class,
+            'generate-ai-flux' => \commands\actions\deposit\GenerateAiFlux::class,
         ];
     }
 }

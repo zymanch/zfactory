@@ -32,8 +32,19 @@ class EntityTypeFactory
         relief\MediumRockEntityType::ENTITY_TYPE_ID => relief\MediumRockEntityType::class,
         relief\LargeRockEntityType::ENTITY_TYPE_ID => relief\LargeRockEntityType::class,
 
-        // Transporters (100)
-        transporter\ConveyorEntityType::ENTITY_TYPE_ID => transporter\ConveyorEntityType::class,
+        // Transporters - Conveyors (100-130)
+        100 => transporter\ConveyorEntityType::class, // conveyor
+        120 => transporter\ConveyorEntityType::class, // conveyor_up
+        121 => transporter\ConveyorEntityType::class, // conveyor_down
+        122 => transporter\ConveyorEntityType::class, // conveyor_left
+        123 => transporter\ConveyorEntityType::class, // conveyor_dual
+        124 => transporter\ConveyorEntityType::class, // conveyor_dual_up
+        125 => transporter\ConveyorEntityType::class, // conveyor_dual_left
+        126 => transporter\ConveyorEntityType::class, // conveyor_dual_down
+        127 => transporter\ConveyorEntityType::class, // conveyor_fast_dual
+        128 => transporter\ConveyorEntityType::class, // conveyor_fast_dual_up
+        129 => transporter\ConveyorEntityType::class, // conveyor_fast_dual_left
+        130 => transporter\ConveyorEntityType::class, // conveyor_fast_dual_down
 
         // Buildings (101-122)
         building\FurnaceEntityType::ENTITY_TYPE_ID => building\FurnaceEntityType::class,

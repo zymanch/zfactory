@@ -19,11 +19,11 @@ class LandingController extends \yii\console\Controller
     public function actions()
     {
         return [
-            'generate' => \actions\landing\Generate::class,
-            'scale-original' => \actions\landing\ScaleOriginal::class,
-            'generate-ai' => \actions\landing\GenerateAi::class,
-            'generate-ai-flux' => \actions\landing\GenerateAiFlux::class,
-            'generate-sids' => \actions\landing\GenerateSids::class,
+            'generate' => \commands\actions\landing\Generate::class,
+            'scale-original' => \commands\actions\landing\ScaleOriginal::class,
+            'generate-ai' => \commands\actions\landing\GenerateAi::class,
+            'generate-ai-flux' => \commands\actions\landing\GenerateAiFlux::class,
+            'generate-sids' => \commands\actions\landing\GenerateSids::class,
         ];
     }
 

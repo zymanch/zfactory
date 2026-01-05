@@ -111,9 +111,9 @@ abstract class AbstractEntityGenerator
      * Generate sprite for entity type
      * @param EntityType $entity
      * @param bool $testMode If true, only generate normal.png
-     * @return bool Success
+     * @return bool|resource Success (bool) or GD resource for new generators
      */
-    public function generate(EntityType $entity, bool $testMode = false): bool
+    public function generate(EntityType $entity, bool $testMode = false)
     {
         $imageUrl = $entity->image_url;
 
@@ -121,6 +121,12 @@ abstract class AbstractEntityGenerator
         if ($this->isRotational() && $this->isRotationalVariant($imageUrl)) {
             echo "  Skipping rotational variant: {$imageUrl} (will be rotated from base)\n";
             return true;
+        }
+
+        // Check if ComfyUI is available (needed for AI generation)
+        if (!$this->fluxClient->isAvailable()) {
+            echo "  Error: ComfyUI is not running (required for AI generation)\n";
+            return false;
         }
 
         $pixelWidth = $entity->width * $this->getTileWidth();

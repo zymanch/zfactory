@@ -267,6 +267,26 @@ Defines types of entities that can be placed on the map.
 - При постройке можно вращать объект клавишей **R** (или **К** на русской раскладке)
 - Порядок вращения: right → down → left → up → right (по часовой стрелке)
 
+**Conveyor Color Variants (Dual & Fast Dual):**
+Двухполосные конвейеры (Dual) и быстрые двухполосные (Fast Dual) - это цветовые варианты базового конвейера:
+- **conveyor_dual** (123-126): HSL hue shift +240° → **Strong Blue** color
+- **conveyor_fast_dual** (127-130): HSL hue shift +120° → **Strong Green** color
+- Генерируются БЕЗ ComfyUI - используют HSL преобразование базового спрайта (entity_type_id=100)
+- Все 5 состояний (normal, damaged, blueprint, normal_selected, damaged_selected) создаются автоматически
+- Ротационные варианты (_up, _down, _left) наследуют цвет базовой ориентации
+
+**Sprite Generation Commands:**
+```bash
+# Синий двухполосный (не требует ComfyUI)
+php yii entity/generate-ai-flux conveyor_dual 0
+
+# Зеленый быстрый двухполосный (не требует ComfyUI)
+php yii entity/generate-ai-flux conveyor_fast_dual 0
+
+# Базовый конвейер (требует ComfyUI для AI генерации)
+php yii entity/generate-ai-flux conveyor 0
+```
+
 ### entity (entity instances)
 Stores actual entity placement on the game map.
 
