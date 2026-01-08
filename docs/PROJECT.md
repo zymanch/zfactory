@@ -599,7 +599,8 @@ All game modes extend **GameModeBase** class which provides:
 - **Click entity** - open entity info window
 
 **BUILD Mode:**
-- **Click** - place building
+- **Click** - place building (single placement)
+- **Drag & Drop** - mass building for ship/transporter types
 - **R** - rotate building (if rotatable)
 - **Esc** - cancel and return to NORMAL
 - Green preview = valid placement
@@ -612,6 +613,139 @@ All game modes extend **GameModeBase** class which provides:
 
 **ENTITY_INFO Mode:**
 - **Esc** - close window and return to NORMAL
+
+## Mass Building System (2026-01)
+
+The build system supports **two building modes** depending on entity type:
+
+### 1. Single Click-to-Place (Default)
+Used for all regular buildings (furnaces, drills, assemblers, etc.):
+- Click to place one building at a time
+- Preview follows mouse cursor
+- Green/red tint indicates validity
+- R key rotates oriented buildings
+
+### 2. Drag-and-Drop Mass Building
+Enabled for specific entity types with special mechanics:
+
+#### Ship Floor Mass Building (type='ship')
+Build large ship floor areas with drag selection:
+
+**Mechanics:**
+1. **Mousedown** - start area selection
+2. **Mousemove** - show preview of all ships in rectangular area
+3. **Mouseup** - build all valid ships in one AJAX request
+
+**Flood-Fill Validation:**
+- Uses intelligent connectivity algorithm
+- Finds starting points (tiles adjacent to existing ship)
+- Expands to connected tiles within selected area
+- Considers planned tiles as neighbors for validation
+- Stops at obstacles (existing entities, fog of war, ship bounds)
+
+**Visual Feedback:**
+- Green preview = valid and connected positions
+- Red preview = invalid (obstacles, disconnected, out of bounds)
+- Shows all tiles that will be built before placement
+
+**Rules:**
+- Must be within ship bounds (coordinates >= ship_attach_x/y)
+- Must connect to existing ship or be reachable from it
+- Cannot overlap existing entities
+- Skips occupied tiles (builds only on free spaces)
+
+#### Conveyor Path Laying (type='transporter')
+Build conveyor paths with automatic orientation:
+
+**Mechanics:**
+1. **Mousedown** - start path
+2. **Mousemove** - show linear path (horizontal or vertical)
+3. **Mouseup** - build all conveyors with correct orientation
+
+**Direction Selection:**
+- If `|deltaX| >= |deltaY|` → horizontal path (right/left)
+- If `|deltaY| > |deltaX|` → vertical path (up/down)
+- Horizontal has priority when equal
+
+**Automatic Orientation:**
+- `deltaX > 0` → orientation='right'
+- `deltaX < 0` → orientation='left'
+- `deltaY > 0` → orientation='down'
+- `deltaY < 0` → orientation='up'
+
+**Obstacle Handling:**
+- Path stops at first obstacle
+- Shows green preview up to obstacle
+- No preview beyond first blocked tile
+
+**Technical Details:**
+- Automatically selects correct entity_type_id variant (e.g., conveyor_up, conveyor_left)
+- Uses getOrientationVariants() to find rotational variants
+- All conveyors in path have same orientation
+
+### Backend API for Mass Building
+
+**Endpoint:** `POST /map/create-entity`
+
+**Single Entity (backward compatible):**
+```json
+{
+  "entity_type_id": 601,
+  "x": 10,
+  "y": 20,
+  "state": "blueprint"
+}
+```
+
+**Mass Creation:**
+```json
+{
+  "entities": [
+    {"entity_type_id": 601, "x": 10, "y": 20, "state": "blueprint"},
+    {"entity_type_id": 100, "x": 11, "y": 20, "state": "blueprint"},
+    {"entity_type_id": 120, "x": 12, "y": 20, "state": "blueprint"}
+  ]
+}
+```
+
+**Implementation:**
+- `src/commands/actions/map/CreateEntity.php` - refactored for mass creation
+- `createMultipleEntities()` - processes array of entities
+- `createEntityInternal()` - extracted logic for single entity
+- `createSingleEntity()` - backward compatibility wrapper
+- All entities created in single transaction (atomic operation)
+- Invalid entities skipped (doesn't break transaction)
+- Resources deducted for each created entity
+
+**Response Format:**
+```json
+{
+  "result": "ok",
+  "entities": [...],
+  "depositsRemoved": [...],
+  "count": 15
+}
+```
+
+### Frontend Implementation
+
+**Files:**
+- `resources/js/modules/modes/buildMode.js` - main build mode logic
+
+**Key Methods:**
+- `onMouseDown()` - detect drag mode by entity type
+- `startDragging()` - initialize drag state
+- `updateDragPreview()` - update preview during drag
+- `validateShipAreaWithFloodFill()` - intelligent ship connectivity validation
+- `calculateConveyorPath()` - determine path direction and orientation
+- `createMultiPreviews()` - render preview sprites for all tiles
+- `finishDragging()` - place all entities via AJAX
+- `placeMultipleBuildings()` - send mass creation request
+
+**Performance:**
+- Preview limited to 100 tiles max
+- Sprites destroyed after placement
+- Efficient flood-fill algorithm (BFS)
 
 ## Build Panel
 

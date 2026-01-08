@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { tileKey, tileToWorld, getCSRFToken } from '../utils.js';
 import { BUILD_VALID_COLOR, BUILD_INVALID_COLOR, BUILD_VALID_ALPHA, BUILD_INVALID_ALPHA, PREVIEW_Z_OFFSET } from '../constants.js';
-import { EntityBehaviorFactory } from '../entityBehaviors.js';
+import EntityBehaviorFactory from '../entityBehaviors.js';
 import { GameModeBase } from './gameModeBase.js';
 
 /**
@@ -24,6 +24,13 @@ export class BuildMode extends GameModeBase {
         this.baseEntityTypeId = null;  // The parent entity type (or self if no parent)
         this.orientationVariants = []; // Array of entity type IDs for each orientation
         this.currentOrientationIndex = 0;
+
+        // Drag-and-drop for mass building
+        this.isDragging = false;
+        this.wasDragging = false; // Prevent onClick after drag
+        this.dragStartTile = { x: -1, y: -1 };
+        this.dragEndTile = { x: -1, y: -1 };
+        this.previewSprites = []; // Array of {sprite, x, y, valid, entityTypeId}
     }
 
     /**
@@ -32,6 +39,8 @@ export class BuildMode extends GameModeBase {
     init() {
         // Register event listeners using base class method (auto-cleanup)
         this.addEventListener(this.game.app.canvas, 'click', this.onClick);
+        this.addEventListener(this.game.app.canvas, 'mousedown', this.onMouseDown);
+        this.addEventListener(this.game.app.canvas, 'mouseup', this.onMouseUp);
         this.addEventListener(document, 'keydown', this.onKeyDown);
     }
 
@@ -219,7 +228,16 @@ export class BuildMode extends GameModeBase {
      * Update preview position based on mouse
      */
     updatePreview(screenX, screenY) {
-        if (!this.isActive || !this.previewSprite) return;
+        if (!this.isActive) return;
+
+        // If drag active - handle drag preview
+        if (this.isDragging) {
+            this.updateDragPreview(screenX, screenY);
+            return;
+        }
+
+        // Regular single preview
+        if (!this.previewSprite) return;
 
         const mouseTile = this.game.input.screenToTile(screenX, screenY);
         const tile = this.adjustTileForBuildingSize(mouseTile.x, mouseTile.y);
@@ -323,12 +341,43 @@ export class BuildMode extends GameModeBase {
      * Handle click to place building
      */
     onClick(e) {
+        // Ignore click after drag
+        if (this.wasDragging) {
+            this.wasDragging = false;
+            return;
+        }
+
         if (!this.isActive || !this.canPlace) return;
         if (e.target !== this.game.app.canvas) return;
 
         const mouseTile = this.game.input.screenToTile(e.clientX, e.clientY);
         const tile = this.adjustTileForBuildingSize(mouseTile.x, mouseTile.y);
         this.placeBuilding(tile.x, tile.y);
+    }
+
+    /**
+     * Handle mouse down for drag-and-drop building
+     */
+    onMouseDown(e) {
+        if (!this.isActive || e.button !== 0) return;
+        if (e.target !== this.game.app.canvas) return;
+
+        const entityType = this.game.entityTypes[this.entityTypeId];
+        if (!entityType) return;
+
+        // Determine mode: drag for ship/transporter, click for others
+        if (entityType.type === 'ship' || entityType.type === 'transporter') {
+            this.startDragging(e);
+        }
+    }
+
+    /**
+     * Handle mouse up to finish dragging
+     */
+    onMouseUp(e) {
+        if (!this.isActive || !this.isDragging || e.button !== 0) return;
+
+        this.finishDragging(e);
     }
 
     /**
@@ -439,6 +488,476 @@ export class BuildMode extends GameModeBase {
             parseInt(entity.y)
         );
         this.game.loadViewport();
+    }
+
+    /**
+     * Start dragging for mass building
+     */
+    startDragging(e) {
+        this.isDragging = true;
+        this.wasDragging = false;
+
+        const mouseTile = this.game.input.screenToTile(e.clientX, e.clientY);
+        const tile = this.adjustTileForBuildingSize(mouseTile.x, mouseTile.y);
+
+        this.dragStartTile = { x: tile.x, y: tile.y };
+        this.dragEndTile = { x: tile.x, y: tile.y };
+
+        // Hide single preview
+        if (this.previewSprite) {
+            this.previewSprite.visible = false;
+        }
+
+        this.clearMultiPreviews();
+    }
+
+    /**
+     * Update drag preview based on mouse position
+     */
+    updateDragPreview(screenX, screenY) {
+        const mouseTile = this.game.input.screenToTile(screenX, screenY);
+        const tile = this.adjustTileForBuildingSize(mouseTile.x, mouseTile.y);
+
+        if (tile.x === this.dragEndTile.x && tile.y === this.dragEndTile.y) {
+            return; // Position unchanged
+        }
+
+        this.dragEndTile = { x: tile.x, y: tile.y };
+
+        const entityType = this.game.entityTypes[this.entityTypeId];
+
+        if (entityType.type === 'ship') {
+            this.updateShipAreaPreview();
+        } else if (entityType.type === 'transporter') {
+            this.updateConveyorPathPreview();
+        }
+    }
+
+    /**
+     * Update ship area preview (rectangular selection)
+     * Uses flood-fill to validate connectivity
+     */
+    updateShipAreaPreview() {
+        const tiles = this.calculateRectArea(
+            this.dragStartTile.x, this.dragStartTile.y,
+            this.dragEndTile.x, this.dragEndTile.y
+        );
+
+        // For ship entities, use flood-fill validation to consider planned neighbors
+        const validatedTiles = this.validateShipAreaWithFloodFill(tiles);
+
+        this.createMultiPreviews(validatedTiles, this.entityTypeId);
+    }
+
+    /**
+     * Calculate rectangular area between two points
+     */
+    calculateRectArea(x1, y1, x2, y2) {
+        const minX = Math.min(x1, x2);
+        const minY = Math.min(y1, y2);
+        const maxX = Math.max(x1, x2);
+        const maxY = Math.max(y1, y2);
+
+        const tiles = [];
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                tiles.push({ x, y });
+            }
+        }
+        return tiles;
+    }
+
+    /**
+     * Validate ship area using flood-fill to consider planned neighbors
+     * Returns all tiles with validation status
+     */
+    validateShipAreaWithFloodFill(tiles) {
+        // Create a set of planned positions for quick lookup
+        const plannedSet = new Set();
+        const tileMap = new Map();
+
+        for (const tile of tiles) {
+            const key = `${tile.x},${tile.y}`;
+            plannedSet.add(key);
+            tileMap.set(key, { ...tile, valid: false, visited: false });
+        }
+
+        // Find starting positions (valid by themselves - next to existing ship landing)
+        const queue = [];
+
+        for (const tile of tiles) {
+            // Check if this position is valid on its own (has existing ship neighbor)
+            const canPlace = this.checkPlacement(tile.x, tile.y);
+
+            if (canPlace) {
+                const key = `${tile.x},${tile.y}`;
+                const tileInfo = tileMap.get(key);
+                tileInfo.valid = true;
+                tileInfo.visited = true;
+                queue.push(tile);
+            }
+        }
+
+        // If no valid starting positions, mark all as invalid and return
+        if (queue.length === 0) {
+            return Array.from(tileMap.values())
+                .map(tile => ({ x: tile.x, y: tile.y, preValidated: true, valid: false }));
+        }
+
+        // Flood-fill from valid starting positions
+        const directions = [
+            { dx: 0, dy: 1 },  // down
+            { dx: 0, dy: -1 }, // up
+            { dx: 1, dy: 0 },  // right
+            { dx: -1, dy: 0 }  // left
+        ];
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+
+            // Check all 4 neighbors
+            for (const dir of directions) {
+                const nx = current.x + dir.dx;
+                const ny = current.y + dir.dy;
+                const neighborKey = `${nx},${ny}`;
+
+                // If neighbor is in our planned area and not visited yet
+                if (plannedSet.has(neighborKey)) {
+                    const neighborTile = tileMap.get(neighborKey);
+
+                    if (!neighborTile.visited) {
+                        // Check basic placement rules (excluding ship neighbor check)
+                        const canPlaceBasic = this.checkBasicPlacement(nx, ny);
+
+                        if (canPlaceBasic) {
+                            neighborTile.valid = true;
+                            neighborTile.visited = true;
+                            queue.push({ x: nx, y: ny });
+                        } else {
+                            // Mark as visited but invalid (obstacle, etc.)
+                            neighborTile.visited = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Return all tiles with validation status
+        return Array.from(tileMap.values())
+            .map(tile => ({ x: tile.x, y: tile.y, preValidated: true, valid: tile.valid }));
+    }
+
+    /**
+     * Check basic placement rules without ship neighbor requirement
+     * Used for flood-fill validation
+     */
+    checkBasicPlacement(tileX, tileY) {
+        const entityType = this.game.entityTypes[this.entityTypeId];
+        if (!entityType) {
+            return false;
+        }
+
+        // For ship entities, check basic rules but skip neighbor requirement
+        if (entityType.type === 'ship') {
+            const behavior = EntityBehaviorFactory.create(this.game, this.entityTypeId);
+            if (!behavior) return false;
+
+            // 1. Check fog of war
+            if (!behavior.areAllTilesVisible(tileX, tileY)) {
+                return false;
+            }
+
+            // 2. Check entity collision
+            if (behavior.hasEntityCollision(tileX, tileY)) {
+                return false;
+            }
+
+            // 3. Check ship bounds (must be >= ship_attach)
+            const region = this.game.gameData?.region;
+            if (!region) return false;
+
+            const shipAttachX = parseInt(region.ship_attach_x) || 0;
+            const shipAttachY = parseInt(region.ship_attach_y) || 0;
+
+            if (tileX < shipAttachX || tileY < shipAttachY) {
+                return false; // Outside ship bounds
+            }
+
+            // Skip hasAdjacentMap check - that's handled by flood-fill
+            return true;
+        }
+
+        // For non-ship entities, use standard validation
+        return this.checkPlacement(tileX, tileY);
+    }
+
+    /**
+     * Update conveyor path preview (linear path)
+     */
+    updateConveyorPathPreview() {
+        const pathInfo = this.calculateConveyorPath(
+            this.dragStartTile.x, this.dragStartTile.y,
+            this.dragEndTile.x, this.dragEndTile.y
+        );
+
+        // Get entity_type_id with correct orientation
+        const orientedTypeId = this.getOrientedEntityType(
+            this.entityTypeId,
+            pathInfo.orientation
+        );
+
+        this.createMultiPreviews(pathInfo.tiles, orientedTypeId);
+    }
+
+    /**
+     * Calculate conveyor path and determine orientation
+     */
+    calculateConveyorPath(x1, y1, x2, y2) {
+        const deltaX = x2 - x1;
+        const deltaY = y2 - y1;
+
+        // Determine direction (horizontal priority)
+        const isHorizontal = Math.abs(deltaX) >= Math.abs(deltaY);
+
+        let tiles, orientation;
+
+        if (isHorizontal) {
+            orientation = deltaX >= 0 ? 'right' : 'left';
+            tiles = this.getHorizontalPath(x1, y1, x2);
+        } else {
+            orientation = deltaY >= 0 ? 'down' : 'up';
+            tiles = this.getVerticalPath(x1, y1, y2);
+        }
+
+        // Stop at first obstacle
+        tiles = this.stopAtObstacle(tiles);
+
+        return { tiles, orientation };
+    }
+
+    /**
+     * Get horizontal path from (x1, y) to (x2, y)
+     */
+    getHorizontalPath(x1, y, x2) {
+        const tiles = [];
+        const step = x2 >= x1 ? 1 : -1;
+
+        for (let x = x1; step > 0 ? x <= x2 : x >= x2; x += step) {
+            tiles.push({ x, y });
+        }
+        return tiles;
+    }
+
+    /**
+     * Get vertical path from (x, y1) to (x, y2)
+     */
+    getVerticalPath(x, y1, y2) {
+        const tiles = [];
+        const step = y2 >= y1 ? 1 : -1;
+
+        for (let y = y1; step > 0 ? y <= y2 : y >= y2; y += step) {
+            tiles.push({ x, y });
+        }
+        return tiles;
+    }
+
+    /**
+     * Stop path at first obstacle
+     */
+    stopAtObstacle(tiles) {
+        const validTiles = [];
+
+        for (const tile of tiles) {
+            const canPlace = this.checkPlacement(tile.x, tile.y);
+            if (!canPlace) break; // Stop at first obstacle
+            validTiles.push(tile);
+        }
+
+        return validTiles;
+    }
+
+    /**
+     * Get entity_type_id with correct orientation
+     */
+    getOrientedEntityType(baseTypeId, orientation) {
+        const variants = this.getOrientationVariants(baseTypeId);
+
+        for (const variantId of variants) {
+            const entityType = this.game.entityTypes[variantId];
+            if (entityType && entityType.orientation === orientation) {
+                return variantId;
+            }
+        }
+
+        return baseTypeId; // Fallback
+    }
+
+    /**
+     * Create preview sprites for multiple tiles
+     */
+    createMultiPreviews(tiles, entityTypeId) {
+        // Limit to 100 tiles for performance
+        if (tiles.length > 100) {
+            tiles = tiles.slice(0, 100);
+        }
+
+        this.clearMultiPreviews();
+
+        const entityType = this.game.entityTypes[entityTypeId];
+        if (!entityType) return;
+
+        const texture = this.game.textures[`entity_${entityTypeId}_blueprint`];
+        if (!texture) return;
+
+        const { tileWidth, tileHeight } = this.game.config;
+
+        for (const tile of tiles) {
+            // Use pre-validated status if available (from flood-fill), otherwise check placement
+            const canPlace = tile.preValidated !== undefined ? tile.valid : this.checkPlacement(tile.x, tile.y);
+
+            const sprite = new PIXI.Sprite(texture);
+            const pos = tileToWorld(tile.x, tile.y, tileWidth, tileHeight);
+
+            sprite.x = pos.x;
+            sprite.y = pos.y;
+            sprite.zIndex = pos.y + PREVIEW_Z_OFFSET;
+            sprite.tint = canPlace ? BUILD_VALID_COLOR : BUILD_INVALID_COLOR;
+            sprite.alpha = canPlace ? BUILD_VALID_ALPHA : BUILD_INVALID_ALPHA;
+
+            this.game.entityLayer.addChild(sprite);
+
+            this.previewSprites.push({
+                sprite,
+                x: tile.x,
+                y: tile.y,
+                valid: canPlace,
+                entityTypeId: entityTypeId
+            });
+        }
+    }
+
+    /**
+     * Clear all preview sprites
+     */
+    clearMultiPreviews() {
+        for (const item of this.previewSprites) {
+            this.game.entityLayer.removeChild(item.sprite);
+            item.sprite.destroy();
+        }
+        this.previewSprites = [];
+    }
+
+    /**
+     * Get valid placements from preview sprites
+     */
+    getValidPlacements() {
+        return this.previewSprites
+            .filter(p => p.valid)
+            .map(p => ({
+                entity_type_id: p.entityTypeId,
+                x: p.x,
+                y: p.y,
+                state: 'blueprint'
+            }));
+    }
+
+    /**
+     * Finish dragging and place buildings
+     */
+    async finishDragging(e) {
+        this.wasDragging = this.isDragging;
+        this.isDragging = false;
+
+        const placements = this.getValidPlacements();
+
+        if (placements.length === 0) {
+            this.clearMultiPreviews();
+
+            // Restore single preview
+            if (this.previewSprite) {
+                this.previewSprite.visible = true;
+            }
+            return;
+        }
+
+        await this.placeMultipleBuildings(placements);
+    }
+
+    /**
+     * Place multiple buildings via AJAX
+     */
+    async placeMultipleBuildings(placements) {
+        try {
+            const response = await fetch(this.game.config.createEntityUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
+                body: JSON.stringify({ entities: placements })
+            });
+
+            const data = await response.json();
+
+            if (data.result === 'ok' && data.entities) {
+                // Deduct resources for each entity
+                this.updateUserResourcesForMultiple(placements);
+
+                // Remove deposits
+                if (data.depositsRemoved && data.depositsRemoved.length > 0) {
+                    const depositIds = data.depositsRemoved.map(d => d.deposit_id);
+                    this.game.depositManager.removeDeposits(depositIds);
+                }
+
+                // Render new entities
+                this.game.renderEntities(data.entities);
+
+                // Handle eye entities for fog of war
+                for (const entity of data.entities) {
+                    this.handleEyeEntityPlacement(entity);
+                }
+
+                console.log(`Placed ${data.count} entities`);
+            } else {
+                console.error('Failed to place buildings:', data.error);
+            }
+        } catch (e) {
+            console.error('Error placing buildings:', e);
+        } finally {
+            this.clearMultiPreviews();
+
+            // Restore single preview
+            if (this.previewSprite) {
+                this.previewSprite.visible = true;
+            }
+        }
+    }
+
+    /**
+     * Update user resources after mass building
+     */
+    updateUserResourcesForMultiple(placements) {
+        for (const placement of placements) {
+            const costs = this.game.entityTypeCosts[placement.entity_type_id];
+
+            if (costs) {
+                for (const [resourceId, quantity] of Object.entries(costs)) {
+                    const rid = parseInt(resourceId);
+                    this.game.userResources[rid] = (this.game.userResources[rid] || 0) - quantity;
+                    if (this.game.userResources[rid] < 0) {
+                        this.game.userResources[rid] = 0;
+                    }
+                }
+            }
+        }
+
+        if (this.game.buildPanel) {
+            this.game.buildPanel.updateAffordability();
+        }
+
+        if (this.game.resourcePanel) {
+            this.game.resourcePanel.updateAll();
+        }
     }
 }
 

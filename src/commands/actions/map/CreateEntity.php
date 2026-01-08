@@ -30,6 +30,103 @@ class CreateEntity extends JsonAction
 
         $data = $this->getBodyParams();
 
+        // Check for mass creation mode
+        if (isset($data['entities']) && is_array($data['entities'])) {
+            return $this->createMultipleEntities($data['entities']);
+        }
+
+        // Backward compatibility: single entity creation
+        return $this->createSingleEntity($data);
+    }
+
+    /**
+     * Create single entity (backward compatibility)
+     */
+    private function createSingleEntity($data)
+    {
+        $userId = Yii::$app->user->id;
+        $currentRegionId = (int)$this->getUser()->current_region_id;
+        $region = Region::findOne($currentRegionId);
+
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            $result = $this->createEntityInternal($data, $userId, $currentRegionId, $region);
+
+            if (!$result['success']) {
+                throw new \Exception($result['error']);
+            }
+
+            $transaction->commit();
+
+            return $this->success([
+                'entity' => $result['entity'],
+                'depositsRemoved' => $result['depositsRemoved'],
+                'isShip' => $result['isShip'],
+                'targetRemoved' => $result['targetRemoved'] ?? false,
+                'oldHqRemoved' => $result['oldHqRemoved'] ?? null,
+            ]);
+
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return $this->error($e->getMessage());
+        }
+    }
+
+    /**
+     * Create multiple entities in one transaction
+     */
+    private function createMultipleEntities($entitiesData)
+    {
+        $userId = Yii::$app->user->id;
+        $currentRegionId = (int)$this->getUser()->current_region_id;
+        $region = Region::findOne($currentRegionId);
+
+        $createdEntities = [];
+        $totalDepositsRemoved = [];
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            foreach ($entitiesData as $entityData) {
+                $result = $this->createEntityInternal(
+                    $entityData,
+                    $userId,
+                    $currentRegionId,
+                    $region
+                );
+
+                if ($result['success']) {
+                    $createdEntities[] = $result['entity'];
+                    if (!empty($result['depositsRemoved'])) {
+                        $totalDepositsRemoved = array_merge(
+                            $totalDepositsRemoved,
+                            $result['depositsRemoved']
+                        );
+                    }
+                }
+                // Skip invalid entities (don't break transaction)
+            }
+
+            $transaction->commit();
+
+            return $this->success([
+                'entities' => $createdEntities,
+                'depositsRemoved' => $totalDepositsRemoved,
+                'count' => count($createdEntities)
+            ]);
+
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return $this->error($e->getMessage());
+        }
+    }
+
+    /**
+     * Internal method to create a single entity
+     * Extracted from run() for reuse in both single and mass creation
+     */
+    private function createEntityInternal($data, $userId, $currentRegionId, $region)
+    {
         // Validate required fields
         $entityTypeId = (int) ($data['entity_type_id'] ?? 0);
         $worldX = (int) ($data['x'] ?? 0);
@@ -38,22 +135,19 @@ class CreateEntity extends JsonAction
         $targetEntityId = isset($data['target_entity_id']) ? (int) $data['target_entity_id'] : null;
 
         if (!$entityTypeId) {
-            return $this->error('entity_type_id required');
+            return ['success' => false, 'error' => 'entity_type_id required'];
         }
 
         // Check entity type exists
         $entityType = EntityType::findOne($entityTypeId);
         if (!$entityType) {
-            return $this->error('Invalid entity_type_id');
+            return ['success' => false, 'error' => 'Invalid entity_type_id'];
         }
 
         // Special rules for HQ building
         $isHqBuilding = ($entityType->type === 'hq');
 
-        // Get current region and user
-        $userId = Yii::$app->user->id;
-        $currentRegionId = (int)$this->getUser()->current_region_id;
-        $region = Region::findOne($currentRegionId);
+        // Use provided region and user data
         $shipAttachX = $region ? (int)$region->ship_attach_x : 0;
         $shipAttachY = $region ? (int)$region->ship_attach_y : 0;
 
@@ -81,12 +175,12 @@ class CreateEntity extends JsonAction
 
         // Check if user can afford building (BEFORE placement rules)
         if (!EntityTypeCost::canAfford($userId, $entityTypeId)) {
-            return $this->error('Not enough resources to build this');
+            return ['success' => false, 'error' => 'Not enough resources to build this'];
         }
 
         // HQ Rule 2: Can only build HQ on ship landing
         if ($isHqBuilding && !$isShipPlacement) {
-            return $this->error('HQ can only be built on ship floors');
+            return ['success' => false, 'error' => 'HQ can only be built on ship floors'];
         }
 
         // Check building rules using behavior system (world coordinates)
@@ -96,7 +190,7 @@ class CreateEntity extends JsonAction
 
         // If building placement is not allowed
         if (!$ruleCheck['allowed']) {
-            return $this->error($ruleCheck['error'] ?? 'Cannot place here');
+            return ['success' => false, 'error' => $ruleCheck['error'] ?? 'Cannot place here'];
         }
 
         // HQ Rule 1: Delete old HQ when building new one
@@ -122,11 +216,10 @@ class CreateEntity extends JsonAction
 
         // Validate target_entity_id matches the rule check (for mining entities)
         if ($targetEntityId && $targetEntity && $targetEntity->entity_id != $targetEntityId) {
-            return $this->error('Target entity mismatch');
+            return ['success' => false, 'error' => 'Target entity mismatch'];
         }
 
-        // Begin transaction
-        $transaction = Yii::$app->db->beginTransaction();
+        // No transaction here - managed by calling methods
         try {
             // HQ Rule 1: Delete old HQ if exists (before creating new one)
             $oldHqRemoved = null;
@@ -258,9 +351,9 @@ class CreateEntity extends JsonAction
                 }
             }
 
-            $transaction->commit();
-
-            return $this->success([
+            // Return success result (transaction managed by calling method)
+            return [
+                'success' => true,
                 'entity' => [
                     'entity_id' => $entityIdResponse,
                     'entity_type_id' => $entityTypeId,
@@ -273,11 +366,11 @@ class CreateEntity extends JsonAction
                 'depositsRemoved' => $depositsRemoved,
                 'oldHqRemoved' => $oldHqRemoved,
                 'isShip' => $isShipPlacement,
-            ]);
+            ];
 
         } catch (\Exception $e) {
-            $transaction->rollBack();
-            return $this->error($e->getMessage());
+            // Let exception bubble up to calling method for transaction rollback
+            throw $e;
         }
     }
 }
