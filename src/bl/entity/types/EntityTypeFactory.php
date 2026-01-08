@@ -54,6 +54,7 @@ class EntityTypeFactory
         building\PowerPoleEntityType::ENTITY_TYPE_ID => building\PowerPoleEntityType::class,
         building\SteamEngineEntityType::ENTITY_TYPE_ID => building\SteamEngineEntityType::class,
         building\BoilerEntityType::ENTITY_TYPE_ID => building\BoilerEntityType::class,
+        building\PressEntityType::ENTITY_TYPE_ID => building\PressEntityType::class,
         building\DrillFastEntityType::ENTITY_TYPE_ID => building\DrillFastEntityType::class,
         building\HqEntityType::ENTITY_TYPE_ID => building\HqEntityType::class,
         building\DrillLargeEntityType::ENTITY_TYPE_ID => building\DrillLargeEntityType::class,

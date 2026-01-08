@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <!-- Copper rod - long vertical bar -->
+  <rect x="6.5" y="1" width="3" height="14" fill="#B87333"/>
+  <!-- Highlight on left side -->
+  <rect x="6.5" y="1" width="1" height="14" fill="#CD853F"/>
+  <!-- Shadow on right side -->
+  <rect x="8.5" y="1" width="1" height="14" fill="#8B4513"/>
+  <!-- Top end cap -->
+  <ellipse cx="8" cy="1.5" rx="1.5" ry="1" fill="#C87333"/>
+  <!-- Bottom end cap -->
+  <ellipse cx="8" cy="14.5" rx="1.5" ry="1" fill="#A0522D"/>
+</svg>

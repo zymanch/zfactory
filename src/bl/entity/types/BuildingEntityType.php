@@ -69,6 +69,9 @@ abstract class BuildingEntityType extends AbstractEntityType
             case 'boiler':
                 $generatorClass = building\BoilerGenerator::class;
                 break;
+            case 'press':
+                $generatorClass = building\PressGenerator::class;
+                break;
             case 'drill':
                 $generatorClass = building\DrillGenerator::class;
                 break;
