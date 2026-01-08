@@ -23,6 +23,8 @@ import { TechnologyWindow } from './modules/windows/technologyWindow.js';
 import { ConstructionManager } from './modules/constructionManager.js';
 import { DepositLayerManager } from './modules/depositLayerManager.js';
 import { DepositTooltip } from './modules/tooltips/DepositTooltip.js';
+import { PipeSystemManager } from './modules/pipes/PipeSystemManager.js';
+import { PipeRenderer } from './modules/pipes/PipeRenderer.js';
 import { SPRITE_STATES, SPRITE_STATES_ORIGINAL, CONSTRUCTION_FRAMES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 import { getCSRFToken } from './modules/utils.js';
 
@@ -87,6 +89,8 @@ class ZFactoryGame {
         this.gameModeManager = null;
         this.entityInfoWindow = null;
         this.technologyWindow = null;
+        this.pipeSystemManager = null;
+        this.pipeRenderer = null;
     }
 
     /**
@@ -138,6 +142,8 @@ class ZFactoryGame {
         this.entityInfoWindow = new EntityInfoWindow(this);
         this.technologyWindow = new TechnologyWindow(this);
         this.constructionManager = new ConstructionManager(this);
+        this.pipeSystemManager = new PipeSystemManager(this);
+        this.pipeRenderer = new PipeRenderer(this);
     }
 
     /**
@@ -276,6 +282,12 @@ class ZFactoryGame {
         this.initialEntityResources = data.entityResources || [];
         this.initialCraftingStates = data.craftingStates || [];
         this.initialTransportStates = data.transportStates || [];
+        this.pipeSystems = data.pipeSystems || {};
+
+        // Load pipe systems data
+        if (this.pipeSystemManager && this.pipeSystems) {
+            this.pipeSystemManager.loadSystems(this.pipeSystems);
+        }
 
         // Setup gameData structure for new atlas system
         this.gameData = {

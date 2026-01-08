@@ -15,6 +15,8 @@ use models\EntityCrafting;
 use models\EntityTypeCost;
 use models\UserResource;
 use models\DepositType;
+use models\PipeSystem;
+use models\PipeSystemMember;
 use services\BuildingRules;
 use Yii;
 
@@ -271,6 +273,38 @@ class Config extends JsonAction
         return BuildingRules::getClientRules();
     }
 
+    protected function getPipeSystems($currentRegionId)
+    {
+        $systems = PipeSystem::find()
+            ->where(['region_id' => $currentRegionId])
+            ->asArray()
+            ->all();
+
+        $result = [];
+        foreach ($systems as $system) {
+            $systemId = (int)$system['pipe_system_id'];
+
+            // Get all entity_ids in this system
+            $members = PipeSystemMember::find()
+                ->where(['pipe_system_id' => $systemId])
+                ->select(['entity_id'])
+                ->asArray()
+                ->all();
+
+            $entityIds = array_map(function($m) { return (int)$m['entity_id']; }, $members);
+
+            $result[$systemId] = [
+                'pipe_system_id' => $systemId,
+                'resource_id' => $system['resource_id'] ? (int)$system['resource_id'] : null,
+                'current_amount' => (int)$system['current_amount'],
+                'max_capacity' => (int)$system['max_capacity'],
+                'entity_ids' => $entityIds,
+            ];
+        }
+
+        return $result;
+    }
+
     public function run()
     {
         $currentRegionId = $this->getCurrentRegionId();
@@ -290,6 +324,7 @@ class Config extends JsonAction
             'entityResources' => $this->getEntityResources($currentRegionId),
             'craftingStates' => $this->getCraftingStates($currentRegionId),
             'transportStates' => $this->getTransportStates($currentRegionId),
+            'pipeSystems' => $this->getPipeSystems($currentRegionId),
             'region' => $this->getRegion($currentRegionId),
             'buildPanel' => $this->getBuildPanel(),
             'cameraPosition' => $this->getCameraPosition(),

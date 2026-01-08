@@ -91,6 +91,28 @@ export class EntityTooltip extends BaseTooltip {
             </div>
         `;
 
+        // Pipe System info (if pipe entity)
+        if (this.game.pipeSystemManager && this.game.pipeSystemManager.isPipeEntity(entity.entity_type_id)) {
+            const systemInfo = this.game.pipeSystemManager.getSystemInfo(entity.entity_id);
+            if (systemInfo) {
+                html += `<div style="border-top:1px solid #4a4a5a;padding-top:6px;margin-top:6px;">`;
+                html += `<div style="margin-bottom:4px;font-weight:bold;">Pipe System:</div>`;
+                html += `<div style="display:flex;justify-content:space-between;margin:2px 0;">`;
+                html += `<span>Fluid:</span><span style="color:#8af;">${systemInfo.resourceName}</span>`;
+                html += `</div>`;
+                html += `<div style="display:flex;justify-content:space-between;margin:2px 0;">`;
+                html += `<span>Amount:</span><span style="color:#8af;">${this.formatAmount(systemInfo.currentAmount)} / ${this.formatAmount(systemInfo.maxCapacity)}</span>`;
+                html += `</div>`;
+                html += `<div style="margin-top:4px;">`;
+                html += `<div style="background:#333;height:6px;border-radius:3px;overflow:hidden;">`;
+                html += `<div style="width:${systemInfo.fillPercent}%;height:100%;background:#3498db;"></div>`;
+                html += `</div>`;
+                html += `<div style="font-size:10px;color:#888;text-align:right;margin-top:2px;">${systemInfo.fillPercent}% full</div>`;
+                html += `</div>`;
+                html += `</div>`;
+            }
+        }
+
         // Resources (if any)
         const resources = await this.getEntityResources(entity.entity_id);
         if (resources && resources.length > 0) {
