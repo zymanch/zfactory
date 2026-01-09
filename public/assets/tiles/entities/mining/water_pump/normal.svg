@@ -1,0 +1,20 @@
+<svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Base -->
+  <rect x="8" y="40" width="48" height="16" fill="#5A5A5A" stroke="#3A3A3A" stroke-width="2"/>
+
+  <!-- Pump body -->
+  <rect x="16" y="16" width="32" height="32" fill="#3498DB" stroke="#2980B9" stroke-width="2"/>
+
+  <!-- Pipe connection at top -->
+  <rect x="26" y="8" width="12" height="12" fill="#3498DB" stroke="#2980B9" stroke-width="1"/>
+
+  <!-- Pipe connection at bottom -->
+  <rect x="26" y="48" width="12" height="8" fill="#5A5A5A" stroke="#3A3A3A" stroke-width="1"/>
+
+  <!-- Water indicator -->
+  <circle cx="32" cy="28" r="8" fill="#85C1E9" opacity="0.7"/>
+
+  <!-- Details -->
+  <line x1="20" y1="20" x2="20" y2="44" stroke="#2980B9" stroke-width="1"/>
+  <line x1="44" y1="20" x2="44" y2="44" stroke="#2980B9" stroke-width="1"/>
+</svg>

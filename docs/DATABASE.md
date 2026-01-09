@@ -10,8 +10,8 @@
 ├─────────────────┤     ├─────────────────┤     ├─────────────────┤
 │ landing_id (PK) │     │ entity_type_id  │     │ user_id (PK)    │
 │ is_walk         │     │ type            │     │ username        │
-│ image_url       │     │ name            │     │ auth_key        │
-└────────┬────────┘     │ image_url       │     │ build_panel     │
+│ folder          │     │ name            │     │ auth_key        │
+└────────┬────────┘     │ folder          │     │ build_panel     │
          │              │ max_durability  │     │ camera_x        │
          │              │ width           │     │ camera_y        │
          │              │ height          │     │ zoom            │
@@ -37,7 +37,7 @@
 │deposit_type_id  │     │ resource_id (PK)│
 │ type (enum)     │     │ name            │
 │ name            │     │ icon_url        │
-│ image_url       │     │ type (enum)     │
+│ folder          │     │ type (enum)     │
 │ resource_id (FK)│◄────┤ max_stack       │
 │ resource_amount │     └─────────────────┘
 │ width, height   │
@@ -90,7 +90,7 @@ Defines types of natural resources (trees, rocks, ores) that exist in the world.
 | deposit_type_id     | INT UNSIGNED                  | Primary key                              |
 | type                | ENUM('tree','rock','ore')     | Category of deposit                      |
 | name                | VARCHAR(128)                  | Display name                             |
-| image_url           | VARCHAR(256)                  | Folder name for sprite (only normal.png) |
+| folder              | VARCHAR(256)                  | Folder name for sprite (only normal.png) |
 | resource_id         | INT UNSIGNED                  | FK to resource (what resource it contains)|
 | resource_amount     | INT UNSIGNED DEFAULT 100      | Default resource amount in new deposits  |
 | width               | TINYINT UNSIGNED DEFAULT 1    | Visual width in tiles                    |
@@ -178,7 +178,7 @@ Defines types of entities that can be placed on the map.
 | entity_type_id       | INT UNSIGNED                                                                      | Primary key                           |
 | type                 | ENUM('building','transporter','manipulator','tree','relief','resource','eye','mining','storage') | Category of entity          |
 | name                 | VARCHAR(128)                                                                      | Display name                          |
-| image_url            | VARCHAR(256)                                                                      | Folder name for sprite states         |
+| folder               | VARCHAR(256)                                                                      | Folder name for sprite states         |
 | extension            | VARCHAR(4) DEFAULT 'svg'                                                          | File extension (svg, jpg, png)        |
 | max_durability       | INT UNSIGNED                                                                      | Maximum durability (health)           |
 | width                | TINYINT UNSIGNED DEFAULT 1                                                        | Entity width in tiles                 |
@@ -570,6 +570,7 @@ Stores user accounts and their settings.
 | m260104_000006_migrate_to_pixel_coordinates.php | Migrate to pixel-based coordinate system       |
 | m260104_000007_add_dual_lane_conveyors.php      | Add dual-lane conveyor types (IDs 123-130)    |
 | m260104_000008_unify_position_fields.php        | Unify position_px, remove arm_position_px      |
+| m260109_135158_refactor_sprite_folders.php      | Rename image_url to folder in entity_type and deposit_type |
 
 ## Future Considerations
 

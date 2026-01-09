@@ -158,10 +158,16 @@ When placing extraction building:
 ### Sprite Location
 ```
 public/assets/tiles/deposits/
-├── tree_pine/normal.png
-├── rock_small/normal.png
-├── ore_iron/normal.png
-└── ...
+├── tree/
+│   ├── tree_pine/normal.png
+│   ├── tree_oak/normal.png
+│   └── ...
+├── rock/
+│   ├── rock_small/normal.png
+│   └── ...
+└── ore/
+    ├── ore_iron/normal.png
+    └── ...
 ```
 
 ## Project Structure
@@ -172,10 +178,23 @@ zfactory.local/
 ├── public/                 # Web root
 │   ├── assets/tiles/      # Game sprites
 │   │   ├── landing/       # Terrain tiles (texture atlases)
-│   │   └── entities/      # Entity sprite folders
-│   │       ├── conveyor/  # 5 state PNG files each
-│   │       ├── drill/
-│   │       └── ...
+│   │   ├── entities/      # Entity sprite folders (grouped by type)
+│   │   │   ├── building/
+│   │   │   │   ├── furnace/  # 5 state PNG files each
+│   │   │   │   └── ...
+│   │   │   ├── transporter/
+│   │   │   │   ├── conveyor/
+│   │   │   │   └── ...
+│   │   │   ├── mining/
+│   │   │   │   ├── drill/
+│   │   │   │   └── ...
+│   │   │   └── ...
+│   │   └── deposits/      # Deposit sprite folders (grouped by type)
+│   │       ├── tree/
+│   │       │   ├── tree_pine/
+│   │       │   └── ...
+│   │       ├── rock/
+│   │       └── ore/
 │   ├── css/               # Compiled CSS
 │   ├── js/                # Compiled JS
 │   └── index.php          # Entry point
@@ -369,7 +388,7 @@ $generator->generate($entityType);         // Generates sprites via FLUX.1 Dev
 Generator hierarchy in `bl\entity\generators\`:
 - `base\AbstractEntityGenerator` - Base with generate(), generateStates()
 - `base\ImageProcessor` - Static image processing utilities
-- `EntityGeneratorFactory` - Maps image_url to generator class
+- `EntityGeneratorFactory` - Maps folder name to generator class
 - Individual generators: `building\FurnaceGenerator`, `tree\PineTreeGenerator`, etc.
 
 #### ConveyorGenerator (Advanced Generation Logic)
@@ -467,7 +486,7 @@ public function actions()
 Each entity type has a folder with **7 sprite states** + **9 construction frames**:
 
 ```
-public/assets/tiles/entities/{entity_name}/
+public/assets/tiles/entities/{type}/{folder}/
 ├── normal.png              # Default built state (also used as icon)
 ├── damaged.png             # Durability < 50% max
 ├── blueprint.png           # Construction outline
@@ -481,6 +500,17 @@ public/assets/tiles/entities/{entity_name}/
     ├── ...
     └── frame_8.png         # 89% - 100% progress
 ```
+
+**Sprite Organization:**
+Entities are grouped into subdirectories by their `type` field:
+- `building/` - furnace, assembler, boiler, etc.
+- `transporter/` - conveyor, pipe, splitter, underground_belt, etc.
+- `mining/` - drill, water_pump, sawmill, mine, etc.
+- `storage/` - chest, tank_small, tank_large
+- `manipulator/` - manipulator_short, manipulator_long, etc.
+- `eye/` - tower_crystal_*
+- `ship/` - ship_floor_*
+- `hq/` - headquarters building
 
 **Note**: The `normal.png` file serves dual purpose - both as the default sprite and as the 64×64 icon for UI panels.
 
@@ -520,12 +550,12 @@ public/assets/tiles/entities/{entity_name}/
 - `type` - enum('building','transporter','manipulator','tree','relief','resource','eye','mining')
 - `name` - display name
 - `description` - detailed description shown in entity info window
-- `image_url` - **folder name** for sprite states
+- `folder` - **folder name** for sprite states (within type subdirectory)
 - `extension` - 'png' (file extension for sprites)
 - `max_durability` - maximum health points
 - `width` - entity width in tiles (default 1)
 - `height` - entity height in tiles (default 1)
-- `icon_url` - path to icon (typically '{folder}/normal.png')
+- `icon_url` - path to icon (typically '{type}/{folder}/normal.png')
 - `power` - visibility radius for eye type entities
 - `construction_ticks` - ticks required to complete construction (60 ticks = 1 second)
 
