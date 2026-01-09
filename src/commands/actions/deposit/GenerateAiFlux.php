@@ -67,11 +67,11 @@ class GenerateAiFlux extends ConsoleAction
             $generator = $deposit->getGenerator();
 
             if (!$generator) {
-                $this->stdout("Warning: No generator for '{$deposit->image_url}'\n", Console::FG_YELLOW);
+                $this->stdout("Warning: No generator for '{$deposit->folder}'\n", Console::FG_YELLOW);
                 continue;
             }
 
-            $this->stdout("Deposit: {$deposit->image_url} ({$deposit->name})\n");
+            $this->stdout("Deposit: {$deposit->folder} ({$deposit->name})\n");
 
             try {
                 $result = $generator->generate($deposit);
@@ -142,18 +142,18 @@ class GenerateAiFlux extends ConsoleAction
         if ($depositName === 'all') {
             // All deposits that have generators
             return DepositType::find()
-                ->where(['in', 'image_url', $registeredUrls])
+                ->where(['in', 'folder', $registeredUrls])
                 ->all();
         } elseif ($depositName === 'ores') {
             // Only ore deposits
             return DepositType::find()
                 ->where(['type' => 'ore'])
-                ->andWhere(['in', 'image_url', $registeredUrls])
+                ->andWhere(['in', 'folder', $registeredUrls])
                 ->all();
         } else {
             // Specific deposit
             $deposit = DepositType::find()
-                ->where(['image_url' => $depositName])
+                ->where(['folder' => $depositName])
                 ->one();
 
             if (!$deposit) {

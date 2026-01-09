@@ -21,11 +21,12 @@ class GenerateStates extends ConsoleAction
         $entities = EntityType::find()->asArray()->all();
 
         foreach ($entities as $entity) {
-            $folder = $entity['image_url'];
+            $folder = $entity['folder'];
+            $type = $entity['type'];
             $widthTiles = $entity['width'];
             $heightTiles = $entity['height'];
 
-            $this->generateSpritesForEntity($basePath, $folder, $widthTiles, $heightTiles);
+            $this->generateSpritesForEntity($basePath, $type, $folder, $widthTiles, $heightTiles);
         }
 
         $this->stdout("\nDone! Generated sprites for " . count($entities) . " entities.\n");
@@ -35,9 +36,9 @@ class GenerateStates extends ConsoleAction
         return 0;
     }
 
-    private function generateSpritesForEntity($basePath, $folder, $widthTiles, $heightTiles)
+    private function generateSpritesForEntity($basePath, $type, $folder, $widthTiles, $heightTiles)
     {
-        $entityPath = $basePath . '/public/assets/tiles/entities/' . $folder;
+        $entityPath = $basePath . '/public/assets/tiles/entities/' . $type . '/' . $folder;
 
         if (!is_dir($entityPath)) {
             $this->stdout("Warning: Entity folder not found: {$folder}\n");

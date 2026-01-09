@@ -34,7 +34,7 @@ class EntityType extends base\BaseEntityType
     public function getSpritesDir(): string
     {
         $basePath = Yii::getAlias('@app/..');
-        return $basePath . '/public/assets/tiles/entities/' . $this->image_url;
+        return $basePath . '/public/assets/tiles/entities/' . $this->type . '/' . $this->folder;
     }
 
     /**
@@ -124,7 +124,7 @@ class EntityType extends base\BaseEntityType
         ImageProcessor::createDamaged($normalPath, $this->getStatePath('damaged'));
 
         // Blueprint
-        ImageProcessor::createBlueprint($normalPath, $this->getStatePath('blueprint'), $this->image_url);
+        ImageProcessor::createBlueprint($normalPath, $this->getStatePath('blueprint'), $this->folder);
 
         // Selected variants
         ImageProcessor::createSelected($normalPath, $this->getStatePath('normal_selected'));

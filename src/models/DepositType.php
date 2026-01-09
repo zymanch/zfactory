@@ -28,7 +28,7 @@ class DepositType extends base\BaseDepositType {
             'ore_gold' => deposit\GoldOreDepositType::class,
         ];
 
-        $className = $classMap[$row['image_url']] ?? null;
+        $className = $classMap[$row['folder']] ?? null;
 
         if ($className === null) {
             // Return generic DepositType if no specific class found
@@ -50,7 +50,7 @@ class DepositType extends base\BaseDepositType {
     public function getSpritesDir(): string
     {
         $basePath = Yii::getAlias('@app/..');
-        return $basePath . '/public/assets/tiles/deposits/' . $this->image_url;
+        return $basePath . '/public/assets/tiles/deposits/' . $this->type . '/' . $this->folder;
     }
 
     /**
@@ -140,7 +140,7 @@ class DepositType extends base\BaseDepositType {
         ImageProcessor::createDamaged($normalPath, $this->getStatePath('damaged'));
 
         // Blueprint
-        ImageProcessor::createBlueprint($normalPath, $this->getStatePath('blueprint'), $this->image_url);
+        ImageProcessor::createBlueprint($normalPath, $this->getStatePath('blueprint'), $this->folder);
 
         // Selected variants
         ImageProcessor::createSelected($normalPath, $this->getStatePath('normal_selected'));

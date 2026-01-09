@@ -81,11 +81,11 @@ class GenerateAiFlux extends ConsoleAction
             $generator = $entity->getGenerator();
 
             if (!$generator) {
-                $this->stdout("Warning: No generator for '{$entity->image_url}'\n", Console::FG_YELLOW);
+                $this->stdout("Warning: No generator for '{$entity->folder}'\n", Console::FG_YELLOW);
                 continue;
             }
 
-            $this->stdout("Entity: {$entity->image_url} ({$entity->name})\n");
+            $this->stdout("Entity: {$entity->folder} ({$entity->name})\n");
 
             try {
                 $success = false;
@@ -148,7 +148,7 @@ class GenerateAiFlux extends ConsoleAction
                 /** @var AbstractEntityGenerator $generator */
                 $generator = $item['generator'];
 
-                $this->stdout("Rotating: {$entity->image_url}\n");
+                $this->stdout("Rotating: {$entity->folder}\n");
                 $generator->generateRotationalVariants($entity);
             }
         }
@@ -191,7 +191,7 @@ class GenerateAiFlux extends ConsoleAction
             }
 
             $entities = EntityType::find()
-                ->where(['like', 'image_url', $pattern, false])
+                ->where(['like', 'folder', $pattern, false])
                 ->all();
 
             $result = [];
@@ -205,7 +205,7 @@ class GenerateAiFlux extends ConsoleAction
         } else {
             // Get specific entity
             $entity = EntityType::find()
-                ->where(['image_url' => $entityName])
+                ->where(['folder' => $entityName])
                 ->one();
 
             if (!$entity) {

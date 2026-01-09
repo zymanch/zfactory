@@ -377,10 +377,10 @@ class ZFactoryGame {
     async loadDepositTextures() {
         for (const depositTypeId in this.depositTypes) {
             const depositType = this.depositTypes[depositTypeId];
-            const folder = depositType.image_url;
+            const folder = depositType.folder;
 
             // Only load normal.png for deposits (no damaged, blueprint, etc.)
-            const normalUrl = this.assetUrl(`${this.config.tilesPath}deposits/${folder}/normal.png`);
+            const normalUrl = this.assetUrl(`${this.config.tilesPath}deposits/${depositType.type}/${folder}/normal.png`);
 
             try {
                 const texture = await PIXI.Assets.load(normalUrl);
@@ -399,7 +399,7 @@ class ZFactoryGame {
 
         for (const typeId in this.entityTypes) {
             const entityType = this.entityTypes[typeId];
-            const folder = entityType.image_url;
+            const folder = entityType.folder;
             const width = entityType.width || 1;
             const height = entityType.height || 1;
 
@@ -407,7 +407,7 @@ class ZFactoryGame {
             const pixelHeight = height * tileHeight;
 
             // Load atlas.png
-            const atlasUrl = this.assetUrl(`${this.config.tilesPath}entities/${folder}/atlas.png`);
+            const atlasUrl = this.assetUrl(`${this.config.tilesPath}entities/${entityType.type}/${folder}/atlas.png`);
 
             try {
                 const atlasTexture = await PIXI.Assets.load(atlasUrl);

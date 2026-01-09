@@ -102,8 +102,8 @@ export function assetUrl(basePath, path, version = 1) {
  */
 export function getEntityIconUrl(entityType, tilesPath, version = 1) {
     const path = entityType.icon_url
-        ? `entities/${entityType.icon_url}`
-        : `entities/${entityType.image_url}/normal.${entityType.extension || 'svg'}`;
+        ? `entities/${entityType.type}/${entityType.icon_url}`
+        : `entities/${entityType.type}/${entityType.folder}/normal.${entityType.extension || 'svg'}`;
     return assetUrl(tilesPath, path, version);
 }
 
