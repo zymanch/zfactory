@@ -45,14 +45,23 @@ export class EntityTooltip extends BaseTooltip {
     }
 
     /**
-     * Show tooltip for entity
+     * Show tooltip for entity or deposit
+     * @param {string|object} entityKeyOrDeposit - Entity key string or deposit object
      */
-    async show(entityKey, screenX, screenY) {
+    async show(entityKeyOrDeposit, screenX, screenY) {
         if (this.hideTimeout) {
             clearTimeout(this.hideTimeout);
             this.hideTimeout = null;
         }
 
+        // Check if this is a deposit object (has deposit_id)
+        if (typeof entityKeyOrDeposit === 'object' && entityKeyOrDeposit.deposit_id) {
+            this.showDeposit(entityKeyOrDeposit, screenX, screenY);
+            return;
+        }
+
+        // Otherwise it's an entity key
+        const entityKey = entityKeyOrDeposit;
         this.currentEntityKey = entityKey;
         const entity = this.game.entityData.get(entityKey);
         if (!entity) return;
@@ -147,6 +156,41 @@ export class EntityTooltip extends BaseTooltip {
         if (recipesHtml) {
             html += recipesHtml;
         }
+
+        this.element.innerHTML = html;
+        this.element.style.display = 'block';
+        this.isVisible = true;
+        this.updatePosition(screenX, screenY);
+    }
+
+    /**
+     * Show tooltip for deposit
+     */
+    showDeposit(deposit, screenX, screenY) {
+        const depositType = this.game.depositTypes[deposit.deposit_type_id];
+        if (!depositType) return;
+
+        const resource = this.game.resources[depositType.resource_id];
+        if (!resource) return;
+
+        // Build tooltip content (same style as entity)
+        let html = `<div class="tooltip-header" style="font-weight:bold;margin-bottom:6px;border-bottom:1px solid #4a4a5a;padding-bottom:4px;">${depositType.name}</div>`;
+
+        // Coordinates
+        const tileX = parseInt(deposit.x);
+        const tileY = parseInt(deposit.y);
+        html += `<div style="font-size:10px;color:#888;margin-bottom:6px;">Position: ${tileX}, ${tileY}</div>`;
+
+        // Resource info
+        html += `<div style="border-top:1px solid #4a4a5a;padding-top:6px;margin-top:6px;">`;
+        html += `
+            <div style="display:flex;align-items:center;margin:2px 0;">
+                <img src="/assets/tiles/resources/${resource.icon_url}" width="16" height="16" style="margin-right:6px;">
+                <span>${resource.name}</span>
+                <span style="margin-left:auto;color:#8af;">${this.formatAmount(deposit.resource_amount)}</span>
+            </div>
+        `;
+        html += `</div>`;
 
         this.element.innerHTML = html;
         this.element.style.display = 'block';

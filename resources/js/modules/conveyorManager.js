@@ -51,7 +51,7 @@ export class ConveyorManager {
 
             for (const state of states) {
                 const url = this.game.assetUrl(
-                    `${this.game.config.tilesPath}entities/${orientation}/${state}_atlas.png`
+                    `${this.game.config.tilesPath}entities/transporter/${orientation}/${state}_atlas.png`
                 );
 
                 try {
@@ -87,7 +87,7 @@ export class ConveyorManager {
     getConnectionVariant(entity) {
         const neighbors = this.getNeighbors(entity);
         const entityType = this.game.entityTypes[entity.entity_type_id];
-        const currentOrientation = entityType.image_url;
+        const currentOrientation = entityType.folder;
         let variant = 0;
 
         // Устанавливаем бит если:
@@ -150,7 +150,7 @@ export class ConveyorManager {
         if (!this.isConveyor(neighbor)) return false;
 
         const entityType = this.game.entityTypes[neighbor.entity_type_id];
-        const orientation = entityType.image_url; // 'conveyor', 'conveyor_up', etc.
+        const orientation = entityType.folder; // 'conveyor', 'conveyor_up', etc.
 
         // Конвейер входящий если его направление противоположно его положению
         const incomingMap = {
@@ -202,7 +202,7 @@ export class ConveyorManager {
      */
     getConveyorTexture(entity, isHovered, currentFrame) {
         const entityType = this.game.entityTypes[entity.entity_type_id];
-        const orientation = entityType.image_url; // 'conveyor', 'conveyor_up', etc.
+        const orientation = entityType.folder; // 'conveyor', 'conveyor_up', etc.
         const baseState = this.getEntityState(entity);
         const state = isHovered ? `${baseState}_selected` : baseState;
         const variant = this.getConnectionVariant(entity);

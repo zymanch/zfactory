@@ -157,4 +157,36 @@ class EntityType extends base\BaseEntityType
 
         return null;
     }
+
+    /**
+     * Get URL to entity atlas (for frontend)
+     * @return string
+     */
+    public function getAtlasUrl(): string
+    {
+        return "/assets/tiles/entities/{$this->type}/{$this->folder}/atlas.png";
+    }
+
+    /**
+     * Get URL to entity icon (for UI panels)
+     * @return string
+     */
+    public function getIconUrl(): string
+    {
+        if ($this->icon_url) {
+            return "/assets/tiles/entities/{$this->type}/{$this->icon_url}";
+        }
+
+        return "/assets/tiles/entities/{$this->type}/{$this->folder}/normal.{$this->extension}";
+    }
+
+    /**
+     * Get URL to state-specific atlas (for conveyor/pipe systems)
+     * @param string $state 'normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'
+     * @return string
+     */
+    public function getStateAtlasUrl(string $state): string
+    {
+        return "/assets/tiles/entities/{$this->type}/{$this->folder}/{$state}_atlas.png";
+    }
 }

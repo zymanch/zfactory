@@ -44,16 +44,37 @@ class Config extends JsonAction
 
     protected function getEntityTypes()
     {
+        $entityTypes = EntityType::find()->indexBy('entity_type_id')->all();
+        $result = [];
+
+        foreach ($entityTypes as $id => $entityType) {
+            $data = $entityType->toArray();
+            // Add URL fields for frontend
+            $data['atlas_url'] = $entityType->getAtlasUrl();
+            $data['icon_url'] = $entityType->getIconUrl();
+            $result[$id] = $data;
+        }
+
         return $this->castNumericFieldsIndexed(
-            EntityType::find()->indexBy('entity_type_id')->asArray()->all(),
+            $result,
             ['entity_type_id', 'power', 'max_durability', 'width', 'height']
         );
     }
 
     protected function getDepositTypes()
     {
+        $depositTypes = DepositType::find()->indexBy('deposit_type_id')->all();
+        $result = [];
+
+        foreach ($depositTypes as $id => $depositType) {
+            $data = $depositType->toArray();
+            // Add URL field for frontend
+            $data['sprite_url'] = $depositType->getSpriteUrl();
+            $result[$id] = $data;
+        }
+
         return $this->castNumericFieldsIndexed(
-            DepositType::find()->indexBy('deposit_type_id')->asArray()->all(),
+            $result,
             ['deposit_type_id', 'resource_id', 'resource_amount', 'width', 'height']
         );
     }

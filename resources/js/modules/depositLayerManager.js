@@ -84,6 +84,11 @@ export class DepositLayerManager {
         sprite.eventMode = 'static';
         sprite.cursor = 'pointer';
 
+        // Add event listeners for tooltip (same pattern as entities)
+        sprite.on('pointerover', (e) => this.game.onDepositHover(sprite, true, e));
+        sprite.on('pointerout', (e) => this.game.onDepositHover(sprite, false, e));
+        sprite.on('pointermove', (e) => this.game.onDepositMove(e));
+
         // Set z-index based on Y position for proper depth sorting
         sprite.zIndex = sprite.y;
 

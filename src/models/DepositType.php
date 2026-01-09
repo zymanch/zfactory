@@ -148,4 +148,14 @@ class DepositType extends base\BaseDepositType {
 
         return true;
     }
+
+    /**
+     * Get URL to deposit sprite (for frontend)
+     * Deposits only have normal.png
+     * @return string
+     */
+    public function getSpriteUrl(): string
+    {
+        return "/assets/tiles/deposits/{$this->type}/{$this->folder}/normal.png";
+    }
 }

@@ -96,15 +96,13 @@ export function assetUrl(basePath, path, version = 1) {
 /**
  * Generate entity icon URL
  * @param {Object} entityType - Entity type object
- * @param {string} tilesPath - Base tiles path
+ * @param {string} tilesPath - Base tiles path (unused, kept for compatibility)
  * @param {number} version - Asset version
  * @returns {string} Icon URL
  */
 export function getEntityIconUrl(entityType, tilesPath, version = 1) {
-    const path = entityType.icon_url
-        ? `entities/${entityType.type}/${entityType.icon_url}`
-        : `entities/${entityType.type}/${entityType.folder}/normal.${entityType.extension || 'svg'}`;
-    return assetUrl(tilesPath, path, version);
+    // icon_url now comes pre-formed from backend
+    return assetUrl('', entityType.icon_url, version);
 }
 
 /**

@@ -52,7 +52,7 @@ export class PipeConnectionManager {
 
         for (const state of states) {
             const atlasUrl = this.game.assetUrl(
-                `${this.game.config.tilesPath}entities/pipe/pipe_atlas_${state}.png?v=${Date.now()}`
+                `${this.game.config.tilesPath}entities/transporter/pipe/pipe_atlas_${state}.png?v=${Date.now()}`
             );
 
             try {

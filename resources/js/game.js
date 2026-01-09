@@ -22,7 +22,6 @@ import { EntityInfoWindow } from './modules/windows/entityInfoWindow.js';
 import { TechnologyWindow } from './modules/windows/technologyWindow.js';
 import { ConstructionManager } from './modules/constructionManager.js';
 import { DepositLayerManager } from './modules/depositLayerManager.js';
-import { DepositTooltip } from './modules/tooltips/DepositTooltip.js';
 import { PipeSystemManager } from './modules/pipes/PipeSystemManager.js';
 import { PipeRenderer } from './modules/pipes/PipeRenderer.js';
 import { PipeConnectionManager } from './modules/pipes/PipeConnectionManager.js';
@@ -81,7 +80,6 @@ class ZFactoryGame {
         this.tileManager = null;
         this.depositManager = null;
         this.entityTooltip = null;
-        this.depositTooltip = null;
         this.buildingRules = null;
         this.resourceTransport = null;
         this.resourceRenderer = null;
@@ -145,7 +143,6 @@ class ZFactoryGame {
         this.tileManager = new TileLayerManager(this);
         this.depositManager = new DepositLayerManager(this);
         this.entityTooltip = new EntityTooltip(this);
-        this.depositTooltip = new DepositTooltip(this);
         this.buildingRules = new BuildingRules(this);
         this.resourceTransport = new ResourceTransportManager(this);
         this.resourceRenderer = new ResourceRenderer(this);
@@ -242,7 +239,6 @@ class ZFactoryGame {
         this.fogOfWar.init();
         this.depositManager.init();
         this.entityTooltip.init();
-        this.depositTooltip.init();
         this.entityInfoWindow.init();
         this.technologyWindow.init();
 
@@ -377,10 +373,9 @@ class ZFactoryGame {
     async loadDepositTextures() {
         for (const depositTypeId in this.depositTypes) {
             const depositType = this.depositTypes[depositTypeId];
-            const folder = depositType.folder;
 
-            // Only load normal.png for deposits (no damaged, blueprint, etc.)
-            const normalUrl = this.assetUrl(`${this.config.tilesPath}deposits/${depositType.type}/${folder}/normal.png`);
+            // Only load normal.png for deposits (URL from backend)
+            const normalUrl = this.assetUrl(depositType.sprite_url);
 
             try {
                 const texture = await PIXI.Assets.load(normalUrl);
@@ -399,15 +394,14 @@ class ZFactoryGame {
 
         for (const typeId in this.entityTypes) {
             const entityType = this.entityTypes[typeId];
-            const folder = entityType.folder;
             const width = entityType.width || 1;
             const height = entityType.height || 1;
 
             const pixelWidth = width * tileWidth;
             const pixelHeight = height * tileHeight;
 
-            // Load atlas.png
-            const atlasUrl = this.assetUrl(`${this.config.tilesPath}entities/${entityType.type}/${folder}/atlas.png`);
+            // Load atlas.png (URL from backend)
+            const atlasUrl = this.assetUrl(entityType.atlas_url);
 
             try {
                 const atlasTexture = await PIXI.Assets.load(atlasUrl);
@@ -759,6 +753,29 @@ class ZFactoryGame {
      */
     onEntityMove(event) {
         if (this.entityTooltip && this.hoveredEntity) {
+            this.entityTooltip.updatePosition(event.global.x, event.global.y);
+        }
+    }
+
+    /**
+     * Handle deposit hover (show/hide tooltip)
+     */
+    onDepositHover(sprite, isHovering, event) {
+        // Show/hide tooltip based on game mode (use entityTooltip for deposits too)
+        if (isHovering && this.entityTooltip && this.gameModeManager.shouldShowTooltip()) {
+            const screenX = event.global.x;
+            const screenY = event.global.y;
+            this.entityTooltip.show(sprite.depositData, screenX, screenY);
+        } else if (this.entityTooltip) {
+            this.entityTooltip.hide();
+        }
+    }
+
+    /**
+     * Handle deposit mouse move (update tooltip position)
+     */
+    onDepositMove(event) {
+        if (this.entityTooltip && this.entityTooltip.isVisible) {
             this.entityTooltip.updatePosition(event.global.x, event.global.y);
         }
     }
