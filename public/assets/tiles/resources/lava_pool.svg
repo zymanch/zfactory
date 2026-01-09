@@ -1,0 +1,20 @@
+<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Lava pool icon -->
+
+  <!-- Pool base -->
+  <ellipse cx="16" cy="20" rx="12" ry="6" fill="#C0392B"/>
+
+  <!-- Hot spots -->
+  <circle cx="12" cy="18" r="4" fill="#E74C3C"/>
+  <circle cx="20" cy="20" r="4" fill="#E74C3C"/>
+  <circle cx="16" cy="22" r="3" fill="#F39C12"/>
+
+  <!-- Bubbles -->
+  <circle cx="10" cy="22" r="2" fill="#E67E22" opacity="0.8"/>
+  <circle cx="22" cy="18" r="2" fill="#E67E22" opacity="0.8"/>
+
+  <!-- Heat waves -->
+  <path d="M 10 14 Q 12 12 14 14" stroke="#F39C12" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M 18 12 Q 20 10 22 12" stroke="#F39C12" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M 14 10 Q 16 8 18 10" stroke="#E67E22" stroke-width="1.5" fill="none" opacity="0.5"/>
+</svg>

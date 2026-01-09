@@ -8,6 +8,7 @@ use bl\entity\types\transporter;
 use bl\entity\types\manipulator;
 use bl\entity\types\relief;
 use bl\entity\types\eye;
+use bl\entity\types\mining;
 
 /**
  * Factory for mapping entity_type_id to EntityType class
@@ -79,6 +80,12 @@ class EntityTypeFactory
         eye\SmallCrystalTowerEntityType::ENTITY_TYPE_ID => eye\SmallCrystalTowerEntityType::class,
         eye\MediumCrystalTowerEntityType::ENTITY_TYPE_ID => eye\MediumCrystalTowerEntityType::class,
         eye\LargeCrystalTowerEntityType::ENTITY_TYPE_ID => eye\LargeCrystalTowerEntityType::class,
+
+        // Mining - Fluid Pumps (145-148)
+        mining\WaterPumpEntityType::ENTITY_TYPE_ID => mining\WaterPumpEntityType::class,
+        mining\OilPumpEntityType::ENTITY_TYPE_ID => mining\OilPumpEntityType::class,
+        mining\GasPumpEntityType::ENTITY_TYPE_ID => mining\GasPumpEntityType::class,
+        mining\LavaPumpEntityType::ENTITY_TYPE_ID => mining\LavaPumpEntityType::class,
     ];
 
     /**

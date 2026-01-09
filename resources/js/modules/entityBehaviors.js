@@ -467,8 +467,9 @@ export class EntityBehaviorFactory {
         // Check for deposit-based extraction buildings first
         // Sawmills: 500-502, Stone Quarries: 503-505, Drills: 102/108/506
         // Mines: 507-509, Quarries: 510-512
+        // Fluid Pumps: 145-148
         const typeId = parseInt(entityTypeId);
-        if ((typeId >= 500 && typeId <= 512) || [102, 108].includes(typeId)) {
+        if ((typeId >= 500 && typeId <= 512) || [102, 108].includes(typeId) || (typeId >= 145 && typeId <= 148)) {
             const behavior = new DepositEntityBehavior(game, entityType);
             this.cache.set(entityTypeId, behavior);
             return behavior;

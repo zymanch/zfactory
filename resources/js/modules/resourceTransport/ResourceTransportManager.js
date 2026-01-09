@@ -266,20 +266,68 @@ export class ResourceTransportManager {
                 // Crafting complete - add output
                 const recipe = this.game.recipes[state.craftingRecipeId];
                 if (recipe) {
+                    const outputResourceId = parseInt(recipe.output_resource_id);
+                    const outputAmount = parseInt(recipe.output_amount) || 1;
                     const outputResource = this.game.resources[recipe.output_resource_id];
-                    console.log(`[Craft Complete] Entity ${entityId}: +${recipe.output_amount || 1} ${outputResource?.name || recipe.output_resource_id}`);
-                    state.addResource(
-                        parseInt(recipe.output_resource_id),
-                        parseInt(recipe.output_amount) || 1
-                    );
+
+                    console.log(`[Craft Complete] Entity ${entityId}: +${outputAmount} ${outputResource?.name || outputResourceId}`);
+                    console.log(`[Craft Complete] About to check if fluid...`);
+
+                    // Check if output is fluid (resource_id 300-303)
+                    const isFluid = outputResourceId >= 300 && outputResourceId <= 303;
+                    console.log(`[Craft Complete] Is fluid: ${isFluid}`);
+
+                    if (isFluid) {
+                        console.log(`[Craft Complete] Entering fluid branch...`);
+                        console.log(`[Pump] Fluid output detected: ${outputResourceId}, amount: ${outputAmount}`);
+
+                        // Safety check for pipeSystemManager
+                        if (!this.game) {
+                            console.error(`[Pump] ERROR: this.game is undefined`);
+                            return;
+                        }
+
+                        if (!this.game.pipeSystemManager) {
+                            console.warn(`[Pump] pipeSystemManager not available, skipping fluid output`);
+                            return;
+                        }
+
+                        // Try to push fluid to connected pipe system
+                        const pipeEntityId = this.findOutputPipe(state.x, state.y);
+                        console.log(`[Pump] Found pipe at output: ${pipeEntityId}`);
+
+                        if (pipeEntityId) {
+                            const success = this.game.pipeSystemManager.addFluid(
+                                pipeEntityId,
+                                outputResourceId,
+                                outputAmount
+                            );
+                            if (!success) {
+                                console.warn(`[Pump] Failed to add fluid to pipe system (overflow or mixing?)`);
+                            } else {
+                                console.log(`[Pump] Successfully added ${outputAmount} fluid to pipe system`);
+                            }
+                        } else {
+                            console.warn(`[Pump] No pipe connected at output position (${state.x}, ${state.y})`);
+                        }
+                    } else {
+                        // Normal resource - store in building
+                        console.log(`[Craft Complete] Entering normal resource branch...`);
+                        console.log(`[Craft Complete] About to call addResource(${outputResourceId}, ${outputAmount})`);
+                        state.addResource(outputResourceId, outputAmount);
+                        console.log(`[Craft Complete] addResource() completed`);
+                    }
                 }
 
+                console.log(`[Craft Complete] Clearing crafting state...`);
                 state.craftingRecipeId = null;
                 state.craftingTicksRemaining = 0;
                 this.pendingSync = true;
 
+                console.log(`[Craft Complete] About to tryStartCraftForEntity(${entityId})...`);
                 // Try to start a new craft immediately
                 this.tryStartCraftForEntity(entityId);
+                console.log(`[Craft Complete] tryStartCraftForEntity completed`);
             }
         }
     }
@@ -367,10 +415,18 @@ export class ResourceTransportManager {
 
         if (transfers.length === 0) return;
 
+        // Safety check
+        if (!this.transporters || !this.buildings) {
+            console.error('[ResourceTransport] transporters or buildings not initialized');
+            return;
+        }
+
         // Phase 3: Clear all sources
         for (const t of transfers) {
             const state = this.transporters.get(t.fromId);
-            state.clear();
+            if (state) {
+                state.clear();
+            }
         }
 
         // Phase 4: Fill all targets
@@ -401,10 +457,12 @@ export class ResourceTransportManager {
         }
 
         // Phase 5: Pull from sources of freed conveyors
-        for (const t of transfers) {
-            const freedState = this.transporters.get(t.fromId);
-            if (freedState && freedState.isEmpty()) {
-                this.pullFromSources(freedState);
+        if (this.transporters) {
+            for (const t of transfers) {
+                const freedState = this.transporters.get(t.fromId);
+                if (freedState && freedState.isEmpty()) {
+                    this.pullFromSources(freedState);
+                }
             }
         }
 
@@ -418,8 +476,8 @@ export class ResourceTransportManager {
      * @returns {string} - 'up'|'down'|'left'|'right'
      */
     calculateFromDirection(targetEntityId, fromEntityId) {
-        const targetEntity = this.game.entities.get(targetEntityId);
-        const fromEntity = this.game.entities.get(fromEntityId);
+        const targetEntity = this.game.entityData.get(`entity_${targetEntityId}`);
+        const fromEntity = this.game.entityData.get(`entity_${fromEntityId}`);
 
         if (!targetEntity || !fromEntity) return 'down'; // default
 
@@ -1031,6 +1089,42 @@ export class ResourceTransportManager {
 
         this.calculateLinks();
         this.pendingSync = true;
+    }
+
+    /**
+     * Find pipe at output position (bottom of building)
+     * @param {number} buildingX - Building tile X
+     * @param {number} buildingY - Building tile Y
+     * @returns {number|null} - Pipe entity_id or null
+     */
+    findOutputPipe(buildingX, buildingY) {
+        // Safety checks
+        if (!this.spatialIndex) {
+            console.error('[ResourceTransport] spatialIndex is not available');
+            return null;
+        }
+
+        if (!this.game || !this.game.entityData) {
+            console.error('[ResourceTransport] game.entityData is not available');
+            return null;
+        }
+
+        // Output is at bottom of building (+1 tile Y)
+        const outputX = buildingX;
+        const outputY = buildingY + 1;
+
+        // Find entity ID at output position
+        const entityId = this.spatialIndex.getAt(outputX, outputY);
+        if (!entityId) return null;
+
+        // Get entity data
+        const outputEntity = this.game.entityData.get(`entity_${entityId}`);
+        if (!outputEntity) return null;
+
+        // Check if it's a pipe (entity_type_id 131-141)
+        const isPipe = [131, 132, 135, 136, 140, 141].includes(parseInt(outputEntity.entity_type_id));
+
+        return isPipe ? entityId : null;
     }
 
     /**

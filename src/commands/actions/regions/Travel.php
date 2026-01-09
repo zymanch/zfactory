@@ -39,8 +39,15 @@ class Travel extends JsonAction
             return $this->error('Region is too far to travel');
         }
 
-        // Update user's current region
+        // Update user's current region and reset camera to ship attach area
+        // ship_attach coordinates are in tiles, convert to pixels and offset slightly left
+        $tileSize = Yii::$app->params['tile_width']; // 64px
+        $offsetTiles = 10; // Start 10 tiles left of ship boundary to see the island
+
         $user->current_region_id = $targetRegionId;
+        $user->camera_x = max(0, ($targetRegion->ship_attach_x - $offsetTiles) * $tileSize);
+        $user->camera_y = $targetRegion->ship_attach_y * $tileSize;
+        $user->zoom = 1; // Reset zoom to default
         if (!$user->save()) {
             return $this->error('Failed to update current region');
         }

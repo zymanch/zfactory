@@ -1,0 +1,12 @@
+<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Water droplet icon -->
+  <path d="M 16 4 Q 20 10 20 16 Q 20 22 16 26 Q 12 22 12 16 Q 12 10 16 4 Z"
+        fill="#3498DB" stroke="#2980B9" stroke-width="1"/>
+
+  <!-- Shine/highlight -->
+  <ellipse cx="14" cy="14" rx="3" ry="4" fill="#85C1E9" opacity="0.6"/>
+
+  <!-- Small drops -->
+  <circle cx="10" cy="8" r="1.5" fill="#3498DB"/>
+  <circle cx="22" cy="10" r="1.5" fill="#3498DB"/>
+</svg>

@@ -87,4 +87,81 @@ export class PipeSystemManager {
         };
         return colors[resourceId] || 0xffffff;
     }
+
+    /**
+     * Add fluid to pipe system (client-side validation only)
+     * @param {number} pipeEntityId - Any pipe entity in the system
+     * @param {number} resourceId - Fluid resource ID (300-303)
+     * @param {number} amount - Amount to add
+     * @returns {boolean} - Success
+     */
+    addFluid(pipeEntityId, resourceId, amount) {
+        const system = this.getSystemForEntity(pipeEntityId);
+        if (!system) {
+            console.warn(`[PipeSystemManager] No system found for pipe entity ${pipeEntityId}`);
+            return false;
+        }
+
+        // Check for mixing (different fluid already in system)
+        if (system.resource_id && system.resource_id !== resourceId) {
+            console.warn(`[PipeSystemManager] Cannot mix fluids: system has ${system.resource_id}, trying to add ${resourceId}`);
+            return false;
+        }
+
+        // Check capacity
+        if (system.current_amount + amount > system.max_capacity) {
+            console.warn(`[PipeSystemManager] System overflow: ${system.current_amount} + ${amount} > ${system.max_capacity}`);
+            return false;
+        }
+
+        // Update local state (server will sync back)
+        system.current_amount += amount;
+        if (!system.resource_id) {
+            system.resource_id = resourceId;
+        }
+
+        console.log(`[PipeSystemManager] Added ${amount} of resource ${resourceId} to system (now: ${system.current_amount}/${system.max_capacity})`);
+
+        // TODO: Send update to server
+        // this.game.sendPipeSystemUpdate(system.pipe_system_id);
+
+        return true;
+    }
+
+    /**
+     * Take fluid from pipe system (client-side validation only)
+     * @param {number} pipeEntityId - Any pipe entity in the system
+     * @param {number} resourceId - Fluid resource ID (300-303)
+     * @param {number} amount - Amount to take
+     * @returns {number} - Actual amount taken
+     */
+    takeFluid(pipeEntityId, resourceId, amount) {
+        const system = this.getSystemForEntity(pipeEntityId);
+        if (!system) {
+            console.warn(`[PipeSystemManager] No system found for pipe entity ${pipeEntityId}`);
+            return 0;
+        }
+
+        // Check if system has this fluid
+        if (system.resource_id !== resourceId) {
+            console.warn(`[PipeSystemManager] Wrong fluid: system has ${system.resource_id}, trying to take ${resourceId}`);
+            return 0;
+        }
+
+        // Take what's available
+        const actualAmount = Math.min(amount, system.current_amount);
+        system.current_amount -= actualAmount;
+
+        // Clear resource_id if empty
+        if (system.current_amount === 0) {
+            system.resource_id = null;
+        }
+
+        console.log(`[PipeSystemManager] Took ${actualAmount} of resource ${resourceId} from system (remaining: ${system.current_amount}/${system.max_capacity})`);
+
+        // TODO: Send update to server
+        // this.game.sendPipeSystemUpdate(system.pipe_system_id);
+
+        return actualAmount;
+    }
 }

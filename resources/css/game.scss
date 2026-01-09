@@ -246,7 +246,7 @@ html, body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 450px;
+    width: 650px;
     max-height: 550px;
     background: rgba(25, 25, 45, 0.98);
     border: 1px solid rgba(100, 100, 140, 0.5);
@@ -327,8 +327,84 @@ html, body {
 
     .buildings-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 12px;
+    }
+
+    // Tooltip container - outside of scrollable area
+    .building-tooltips {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 20000;
+
+        .building-tooltip-floating {
+            position: absolute;
+            padding: 10px 12px;
+            background: #141423;
+            border: 1px solid rgba(100, 100, 140, 0.5);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            white-space: normal;
+            max-width: 560px;
+            font-size: 12px;
+            color: #fff;
+
+            &.visible {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            strong {
+                display: block;
+                margin-bottom: 6px;
+                color: #4fc3f7;
+                font-size: 13px;
+            }
+
+            .tooltip-description {
+                display: block;
+                margin-bottom: 8px;
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 11px;
+                line-height: 1.4;
+            }
+
+            .tooltip-costs {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+
+                .tooltip-cost-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    color: #fff;
+                    font-size: 11px;
+
+                    img {
+                        flex-shrink: 0;
+                    }
+
+                    .available {
+                        color: rgba(255, 255, 255, 0.6);
+                        font-size: 10px;
+                        margin-left: 4px;
+                    }
+
+                    &.insufficient {
+                        color: #ff4444;
+                        font-weight: bold;
+                    }
+                }
+            }
+        }
     }
 
     .building-item {
@@ -341,11 +417,14 @@ html, body {
         border-radius: 6px;
         cursor: grab;
         transition: all 0.15s ease;
+        position: relative;
+        z-index: 1;
 
         &:hover {
             background: rgba(70, 70, 100, 0.7);
             border-color: rgba(150, 150, 180, 0.5);
             transform: translateY(-2px);
+            z-index: 10001;
         }
 
         &.dragging {
@@ -369,37 +448,8 @@ html, body {
             word-break: break-word;
         }
 
-        .entity-cost {
-            display: flex;
-            gap: 6px;
-            padding: 6px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-            margin-top: 6px;
-            flex-wrap: wrap;
-            justify-content: center;
-            width: 100%;
-
-            .cost-item {
-                display: flex;
-                align-items: center;
-                gap: 3px;
-                color: #fff;
-                font-size: 11px;
-                padding: 2px 4px;
-                background: rgba(100, 100, 120, 0.3);
-                border-radius: 3px;
-
-                img {
-                    flex-shrink: 0;
-                }
-
-                &.insufficient {
-                    color: #ff4444;
-                    font-weight: bold;
-                    background: rgba(255, 68, 68, 0.2);
-                }
-            }
+        .building-tooltip {
+            display: none;
         }
     }
 }

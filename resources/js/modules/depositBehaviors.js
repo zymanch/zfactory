@@ -3,6 +3,8 @@
  * Mirrors server-side DepositEntityBehavior.php logic
  */
 
+import { tileKey } from './utils.js';
+
 /**
  * Base behavior for extraction buildings that require deposits
  */
@@ -47,6 +49,27 @@ export class DepositEntityBehavior {
             this.requiredDepositType = 'ore';
             this.allowedDepositTypeIds = [302, 303]; // Aluminum, Titanium
         }
+        // Fluid Pumps (145-148)
+        else if (typeId === 145) {
+            // Water Pump - requires water landing (4)
+            this.requiredDepositType = 'landing';
+            this.requiredLandingId = 4;
+        }
+        else if (typeId === 148) {
+            // Lava Pump - requires lava landing (6)
+            this.requiredDepositType = 'landing';
+            this.requiredLandingId = 6;
+        }
+        else if (typeId === 146) {
+            // Oil Pump - requires oil well deposit (13)
+            this.requiredDepositType = 'ore';
+            this.allowedDepositTypeIds = [13];
+        }
+        else if (typeId === 147) {
+            // Gas Pump - requires gas vent deposit (14)
+            this.requiredDepositType = 'ore';
+            this.allowedDepositTypeIds = [14];
+        }
     }
 
     /**
@@ -69,6 +92,11 @@ export class DepositEntityBehavior {
     canBuildAt(tileX, tileY) {
         const width = this.entityType.width || 1;
         const height = this.entityType.height || 1;
+
+        // For pumps that require specific landing tiles (water, lava)
+        if (this.requiredDepositType === 'landing') {
+            return this.checkLandingPlacement(tileX, tileY);
+        }
 
         // Find deposits in building area
         const deposits = this.game.depositManager.getDepositsInArea(tileX, tileY, width, height);
@@ -100,13 +128,54 @@ export class DepositEntityBehavior {
     }
 
     /**
+     * Check landing-based placement (for water/lava pumps)
+     */
+    checkLandingPlacement(tileX, tileY) {
+        const width = this.entityType.width || 1;
+        const height = this.entityType.height || 1;
+
+        // Safety check
+        if (!this.game || !this.game.tileDataMap) {
+            console.error('[DepositBehavior] game.tileDataMap is not available');
+            return {
+                allowed: false,
+                error: 'System error: tile data not loaded'
+            };
+        }
+
+        // Check all tiles in building area
+        for (let dx = 0; dx < width; dx++) {
+            for (let dy = 0; dy < height; dy++) {
+                const checkX = tileX + dx;
+                const checkY = tileY + dy;
+                const key = tileKey(checkX, checkY);
+                const landingId = this.game.tileDataMap.get(key);
+
+                if (landingId !== this.requiredLandingId) {
+                    const landingName = this.game.landingTypes?.[this.requiredLandingId]?.name || 'required terrain';
+                    return {
+                        allowed: false,
+                        error: `Must be placed on ${landingName}`
+                    };
+                }
+            }
+        }
+
+        return {
+            allowed: true,
+            error: null
+        };
+    }
+
+    /**
      * Get error message for no deposits found
      */
     getNoDepositErrorMessage() {
         const messages = {
             'tree': 'Requires trees to place sawmill',
             'rock': 'Requires rocks to place stone quarry',
-            'ore': 'Requires ore deposits to place mining building'
+            'ore': 'Requires ore deposits to place mining building',
+            'landing': 'Requires specific terrain to place pump'
         };
 
         return messages[this.requiredDepositType] || 'Requires deposits to build';
@@ -128,6 +197,14 @@ export class DepositEntityBehavior {
             return 'Mines require silver or gold ore.';
         } else if (typeId >= 510 && typeId <= 512) {
             return 'Quarries require aluminum or titanium ore.';
+        } else if (typeId === 145) {
+            return 'Water Pump requires water terrain.';
+        } else if (typeId === 146) {
+            return 'Oil Pump requires oil well deposit.';
+        } else if (typeId === 147) {
+            return 'Gas Pump requires gas vent deposit.';
+        } else if (typeId === 148) {
+            return 'Lava Pump requires lava terrain.';
         }
 
         return 'Wrong deposit type.';

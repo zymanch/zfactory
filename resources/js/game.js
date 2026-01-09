@@ -25,6 +25,7 @@ import { DepositLayerManager } from './modules/depositLayerManager.js';
 import { DepositTooltip } from './modules/tooltips/DepositTooltip.js';
 import { PipeSystemManager } from './modules/pipes/PipeSystemManager.js';
 import { PipeRenderer } from './modules/pipes/PipeRenderer.js';
+import { PipeConnectionManager } from './modules/pipes/PipeConnectionManager.js';
 import { SPRITE_STATES, SPRITE_STATES_ORIGINAL, CONSTRUCTION_FRAMES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 import { getCSRFToken } from './modules/utils.js';
 
@@ -91,21 +92,32 @@ class ZFactoryGame {
         this.technologyWindow = null;
         this.pipeSystemManager = null;
         this.pipeRenderer = null;
+        this.pipeConnectionManager = null;
     }
 
     /**
      * Initialize game
      */
     async init() {
+        console.log('[Game] 1/9 Loading config...');
         await this.loadConfig();
+        console.log('[Game] 2/9 Initializing modules...');
         this.initModules();
+        console.log('[Game] 3/9 Initializing PIXI...');
         await this.initPixi();
+        console.log('[Game] 4/9 Initializing layers...');
         this.initLayers();
+        console.log('[Game] 5/9 Initializing camera...');
         this.initCamera();
+        console.log('[Game] 6/9 Loading textures...');
         await this.loadTextures();
+        console.log('[Game] 7/9 Post-init modules...');
         await this.initModulesPost();
+        console.log('[Game] 8/9 Loading viewport...');
         await this.loadViewport();
+        console.log('[Game] 9/9 Starting game loop...');
         this.startGameLoop();
+        console.log('[Game] Init complete!');
     }
 
     /**
@@ -144,6 +156,7 @@ class ZFactoryGame {
         this.constructionManager = new ConstructionManager(this);
         this.pipeSystemManager = new PipeSystemManager(this);
         this.pipeRenderer = new PipeRenderer(this);
+        this.pipeConnectionManager = new PipeConnectionManager(this);
     }
 
     /**
@@ -319,6 +332,7 @@ class ZFactoryGame {
         await this.loadEntityTextures();
         await this.loadDepositTextures();
         await this.conveyorManager.loadAtlases();
+        await this.pipeConnectionManager.loadVariantTextures();
     }
 
     /**
@@ -571,15 +585,30 @@ class ZFactoryGame {
 
             const isVisible = !this.fogOfWar || this.fogOfWar.isEntityVisible(entity);
             const entityType = this.entityTypes[entity.entity_type_id];
+            const imageUrl = entityType?.image_url || '';
 
-            // Handle conveyors separately
-            if (entityType && entityType.type === 'transporter') {
+            // Check if this is a pipe entity (image_url starts with 'pipe' or 'tank' or 'underground_pipe')
+            const isPipeEntity = imageUrl.startsWith('pipe') || imageUrl.startsWith('tank') || imageUrl.startsWith('underground_pipe');
+
+            // Handle conveyors separately (but exclude pipes)
+            if (entityType && entityType.type === 'transporter' && !isPipeEntity) {
                 const texture = this.conveyorManager.getConveyorTexture(entity, false, 0);
                 if (texture) {
                     const sprite = this.createEntitySprite(entity, texture, isVisible);
                     this.entityLayer.addChild(sprite);
                     this.loadedEntities.set(key, sprite);
                     this.conveyorManager.registerConveyor(entity.entity_id, sprite);
+                }
+            } else if (isPipeEntity) {
+                // Handle pipes with connection variants and fluid visualization
+                // Use fallback texture initially, will update after all entities loaded
+                const fallbackTexture = this.textures['entity_131_normal'] || this.textures[`entity_${entity.entity_type_id}_normal`];
+                if (fallbackTexture) {
+                    // Create container for pipe + fluid sprite
+                    const container = this.pipeRenderer.createPipeContainer(entity, fallbackTexture, isVisible);
+                    this.entityLayer.addChild(container);
+                    this.loadedEntities.set(key, container);
+                    this.pipeConnectionManager.registerPipe(entity.entity_id, container);
                 }
             } else {
                 // Handle other entities normally
@@ -595,6 +624,11 @@ class ZFactoryGame {
         }
 
         this.updateDebug('entities', this.loadedEntities.size);
+
+        // Update all pipe connections after all entities are loaded
+        if (this.pipeConnectionManager) {
+            this.pipeConnectionManager.updateAllConnections();
+        }
     }
 
     /**
@@ -655,14 +689,30 @@ class ZFactoryGame {
 
         this.hoveredEntity = isHovering ? key : null;
         const entityType = this.entityTypes[entity.entity_type_id];
+        const imageUrl = entityType?.image_url || '';
+
+        // Check if this is a pipe entity
+        const isPipeEntity = imageUrl.startsWith('pipe') || imageUrl.startsWith('tank') || imageUrl.startsWith('underground_pipe');
 
         // Get hover sprite type based on current game mode
         const hoverSpriteType = this.gameModeManager.getHoverSpriteType();
 
         if (isHovering && hoverSpriteType) {
-            // Handle conveyors separately
-            if (entityType && entityType.type === 'transporter') {
+            // Handle conveyors separately (but exclude pipes)
+            if (entityType && entityType.type === 'transporter' && !isPipeEntity) {
                 this.conveyorManager.updateConveyorTexture(entity.entity_id, true);
+            } else if (isPipeEntity) {
+                // Handle pipes - switch to selected texture
+                if (hoverSpriteType === 'deleting') {
+                    // For delete mode, use tint (no _deleting atlas)
+                    const pipeSprite = sprite.children ? sprite.children[0] : sprite;
+                    if (pipeSprite) {
+                        pipeSprite.tint = 0xff6666; // Red tint for delete
+                    }
+                } else {
+                    // For normal hover, use _selected atlas
+                    this.pipeConnectionManager.updatePipeTexture(entity.entity_id, true);
+                }
             } else {
                 // Handle other entities normally
                 const textureKey = this.getEntityTextureKey(entity, true, hoverSpriteType);
@@ -674,8 +724,16 @@ class ZFactoryGame {
             }
         } else {
             // Reset to normal texture
-            if (entityType && entityType.type === 'transporter') {
+            if (entityType && entityType.type === 'transporter' && !isPipeEntity) {
                 this.conveyorManager.updateConveyorTexture(entity.entity_id, false);
+            } else if (isPipeEntity) {
+                // Handle pipes - reset to normal texture
+                this.pipeConnectionManager.updatePipeTexture(entity.entity_id, false);
+                // Also reset tint in case it was in delete mode
+                const pipeSprite = sprite.children ? sprite.children[0] : sprite;
+                if (pipeSprite) {
+                    pipeSprite.tint = 0xffffff;
+                }
             } else {
                 const textureKey = this.getEntityTextureKey(entity, false);
                 const texture = this.textures[textureKey];
@@ -785,50 +843,54 @@ class ZFactoryGame {
      * Main game loop
      */
     gameLoop(ticker) {
-        const moved = this.camera.update();
-        this.camera.apply();
+        try {
+            const moved = this.camera.update();
+            this.camera.apply();
 
-        if (this.cloudManager) {
-            this.cloudManager.applyParallax();
+            if (this.cloudManager) {
+                this.cloudManager.applyParallax();
+            }
+
+            if (moved) {
+                this.needsReload = true;
+            }
+
+            const now = performance.now();
+            if (this.needsReload && now - this.lastReloadTime > VIEWPORT_RELOAD_INTERVAL) {
+                this.loadViewport();
+                this.needsReload = false;
+                this.lastReloadTime = now;
+            }
+
+            // Update UI
+            this.cameraInfo.update();
+
+            // Tick resource transport system
+            this.resourceTransport.tick();
+
+            // Render resource sprites on conveyors/manipulators
+            this.resourceRenderer.render();
+
+            // Update cloud positions
+            if (this.cloudManager) {
+                this.cloudManager.update();
+            }
+
+            // Update conveyor animations
+            if (this.conveyorManager) {
+                this.conveyorManager.update();
+            }
+
+            // Update construction progress
+            if (this.constructionManager) {
+                this.constructionManager.update();
+            }
+
+            this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);
+            this.updateFPS(now);
+        } catch (error) {
+            console.error('[GameLoop] Error:', error);
         }
-
-        if (moved) {
-            this.needsReload = true;
-        }
-
-        const now = performance.now();
-        if (this.needsReload && now - this.lastReloadTime > VIEWPORT_RELOAD_INTERVAL) {
-            this.loadViewport();
-            this.needsReload = false;
-            this.lastReloadTime = now;
-        }
-
-        // Update UI
-        this.cameraInfo.update();
-
-        // Tick resource transport system
-        this.resourceTransport.tick();
-
-        // Render resource sprites on conveyors/manipulators
-        this.resourceRenderer.render();
-
-        // Update cloud positions
-        if (this.cloudManager) {
-            this.cloudManager.update();
-        }
-
-        // Update conveyor animations
-        if (this.conveyorManager) {
-            this.conveyorManager.update();
-        }
-
-        // Update construction progress
-        if (this.constructionManager) {
-            this.constructionManager.update();
-        }
-
-        this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);
-        this.updateFPS(now);
     }
 
     /**

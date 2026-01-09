@@ -1,0 +1,15 @@
+<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Oil barrel/well icon -->
+  <ellipse cx="16" cy="26" rx="10" ry="3" fill="#1A1A1A"/>
+
+  <!-- Barrel body -->
+  <rect x="10" y="10" width="12" height="16" fill="#2C3E50" stroke="#1A252F" stroke-width="1" rx="1"/>
+
+  <!-- Barrel bands -->
+  <line x1="10" y1="14" x2="22" y2="14" stroke="#1A1A1A" stroke-width="1"/>
+  <line x1="10" y1="22" x2="22" y2="22" stroke="#1A1A1A" stroke-width="1"/>
+
+  <!-- Oil drop -->
+  <path d="M 16 6 Q 18 8 18 10 Q 18 12 16 14 Q 14 12 14 10 Q 14 8 16 6 Z"
+        fill="#000000" opacity="0.8"/>
+</svg>

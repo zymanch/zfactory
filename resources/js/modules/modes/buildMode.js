@@ -865,8 +865,31 @@ export class BuildMode extends GameModeBase {
      * Finish dragging and place buildings
      */
     async finishDragging(e) {
-        this.wasDragging = this.isDragging;
         this.isDragging = false;
+
+        // Check if this was actually a drag or just a click
+        const wasSingleClick = (this.dragStartTile.x === this.dragEndTile.x &&
+                                this.dragStartTile.y === this.dragEndTile.y);
+
+        if (wasSingleClick) {
+            // Treat as regular click - don't set wasDragging flag
+            this.wasDragging = false;
+            this.clearMultiPreviews();
+
+            // Restore single preview
+            if (this.previewSprite) {
+                this.previewSprite.visible = true;
+            }
+
+            // Place single building if valid
+            if (this.canPlace) {
+                await this.placeBuilding(this.dragStartTile.x, this.dragStartTile.y);
+            }
+            return;
+        }
+
+        // Was an actual drag - set flag to prevent onClick
+        this.wasDragging = true;
 
         const placements = this.getValidPlacements();
 
