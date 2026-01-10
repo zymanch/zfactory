@@ -177,7 +177,7 @@ Defines types of entities that can be placed on the map.
 | Column               | Type                                                                              | Description                           |
 |----------------------|-----------------------------------------------------------------------------------|---------------------------------------|
 | entity_type_id       | INT UNSIGNED                                                                      | Primary key                           |
-| type                 | ENUM('building','transporter','manipulator','tree','relief','resource','eye','mining','storage') | Category of entity          |
+| type                 | ENUM('building','conveyor','pipe','electricity','manipulator','tree','relief','resource','eye','mining','storage','ship','hq') | Category of entity |
 | name                 | VARCHAR(128)                                                                      | Display name                          |
 | folder               | VARCHAR(256)                                                                      | Folder name for sprite states         |
 | extension            | VARCHAR(4) DEFAULT 'svg'                                                          | File extension (svg, jpg, png)        |
@@ -191,14 +191,18 @@ Defines types of entities that can be placed on the map.
 
 **Entity Type Categories:**
 - `building` — производственные здания (furnace, assembler) - стандартные правила постройки
-- `mining` — добывающие машины (drill) - требуют resource entity для размещения
-- `transporter` — конвейеры и трубы
+- `mining` — добывающие машины (drill, sawmill, mine) - требуют deposit для размещения
+- `conveyor` — конвейерные ленты для транспортировки предметов
+- `pipe` — трубы для транспортировки жидкостей
+- `electricity` — электрические сооружения (pylons, batteries, generators)
 - `manipulator` — манипуляторы для загрузки/выгрузки
 - `tree` — деревья (не строятся игроком, не показывают tooltip)
 - `relief` — камни и рельеф (неуничтожаемые)
 - `resource` — ресурсные залежи (неуничтожаемые)
 - `eye` — башни видимости (Crystal Towers) с радиусом обзора = power
 - `storage` — хранилища для ресурсов (сундуки, контейнеры)
+- `ship` — корабельные сегменты (ship floor tiles)
+- `hq` — штаб-квартира
 
 **Entity Behavior System:**
 Каждый тип сущности имеет свой класс поведения (EntityBehavior):
@@ -261,6 +265,21 @@ Defines types of entities that can be placed on the map.
 | 400 | Small Crystal Tower   | eye         | 100     | none        | -      |
 | 401 | Medium Crystal Tower  | eye         | 200     | none        | -      |
 | 402 | Large Crystal Tower   | eye         | 300     | none        | -      |
+| 900 | Small Pylon           | electricity | 100     | none        | -      |
+| 901 | Medium Pylon          | electricity | 200     | none        | -      |
+| 902 | Large Pylon           | electricity | 300     | none        | -      |
+| 910 | Small Battery         | electricity | 150     | none        | -      |
+| 911 | Medium Battery        | electricity | 250     | none        | -      |
+| 912 | Large Battery         | electricity | 400     | none        | -      |
+| 920 | Coal Generator        | electricity | 300     | none        | -      |
+| 921 | Solar Panel Small     | electricity | 100     | none        | -      |
+| 922 | Solar Panel Large     | electricity | 200     | none        | -      |
+
+**Electricity System Entities:**
+Electricity entities use the `power` field with different meanings:
+- **Pylons**: power = transmission radius in tiles (7, 15, 30)
+- **Batteries**: power = storage capacity (100, 500, 2000)
+- **Generators**: power = production rate per tick (10, 5, 25)
 
 **Orientation System:**
 - Сущности с `parent_entity_type_id` - это варианты ориентации базовой сущности
@@ -312,13 +331,14 @@ Defines types of resources in the game (ores, ingots, crafted items).
 | resource_id | INT UNSIGNED AUTO_INC                  | Primary key                          |
 | name        | VARCHAR(128)                           | Display name                         |
 | icon_url    | VARCHAR(256)                           | Path to 16x16 icon (resources folder)|
-| type        | ENUM('raw','liquid','crafted','deposit')| Resource category                   |
+| type        | ENUM('raw','liquid','crafted','deposit','energy')| Resource category                   |
 
 **Resource Types:**
 - `raw` — сырые ресурсы (руды, дерево, уголь)
 - `liquid` — жидкие ресурсы (топливо, масла)
 - `crafted` — обработанные ресурсы (слитки, пластины, компоненты)
 - `deposit` — абстрактные залежи внутри resource entities (не перемещаются)
+- `energy` — энергетические ресурсы (электричество, солнечный свет)
 
 **Resources:**
 | ID  | Name          | Type    | Description              |
@@ -358,6 +378,12 @@ Defines types of resources in the game (ores, ingots, crafted items).
 | 111 | Motor         | crafted | Мотор                    |
 | 112 | Charcoal      | crafted | Древесный уголь          |
 | 113 | Fuel Cell     | crafted | Топливный элемент        |
+| 400 | Electricity   | energy  | Электричество            |
+
+**Energy Resources:**
+Energy resources (type='energy') are used for electricity system:
+- `400` - **Electricity**: Stored in batteries, consumed by recipes
+- Resource is not created in database - only used as placeholder for recipe system
 
 ### entity_resource (entity-resource links)
 Links entities to their contained resources and transport state.
@@ -394,6 +420,43 @@ Links entities to their contained resources and transport state.
   - Long (reach=2): -192 to +192 (центр через 2.5 тайла)
 - `from_direction`: направление, откуда ресурс вошел на конвейер (влияет на визуальное смещение полосы)
 - `status`: состояние транспорта (empty, carrying, waiting_transfer, idle, picking, placing)
+
+### electricity_system (electricity networks)
+Stores electricity networks detected by BFS algorithm.
+
+| Column            | Type         | Description                          |
+|-------------------|--------------|--------------------------------------|
+| system_id         | INT UNSIGNED | Primary key (AUTO_INCREMENT)         |
+| region_id         | INT UNSIGNED | FK to region.region_id               |
+| total_capacity    | INT DEFAULT 0| Sum of battery capacities            |
+| total_electricity | INT DEFAULT 0| Current electricity in system        |
+
+**Note:** Systems are recalculated on every CREATE/DELETE/FINISH_CONSTRUCTION of electricity entities.
+
+### electricity_system_member (system membership)
+Links entities to their electricity systems.
+
+| Column     | Type         | Description                              |
+|------------|--------------|------------------------------------------|
+| system_id  | INT UNSIGNED | FK to electricity_system.system_id (CASCADE) |
+| entity_id  | INT UNSIGNED | FK to entity.entity_id (CASCADE)         |
+| role       | ENUM('pylon','battery','generator','consumer') | Entity role in system |
+
+**Unique constraint:** (system_id, entity_id)
+
+**Roles:**
+- `pylon` - Transmits electricity via power radius
+- `battery` - Stores electricity (capacity = entity_type.power)
+- `generator` - Produces electricity (rate = entity_type.power)
+- `consumer` - Consumes electricity (any building with electricity recipes)
+
+**Algorithm (ElectricitySystemManager.php):**
+1. Find all `type='electricity'` entities with `state='built'`
+2. BFS: Group entities connected by power radius (Euclidean distance)
+3. Create `electricity_system` for each network
+4. Create `electricity_system_member` for each entity
+5. Calculate `total_capacity` from batteries
+6. Load `total_electricity` from `entity_resource`
 
 ### recipe (crafting recipes)
 Defines crafting/processing recipes for buildings.
@@ -572,6 +635,13 @@ Stores user accounts and their settings.
 | m260104_000007_add_dual_lane_conveyors.php      | Add dual-lane conveyor types (IDs 123-130)    |
 | m260104_000008_unify_position_fields.php        | Unify position_px, remove arm_position_px      |
 | m260109_135158_refactor_sprite_folders.php      | Rename image_url to folder in entity_type and deposit_type |
+| m260110_000001_add_electricity_to_entity_type.php | Split transporter into conveyor/pipe/electricity |
+| m260110_000002_create_electricity_system_tables.php | Create electricity_system and electricity_system_member |
+| m260110_000003_add_electricity_resources_and_types.php | Add resources 400-401, entity types 900-922 |
+| m260110_000004_add_electricity_recipes.php       | Add electricity generation recipes (500-502)   |
+| m260110_163000_fix_solar_panel_recipes.php       | Remove Sunlight resource, fix generators       |
+| m260110_163100_fix_coal_generator_recipe.php     | Change Coal Generator to use Coal (ID 4)       |
+| m260110_164000_remove_power_pole.php             | Remove obsolete power_pole entity type (ID 105)|
 
 ## Future Considerations
 

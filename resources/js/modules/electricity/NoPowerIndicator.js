@@ -17,9 +17,10 @@ export class NoPowerIndicator {
     /**
      * Initialize manager
      */
-    init() {
+    async init() {
         // Load no_power texture
-        this.texture = PIXI.Texture.from('/assets/tiles/no_power.png');
+        const texturePath = this.game.config.tilesPath + 'no_power.png?v=' + this.game.config.assetVersion;
+        this.texture = await PIXI.Assets.load(texturePath);
 
         console.log('[NoPowerIndicator] Initialized');
     }

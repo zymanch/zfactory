@@ -211,7 +211,7 @@ class ZFactoryGame {
         this.entityLayer.eventMode = 'static';
         this.entityLayer.zIndex = 2;
 
-        // depositLayer will be added by depositManager.init() with z-index 1.5
+        // depositLayer will be added by depositManager.init() with z-index 1.6
     }
 
     /**
@@ -256,8 +256,8 @@ class ZFactoryGame {
         }
 
         // Initialize electricity managers
-        this.electrificationLayer.init();
-        this.noPowerIndicator.init();
+        await this.electrificationLayer.init();
+        await this.noPowerIndicator.init();
 
         this.buildPanel.refresh();
         // Note: resourceTransport.init() is called after entities are loaded in loadViewport()
@@ -538,6 +538,11 @@ class ZFactoryGame {
 
             // Initialize resource renderer (visual layer for resources on conveyors/manipulators)
             await this.resourceRenderer.init();
+
+            // Render electrification layer after entities are loaded
+            if (this.electrificationLayer) {
+                this.electrificationLayer.render();
+            }
         }
 
         const viewport = this.calculateViewport();

@@ -19,22 +19,27 @@ ZFactory is a browser-based automation game inspired by Factorio. The game featu
 - All game elements must be multiples of this base size
 - Entities can span multiple tiles (e.g., 128x128 = 2x2 tiles)
 
-### Three-Layer Architecture
+### Multi-Layer Architecture
 1. **Background Layer (landing)** - terrain tiles (grass, water, stone, etc.)
    - Always 64x64 px
    - Stored in `landing` table (types) and `map` table (instances)
-   - zIndex: 1
+   - zIndex: 1.0
 
-2. **Deposit Layer (deposit)** - natural resources (trees, rocks, ores)
+2. **Electrification Layer** - blue glowing dots showing powered areas
+   - 64x64 px sprite with isolated pixels (35% coverage)
+   - Rendered by ElectrificationLayerManager
+   - zIndex: 1.5
+
+3. **Deposit Layer (deposit)** - natural resources (trees, rocks, ores)
    - Simplified rendering (only normal.png sprite)
    - Stored in `deposit_type` table (types) and `deposit` table (instances)
    - Removed when extraction buildings are placed
-   - zIndex: 1.5
+   - zIndex: 1.6
 
-3. **Entity Layer (entity)** - buildings, conveyors, extraction facilities, etc.
+4. **Entity Layer (entity)** - buildings, conveyors, extraction facilities, etc.
    - Can be larger: width = N*64px, height = M*64px
    - Stored in `entity_type` table (types) and `entity` table (instances)
-   - zIndex: 2
+   - zIndex: 2.0
 
 ### Map Size
 - **Max bounds**: 50x28 tiles (3200x1792 pixels)
@@ -513,13 +518,19 @@ Located in `src/bl/electricity/ElectricitySystemManager.php`.
 
 **ElectrificationLayerManager.js**:
 - Renders blue glowing dots on powered tiles
-- Z-index: 1.5 (between landing and entities)
+- Z-index: 1.5 (between landing and deposits)
 - Sprite: `public/assets/tiles/electrification.png` (64×64)
+  - 35% coverage with isolated single-pixel dots
+  - Dark blue colors (RGB: 40-60, 100-140, 180-220)
+  - Dots can touch diagonally but not horizontally/vertically
+- Coordinates conversion: entity tile coords × 64 = pixel coords
+- Renders for viewport with padding (128px)
 - Updates when electricity entities change
 
 **NoPowerIndicator.js**:
 - Shows warning icon on buildings without power
 - Sprite: `public/assets/tiles/no_power.png` (64×64)
+  - Yellow lightning bolt with red X overlay
 - Checks recipes for `input3_resource_id=400` (electricity)
 - Updates periodically (every 60 frames)
 

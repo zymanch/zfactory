@@ -246,13 +246,14 @@ html, body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 650px;
+    width: 700px;
     max-height: 550px;
     background: rgba(25, 25, 45, 0.98);
     border: 1px solid rgba(100, 100, 140, 0.5);
     border-radius: 8px;
     z-index: 2000;
-    flex-direction: column;
+    display: flex;
+    flex-direction: row;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 
     .window-header {
@@ -262,7 +263,7 @@ html, body {
         padding: 12px 16px;
         background: rgba(40, 40, 70, 0.8);
         border-bottom: 1px solid rgba(100, 100, 140, 0.3);
-        border-radius: 8px 8px 0 0;
+        border-radius: 0 8px 0 0;
 
         .window-title {
             color: #fff;
@@ -290,14 +291,16 @@ html, body {
 
     .window-tabs {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 4px;
-        padding: 10px 12px;
+        padding: 10px 8px;
         background: rgba(30, 30, 50, 0.8);
-        border-bottom: 1px solid rgba(100, 100, 140, 0.2);
+        border-right: 1px solid rgba(100, 100, 140, 0.2);
+        border-radius: 8px 0 0 8px;
+        min-width: 140px;
 
         .window-tab {
-            padding: 6px 12px;
+            padding: 8px 12px;
             background: rgba(50, 50, 80, 0.5);
             border: 1px solid rgba(100, 100, 140, 0.3);
             border-radius: 4px;
@@ -305,6 +308,8 @@ html, body {
             font-size: 12px;
             cursor: pointer;
             transition: all 0.15s ease;
+            text-align: left;
+            white-space: nowrap;
 
             &:hover {
                 background: rgba(70, 70, 100, 0.7);
@@ -319,10 +324,17 @@ html, body {
         }
     }
 
+    .window-main {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
     .window-content {
         padding: 16px;
         overflow-y: auto;
-        max-height: 380px;
+        max-height: 450px;
+        flex: 1;
     }
 
     .buildings-grid {

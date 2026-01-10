@@ -41,13 +41,15 @@ export class BuildingWindow {
         this.element.style.display = 'none';
 
         this.element.innerHTML = `
-            <div class="window-header">
-                <span class="window-title">Объекты</span>
-                <button class="window-close">&times;</button>
-            </div>
             <div class="window-tabs"></div>
-            <div class="window-content">
-                <div class="buildings-grid"></div>
+            <div class="window-main">
+                <div class="window-header">
+                    <span class="window-title">Объекты</span>
+                    <button class="window-close">&times;</button>
+                </div>
+                <div class="window-content">
+                    <div class="buildings-grid"></div>
+                </div>
             </div>
             <div class="building-tooltips"></div>
         `;

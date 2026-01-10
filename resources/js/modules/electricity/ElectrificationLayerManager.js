@@ -19,16 +19,15 @@ export class ElectrificationLayerManager {
     /**
      * Initialize manager
      */
-    init() {
+    async init() {
         // Load electrification texture
-        this.texture = PIXI.Texture.from('/assets/tiles/electrification.png');
+        const texturePath = this.game.config.tilesPath + 'electrification.png?v=' + this.game.config.assetVersion;
+        this.texture = await PIXI.Assets.load(texturePath);
 
-        // Add layer to entity layer container
-        if (this.game.entityLayer) {
-            this.game.entityLayer.addChild(this.layer);
+        // Add layer to world container (same as deposits)
+        if (this.game.worldContainer) {
+            this.game.worldContainer.addChild(this.layer);
         }
-
-        console.log('[ElectrificationLayerManager] Initialized');
     }
 
     /**
@@ -77,23 +76,30 @@ export class ElectrificationLayerManager {
         // Get viewport bounds (with padding for smooth transitions)
         const bounds = this.game.camera.getViewportBounds();
         const padding = 128;
-        const minX = bounds.minX - padding;
-        const maxX = bounds.maxX + padding;
-        const minY = bounds.minY - padding;
-        const maxY = bounds.maxY + padding;
+        const minX = bounds.left - padding;
+        const maxX = bounds.right + padding;
+        const minY = bounds.top - padding;
+        const maxY = bounds.bottom + padding;
 
         // Find all built electricity entities with power radius
         const powerSources = [];
-        for (const [entityId, entityData] of this.game.entityData) {
-            const entity = this.game.loadedEntities.get(entityId);
-            if (!entity || entity.state !== 'built') continue;
+
+        for (const [entityId, entity] of this.game.entityData) {
+            if (entity.state !== 'built') {
+                continue;
+            }
 
             const radius = this.game.electricityManager.getPowerRadius(entity.entity_type_id);
+
             if (radius <= 0) continue;
 
+            // Convert tile coordinates to pixel coordinates
+            const pixelX = entity.x * 64;
+            const pixelY = entity.y * 64;
+
             powerSources.push({
-                x: entity.x,
-                y: entity.y,
+                x: pixelX,
+                y: pixelY,
                 radius: radius,
             });
         }
@@ -132,8 +138,6 @@ export class ElectrificationLayerManager {
                 }
             }
         }
-
-        console.log(`[ElectrificationLayerManager] Rendered ${this.sprites.size} electrification tiles`);
     }
 
     /**

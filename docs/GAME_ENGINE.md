@@ -16,13 +16,15 @@
 Stage
 └── worldContainer (scaled & positioned by camera)
     ├── landingLayer (terrain tiles, zIndex: 1)
-    ├── depositLayer (natural resources, zIndex: 1.5)
+    ├── electrificationLayer (powered areas, zIndex: 1.5)
+    ├── depositLayer (natural resources, zIndex: 1.6)
     ├── entityLayer (buildings, zIndex: 2)
     └── fogLayer (fog of war overlay, zIndex: 9999)
 ```
 
 **Layer Purpose:**
 - **landingLayer**: Background terrain (grass, water, stone, etc.)
+- **electrificationLayer**: Blue glowing dots showing powered areas (ElectrificationLayerManager)
 - **depositLayer**: Natural resources (trees, rocks, ores) - simplified rendering
 - **entityLayer**: Player-built structures and machines
 - **fogLayer**: Visibility mask based on Crystal Tower positions
@@ -965,6 +967,111 @@ php yii landing/generate
 ```
 
 This generates all texture atlases in `public/assets/tiles/landing/atlases/`.
+
+## Electricity System
+
+The electricity system provides power distribution using **pylons**, **batteries**, and **generators**. It consists of three client-side managers working together.
+
+### ElectricitySystemManager
+
+**Location**: `resources/js/modules/electricity/ElectricitySystemManager.js`
+
+Manages electricity network data and provides API for checking power availability.
+
+**Initialization**:
+```javascript
+this.electricityManager = new ElectricitySystemManager(this);
+this.electricityManager.loadSystems(this.initialElectricitySystems);
+```
+
+**Key Methods**:
+- `loadSystems(systemsData)` - Load system data from server config
+- `getSystemForEntity(entityId)` - Get system for specific entity (O(1) lookup via Map)
+- `hasElectricity(entityId, amount)` - Check if entity has enough electricity
+- `isCoordinateElectrified(x, y)` - Check if world coordinate is powered
+- `getPowerRadius(entityTypeId)` - Get pylon radius in pixels (tiles × 64)
+
+**Data Structures**:
+```javascript
+systems = new Map();           // systemId → {totalCapacity, totalElectricity, members}
+entityToSystem = new Map();    // entityId → systemId (for O(1) lookup)
+```
+
+### ElectrificationLayerManager
+
+**Location**: `resources/js/modules/electricity/ElectrificationLayerManager.js`
+
+Renders blue glowing dots on tiles within pylon power radius.
+
+**Layer Configuration**:
+- **zIndex**: 1.5 (between landing and deposits)
+- **Sprite**: `public/assets/tiles/electrification.png` (64×64)
+- **Coverage**: 35% with isolated single-pixel dots
+- **Colors**: Dark blue (RGB: 40-60, 100-140, 180-220)
+
+**Initialization**:
+```javascript
+await this.electrificationLayer.init();  // Loads texture
+this.electrificationLayer.render();      // Initial render
+```
+
+**Rendering Logic**:
+1. Find all `state='built'` electricity entities with power radius > 0
+2. Convert entity coordinates from tiles to pixels (× 64)
+3. For each tile in viewport:
+   - Check Euclidean distance to all power sources
+   - Create sprite if distance ≤ radius
+4. Sprites pooled for performance
+
+**Coordinates**:
+- Entity coords stored in **tiles** (`entity.x`, `entity.y`)
+- Rendering uses **pixels** (`entity.x * 64`, `entity.y * 64`)
+- Viewport bounds calculated with 128px padding
+
+**Update Triggers**:
+- Called manually via `render()` after entities load
+- Can be called when electricity entities change
+
+### NoPowerIndicator
+
+**Location**: `resources/js/modules/electricity/NoPowerIndicator.js`
+
+Shows warning icon on buildings that need electricity but don't have it.
+
+**Sprite**: `public/assets/tiles/no_power.png` (64×64)
+- Yellow lightning bolt with red X overlay
+
+**Initialization**:
+```javascript
+await this.noPowerIndicator.init();  // Loads texture
+```
+
+**Detection Logic**:
+```javascript
+checkEntityNeedsElectricity(entity) {
+    const recipeIds = this.game.entityTypeRecipes[entity.entity_type_id];
+    for (const recipeId of recipeIds) {
+        const recipe = this.game.recipes[recipeId];
+        // Check if electricity (resource_id 400) is required
+        if (recipe.input1_resource_id === 400 ||
+            recipe.input2_resource_id === 400 ||
+            recipe.input3_resource_id === 400) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+**Update Cycle**:
+- Called periodically (every 60 frames)
+- Shows indicator if: entity needs electricity AND doesn't have it
+- Hides indicator if: entity has electricity OR doesn't need it
+- Sprite added as child to entity container
+
+**Visual Position**:
+- Positioned at `(0, -32)` relative to entity center
+- Appears slightly above center of entity sprite
 
 ## Build
 

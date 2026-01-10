@@ -12,7 +12,7 @@ export class DepositLayerManager {
 
         // Create deposit layer container (z-index between landing and entity)
         this.depositLayer = new PIXI.Container();
-        this.depositLayer.zIndex = 1.5;
+        this.depositLayer.zIndex = 1.6; // Above electrification layer (1.5)
         this.depositLayer.name = 'depositLayer';
     }
 

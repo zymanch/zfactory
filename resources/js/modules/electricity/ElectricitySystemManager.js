@@ -116,7 +116,7 @@ export class ElectricitySystemManager {
     /**
      * Get power radius for entity type
      * @param {number} entityTypeId
-     * @returns {number}
+     * @returns {number} Radius in pixels
      */
     getPowerRadius(entityTypeId) {
         const entityType = this.game.entityTypes[entityTypeId];
@@ -124,7 +124,8 @@ export class ElectricitySystemManager {
 
         const role = this.getElectricityRole(entityTypeId);
         if (role === 'pylon') {
-            return parseInt(entityType.power) || 0;
+            // Convert tiles to pixels (1 tile = 64px)
+            return (parseInt(entityType.power) || 0) * 64;
         }
         return 0;
     }
