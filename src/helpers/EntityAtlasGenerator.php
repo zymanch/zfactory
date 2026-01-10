@@ -50,7 +50,7 @@ class EntityAtlasGenerator
         $entities = EntityType::find()->asArray()->all();
 
         foreach ($entities as $entity) {
-            $folder = $entity['image_url'];
+            $folder = $entity['type'] . '/' . $entity['folder'];
             $this->generateAtlasForEntity($folder, $entity['width'], $entity['height']);
         }
 
