@@ -9,6 +9,7 @@ use bl\entity\types\manipulator;
 use bl\entity\types\relief;
 use bl\entity\types\eye;
 use bl\entity\types\mining;
+use bl\entity\types\electricity;
 
 /**
  * Factory for mapping entity_type_id to EntityType class
@@ -86,6 +87,21 @@ class EntityTypeFactory
         mining\OilPumpEntityType::ENTITY_TYPE_ID => mining\OilPumpEntityType::class,
         mining\GasPumpEntityType::ENTITY_TYPE_ID => mining\GasPumpEntityType::class,
         mining\LavaPumpEntityType::ENTITY_TYPE_ID => mining\LavaPumpEntityType::class,
+
+        // Electricity - Pylons (900-902)
+        electricity\PylonSmallEntityType::ENTITY_TYPE_ID => electricity\PylonSmallEntityType::class,
+        electricity\PylonMediumEntityType::ENTITY_TYPE_ID => electricity\PylonMediumEntityType::class,
+        electricity\PylonLargeEntityType::ENTITY_TYPE_ID => electricity\PylonLargeEntityType::class,
+
+        // Electricity - Batteries (910-912)
+        electricity\BatterySmallEntityType::ENTITY_TYPE_ID => electricity\BatterySmallEntityType::class,
+        electricity\BatteryMediumEntityType::ENTITY_TYPE_ID => electricity\BatteryMediumEntityType::class,
+        electricity\BatteryLargeEntityType::ENTITY_TYPE_ID => electricity\BatteryLargeEntityType::class,
+
+        // Electricity - Generators (920-922)
+        electricity\CoalGeneratorEntityType::ENTITY_TYPE_ID => electricity\CoalGeneratorEntityType::class,
+        electricity\SolarPanelSmallEntityType::ENTITY_TYPE_ID => electricity\SolarPanelSmallEntityType::class,
+        electricity\SolarPanelLargeEntityType::ENTITY_TYPE_ID => electricity\SolarPanelLargeEntityType::class,
     ];
 
     /**

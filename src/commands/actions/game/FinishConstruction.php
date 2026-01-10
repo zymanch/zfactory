@@ -125,6 +125,11 @@ class FinishConstruction extends JsonAction
                 if (!$isShipEntity && $entityType->type === 'eye') {
                     \services\FogOfWarService::invalidateCache($entity->region_id);
                 }
+
+                // Recalculate electricity systems if electricity entity was finished
+                if (!$isShipEntity && $entityType->type === 'electricity') {
+                    \bl\electricity\ElectricitySystemManager::recalculateSystems($entity->region_id);
+                }
             }
 
             $transaction->commit();

@@ -179,7 +179,7 @@ class EntityBehavior {
 }
 
 /**
- * Default behavior for buildings, transporters, manipulators
+ * Default behavior for buildings, conveyors, pipes, electricity, manipulators
  */
 class DefaultEntityBehavior extends EntityBehavior {
     canBuildAt(tileX, tileY) {
@@ -508,7 +508,9 @@ export class EntityBehaviorFactory {
     static TYPE_BEHAVIORS = {
         'mining': MiningEntityBehavior,
         'building': DefaultEntityBehavior,
-        'transporter': DefaultEntityBehavior,
+        'conveyor': DefaultEntityBehavior,
+        'pipe': DefaultEntityBehavior,
+        'electricity': DefaultEntityBehavior,
         'manipulator': DefaultEntityBehavior,
         'tree': TreeEntityBehavior,
         'relief': ReliefEntityBehavior,

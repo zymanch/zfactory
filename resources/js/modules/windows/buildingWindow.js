@@ -16,7 +16,9 @@ export class BuildingWindow {
             'ship': 'Корабль',
             'mining': 'Добыча',
             'manipulator': 'Манипуляторы',
-            'transporter': 'Транспорт',
+            'conveyor': 'Конвейеры',
+            'pipe': 'Трубы',
+            'electricity': 'Электричество',
             'resource': 'Ресурсы',
             'eye': 'Башни'
         };

@@ -368,8 +368,8 @@ export class BuildMode extends GameModeBase {
         const entityType = this.game.entityTypes[this.entityTypeId];
         if (!entityType) return;
 
-        // Determine mode: drag for ship/transporter, click for others
-        if (entityType.type === 'ship' || entityType.type === 'transporter') {
+        // Determine mode: drag for ship/conveyor/pipe, click for others
+        if (entityType.type === 'ship' || entityType.type === 'conveyor' || entityType.type === 'pipe') {
             this.startDragging(e);
         }
     }
@@ -542,7 +542,7 @@ export class BuildMode extends GameModeBase {
 
         if (entityType.type === 'ship') {
             this.updateShipAreaPreview();
-        } else if (entityType.type === 'transporter') {
+        } else if (entityType.type === 'conveyor' || entityType.type === 'pipe') {
             this.updateConveyorPathPreview();
         }
     }

@@ -697,30 +697,66 @@ export class ResourceTransportManager {
             if (!recipe) continue;
 
             // Check all inputs
-            const input1Amount = state.getResourceAmount(parseInt(recipe.input1_resource_id));
-            if (input1Amount < parseInt(recipe.input1_amount)) continue;
+            const input1ResourceId = parseInt(recipe.input1_resource_id);
+            const input1AmountNeeded = parseInt(recipe.input1_amount);
+
+            // Skip check if input amount is 0 (like Sunlight - not consumed)
+            if (input1AmountNeeded > 0) {
+                const input1Amount = state.getResourceAmount(input1ResourceId);
+                if (input1Amount < input1AmountNeeded) continue;
+            }
 
             if (recipe.input2_resource_id) {
-                const input2Amount = state.getResourceAmount(parseInt(recipe.input2_resource_id));
-                if (input2Amount < parseInt(recipe.input2_amount || 1)) continue;
+                const input2ResourceId = parseInt(recipe.input2_resource_id);
+                const input2AmountNeeded = parseInt(recipe.input2_amount || 1);
+
+                // Skip check if input amount is 0
+                if (input2AmountNeeded > 0) {
+                    const input2Amount = state.getResourceAmount(input2ResourceId);
+                    if (input2Amount < input2AmountNeeded) continue;
+                }
             }
 
             if (recipe.input3_resource_id) {
-                const input3Amount = state.getResourceAmount(parseInt(recipe.input3_resource_id));
-                if (input3Amount < parseInt(recipe.input3_amount || 1)) continue;
+                const input3ResourceId = parseInt(recipe.input3_resource_id);
+                const input3Amount = parseInt(recipe.input3_amount || 1);
+
+                // Special handling for electricity (resource_id 400)
+                if (input3ResourceId === 400) {
+                    // Check electricity system instead of building resources
+                    if (!this.game.electricityManager.hasElectricity(state.entityId, input3Amount)) {
+                        console.log(`[Craft Check] Entity ${state.entityId} lacks electricity: needs ${input3Amount}`);
+                        continue;
+                    }
+                } else if (input3Amount > 0) {
+                    // Normal resource check (amount > 0 means it's consumed)
+                    const resourceAmount = state.getResourceAmount(input3ResourceId);
+                    if (resourceAmount < input3Amount) continue;
+                }
             }
 
             // Check output limit
             const outputAmount = state.getResourceAmount(parseInt(recipe.output_resource_id));
             if (outputAmount >= 10) continue;
 
-            // Consume inputs
-            state.removeResource(parseInt(recipe.input1_resource_id), parseInt(recipe.input1_amount));
+            // Consume inputs (only if amount > 0, skip Sunlight and similar non-consumed inputs)
+            if (input1AmountNeeded > 0) {
+                state.removeResource(input1ResourceId, input1AmountNeeded);
+            }
             if (recipe.input2_resource_id) {
-                state.removeResource(parseInt(recipe.input2_resource_id), parseInt(recipe.input2_amount || 1));
+                const input2ResourceId = parseInt(recipe.input2_resource_id);
+                const input2AmountNeeded = parseInt(recipe.input2_amount || 1);
+                if (input2AmountNeeded > 0) {
+                    state.removeResource(input2ResourceId, input2AmountNeeded);
+                }
             }
             if (recipe.input3_resource_id) {
-                state.removeResource(parseInt(recipe.input3_resource_id), parseInt(recipe.input3_amount || 1));
+                const input3ResourceId = parseInt(recipe.input3_resource_id);
+                const input3AmountNeeded = parseInt(recipe.input3_amount || 1);
+                // Don't consume electricity from building - it's consumed from system
+                if (input3ResourceId !== 400 && input3AmountNeeded > 0) {
+                    state.removeResource(input3ResourceId, input3AmountNeeded);
+                }
             }
 
             // Start crafting

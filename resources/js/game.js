@@ -25,6 +25,9 @@ import { DepositLayerManager } from './modules/depositLayerManager.js';
 import { PipeSystemManager } from './modules/pipes/PipeSystemManager.js';
 import { PipeRenderer } from './modules/pipes/PipeRenderer.js';
 import { PipeConnectionManager } from './modules/pipes/PipeConnectionManager.js';
+import { ElectricitySystemManager } from './modules/electricity/ElectricitySystemManager.js';
+import { ElectrificationLayerManager } from './modules/electricity/ElectrificationLayerManager.js';
+import { NoPowerIndicator } from './modules/electricity/NoPowerIndicator.js';
 import { SPRITE_STATES, SPRITE_STATES_ORIGINAL, CONSTRUCTION_FRAMES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 import { getCSRFToken } from './modules/utils.js';
 
@@ -91,6 +94,9 @@ class ZFactoryGame {
         this.pipeSystemManager = null;
         this.pipeRenderer = null;
         this.pipeConnectionManager = null;
+        this.electricityManager = null;
+        this.electrificationLayer = null;
+        this.noPowerIndicator = null;
     }
 
     /**
@@ -154,6 +160,9 @@ class ZFactoryGame {
         this.pipeSystemManager = new PipeSystemManager(this);
         this.pipeRenderer = new PipeRenderer(this);
         this.pipeConnectionManager = new PipeConnectionManager(this);
+        this.electricityManager = new ElectricitySystemManager(this);
+        this.electrificationLayer = new ElectrificationLayerManager(this);
+        this.noPowerIndicator = new NoPowerIndicator(this);
     }
 
     /**
@@ -246,6 +255,10 @@ class ZFactoryGame {
             await this.cloudManager.init();
         }
 
+        // Initialize electricity managers
+        this.electrificationLayer.init();
+        this.noPowerIndicator.init();
+
         this.buildPanel.refresh();
         // Note: resourceTransport.init() is called after entities are loaded in loadViewport()
     }
@@ -292,10 +305,16 @@ class ZFactoryGame {
         this.initialCraftingStates = data.craftingStates || [];
         this.initialTransportStates = data.transportStates || [];
         this.pipeSystems = data.pipeSystems || {};
+        this.electricitySystems = data.electricitySystems || {};
 
         // Load pipe systems data
         if (this.pipeSystemManager && this.pipeSystems) {
             this.pipeSystemManager.loadSystems(this.pipeSystems);
+        }
+
+        // Load electricity systems data
+        if (this.electricityManager && this.electricitySystems) {
+            this.electricityManager.loadSystems(this.electricitySystems);
         }
 
         // Setup gameData structure for new atlas system
@@ -589,7 +608,7 @@ class ZFactoryGame {
             const isPipeEntity = this.pipeConnectionManager.isPipe(entity);
 
             // Handle conveyors separately (but exclude pipes)
-            if (entityType && entityType.type === 'transporter' && !isPipeEntity) {
+            if (entityType && entityType.type === 'conveyor' && !isPipeEntity) {
                 const texture = this.conveyorManager.getConveyorTexture(entity, false, 0);
                 if (texture) {
                     const sprite = this.createEntitySprite(entity, texture, isVisible);
@@ -697,7 +716,7 @@ class ZFactoryGame {
 
         if (isHovering && hoverSpriteType) {
             // Handle conveyors separately (but exclude pipes)
-            if (entityType && entityType.type === 'transporter' && !isPipeEntity) {
+            if (entityType && entityType.type === 'conveyor' && !isPipeEntity) {
                 this.conveyorManager.updateConveyorTexture(entity.entity_id, true);
             } else if (isPipeEntity) {
                 // Handle pipes - switch to selected texture
@@ -722,7 +741,7 @@ class ZFactoryGame {
             }
         } else {
             // Reset to normal texture
-            if (entityType && entityType.type === 'transporter' && !isPipeEntity) {
+            if (entityType && entityType.type === 'conveyor' && !isPipeEntity) {
                 this.conveyorManager.updateConveyorTexture(entity.entity_id, false);
             } else if (isPipeEntity) {
                 // Handle pipes - reset to normal texture
@@ -905,6 +924,11 @@ class ZFactoryGame {
             // Update construction progress
             if (this.constructionManager) {
                 this.constructionManager.update();
+            }
+
+            // Update electricity indicators (periodic, every 60 frames = ~1 second)
+            if (this.noPowerIndicator && this.frameCount % 60 === 0) {
+                this.noPowerIndicator.update();
             }
 
             this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);

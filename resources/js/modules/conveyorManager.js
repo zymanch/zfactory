@@ -51,7 +51,7 @@ export class ConveyorManager {
 
             for (const state of states) {
                 const url = this.game.assetUrl(
-                    `${this.game.config.tilesPath}entities/transporter/${orientation}/${state}_atlas.png`
+                    `${this.game.config.tilesPath}entities/conveyor/${orientation}/${state}_atlas.png`
                 );
 
                 try {
@@ -137,7 +137,7 @@ export class ConveyorManager {
         const entityType = this.game.entityTypes[entity.entity_type_id];
         if (!entityType) return false;
 
-        return entityType.type === 'transporter';
+        return entityType.type === 'conveyor';
     }
 
     /**

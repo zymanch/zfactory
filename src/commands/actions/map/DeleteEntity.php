@@ -87,6 +87,11 @@ class DeleteEntity extends JsonAction
                 PipeSystemManager::recalculateSystems($regionId);
             }
 
+            // Recalculate electricity systems if electricity entity was deleted (only for island, not ship)
+            if (!$isShipEntity && $regionId && $entityType && $entityType->type === 'electricity') {
+                \bl\electricity\ElectricitySystemManager::recalculateSystems($regionId);
+            }
+
             // Invalidate fog cache if eye entity was deleted
             if (!$isShipEntity && $regionId && $isEyeEntity) {
                 \services\FogOfWarService::invalidateCache($regionId);

@@ -224,6 +224,10 @@ zfactory.local/
 │           ├── depositLayerManager.js  # Deposit rendering
 │           ├── depositTooltip.js       # Deposit hover info
 │           ├── depositBehaviors.js     # Deposit placement logic
+│           ├── electricity/            # Electricity system modules
+│           │   ├── ElectricitySystemManager.js    # System data management
+│           │   ├── ElectrificationLayerManager.js # Blue dots rendering
+│           │   └── NoPowerIndicator.js            # "No power" warnings
 │           ├── entityTooltip.js
 │           ├── fogOfWar.js
 │           └── ...
@@ -335,6 +339,7 @@ bl\entity\types\
 ├── ManipulatorEntityType       # Robotic arms
 ├── ReliefEntityType            # Rocks
 ├── EyeEntityType               # Crystal towers
+├── ElectricityEntityType       # Electricity (pylons, batteries, generators)
 ├── EntityTypeFactory           # Maps entity_type_id to class
 ├── building/
 │   ├── FurnaceEntityType       # ENTITY_TYPE_ID = 101
@@ -352,9 +357,19 @@ bl\entity\types\
 ├── relief/
 │   ├── SmallRockEntityType     # ENTITY_TYPE_ID = 10
 │   └── ... (3 rock sizes)
-└── eye/
-    ├── SmallCrystalTowerEntityType  # ENTITY_TYPE_ID = 400
-    └── ... (3 crystal towers)
+├── eye/
+│   ├── SmallCrystalTowerEntityType  # ENTITY_TYPE_ID = 400
+│   └── ... (3 crystal towers)
+└── electricity/
+    ├── PylonSmallEntityType         # ENTITY_TYPE_ID = 900
+    ├── PylonMediumEntityType        # ENTITY_TYPE_ID = 901
+    ├── PylonLargeEntityType         # ENTITY_TYPE_ID = 902
+    ├── BatterySmallEntityType       # ENTITY_TYPE_ID = 910
+    ├── BatteryMediumEntityType      # ENTITY_TYPE_ID = 911
+    ├── BatteryLargeEntityType       # ENTITY_TYPE_ID = 912
+    ├── CoalGeneratorEntityType      # ENTITY_TYPE_ID = 920
+    ├── SolarPanelSmallEntityType    # ENTITY_TYPE_ID = 921
+    └── SolarPanelLargeEntityType    # ENTITY_TYPE_ID = 922
 ```
 
 ### Landing Class Hierarchy
@@ -437,6 +452,128 @@ php yii entity/generate-ai-flux conveyor 0
 ```
 
 All rotational variants (_up, _down, _left) are generated automatically from base orientation.
+
+## Electricity System
+
+### Overview
+The electricity system provides power distribution using **pylons**, **batteries**, and **generators**. Electricity is a consumable resource that can be required by recipes.
+
+### Architecture
+- **Backend**: BFS algorithm detects connected networks by power radius
+- **Frontend**: Client-side managers handle rendering and validation
+- **Resource ID**: 400 (Electricity), 401 (Sunlight - for solar panels)
+
+### Entity Types
+
+**Pylons** (transmit electricity via radius):
+- `900` - Small Pylon (1×1, radius=7 tiles)
+- `901` - Medium Pylon (2×2, radius=15 tiles)
+- `902` - Large Pylon (3×3, radius=30 tiles)
+
+**Batteries** (store electricity):
+- `910` - Small Battery (1×1, capacity=100)
+- `911` - Medium Battery (2×2, capacity=500)
+- `912` - Large Battery (3×3, capacity=2000)
+
+**Generators** (produce electricity):
+- `920` - Coal Generator (2×2, consumes coal, produces 10/tick)
+- `921` - Solar Panel Small (1×1, uses sunlight, produces 5/tick)
+- `922` - Solar Panel Large (3×3, uses sunlight, produces 25/tick)
+
+### Backend: ElectricitySystemManager.php
+
+Located in `src/bl/electricity/ElectricitySystemManager.php`.
+
+**Key Methods:**
+- `recalculateSystems($regionId)` - Recalculate all networks using BFS
+- `findConnectedEntities()` - BFS to find connected electricity entities
+- `getEntitiesInRadius()` - Check Euclidean distance
+- `addElectricity()` / `takeElectricity()` - Manage electricity flow
+- `getSystemInfo($entityId)` - Query system state
+
+**Algorithm:**
+1. Find all electricity entities with `type='electricity'` and `state='built'`
+2. Use BFS to group entities connected by power radius
+3. Create `electricity_system` record for each network
+4. Calculate total capacity from batteries
+5. Calculate total electricity from `entity_resource`
+
+**Recalculation Triggers:**
+- `CreateEntity.php:368-371` - When electricity entity created
+- `DeleteEntity.php:90-93` - When electricity entity deleted
+- `FinishConstruction.php:129-132` - When construction finished
+
+### Frontend: JavaScript Modules
+
+**ElectricitySystemManager.js** (`resources/js/modules/electricity/`):
+- Loads system data from server config
+- O(1) entity → system lookup via Map
+- `hasElectricity(entityId, amount)` - Check availability
+- `isCoordinateElectrified(x, y)` - Check if tile is powered
+
+**ElectrificationLayerManager.js**:
+- Renders blue glowing dots on powered tiles
+- Z-index: 1.5 (between landing and entities)
+- Sprite: `public/assets/tiles/electrification.png` (64×64)
+- Updates when electricity entities change
+
+**NoPowerIndicator.js**:
+- Shows warning icon on buildings without power
+- Sprite: `public/assets/tiles/no_power.png` (64×64)
+- Checks recipes for `input3_resource_id=400` (electricity)
+- Updates periodically (every 60 frames)
+
+### Recipes
+
+Electricity can be used as recipe input (`input3_resource_id=400`):
+
+**Electricity Generation:**
+- `recipe_id=500`: Coal (1) → Electricity (10), 60 ticks
+- `recipe_id=501`: Sunlight (0) → Electricity (5), 60 ticks
+- `recipe_id=502`: Sunlight (0) → Electricity (25), 60 ticks
+
+**Note**: Sunlight has `input_amount=0` - it's not consumed (infinite).
+
+### Crafting Integration
+
+Modified `ResourceTransportManager.js:708-760` to check electricity:
+
+```javascript
+// Check if recipe requires electricity
+if (recipe.input3_resource_id === 400) {
+    if (!this.game.electricityManager.hasElectricity(entityId, amount)) {
+        continue; // Skip this recipe - no power
+    }
+}
+```
+
+Electricity is NOT consumed from building storage - it's checked via system.
+
+### Database Tables
+
+**electricity_system:**
+- `system_id` - Primary key
+- `region_id` - Region FK
+- `total_capacity` - Sum of battery capacities
+- `total_electricity` - Current electricity stored
+
+**electricity_system_member:**
+- `system_id` - System FK
+- `entity_id` - Entity FK
+- `role` - ENUM('pylon', 'battery', 'generator', 'consumer')
+
+Networks are recalculated in memory on entity changes (not stored persistently).
+
+### Visual Feedback
+
+**Powered Areas:**
+- Blue glowing dots on tiles within pylon radius
+- Rendered on electrification layer (z-index 1.5)
+
+**Unpowered Buildings:**
+- Red/yellow lightning bolt with X icon
+- Shown on buildings that need electricity but don't have it
+- Rendered as child sprite of entity
 
 ## Standalone Action Classes
 

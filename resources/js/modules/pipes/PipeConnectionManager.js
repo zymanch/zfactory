@@ -13,14 +13,12 @@ export class PipeConnectionManager {
         this.game = game;
 
         // Pipe entity type IDs (all types with pipe_atlas variants)
-        this.PIPE_TYPES = [131, 132, 135, 136, 140, 141];
+        this.PIPE_TYPES = [131, 132, 140, 141];
 
         // Map entity type IDs to their folder names
         this.PIPE_FOLDERS = {
             131: 'pipe',
             132: 'pipe_vertical',
-            135: 'tank_small',
-            136: 'tank_large',
             140: 'underground_pipe_in',
             141: 'underground_pipe_out'
         };
@@ -69,7 +67,7 @@ export class PipeConnectionManager {
 
             for (const state of states) {
                 const atlasUrl = this.game.assetUrl(
-                    `${this.game.config.tilesPath}entities/transporter/${folder}/pipe_atlas_${state}.png?v=${Date.now()}`
+                    `${this.game.config.tilesPath}entities/pipe/${folder}/pipe_atlas_${state}.png?v=${Date.now()}`
                 );
 
                 try {

@@ -365,6 +365,11 @@ class CreateEntity extends JsonAction
                 PipeSystemManager::recalculateSystems($currentRegionId);
             }
 
+            // Recalculate electricity systems if electricity entity was created (only for island, not ship)
+            if (!$isShipPlacement && $entityType->type === 'electricity') {
+                \bl\electricity\ElectricitySystemManager::recalculateSystems($currentRegionId);
+            }
+
             // Invalidate fog cache if eye entity was created (only for built entities)
             if (!$isShipPlacement && $entityType->type === 'eye' && $state === 'built') {
                 \services\FogOfWarService::invalidateCache($currentRegionId);
