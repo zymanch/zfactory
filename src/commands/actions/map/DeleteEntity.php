@@ -5,6 +5,7 @@ namespace commands\actions\map;
 use commands\actions\JsonAction;
 use models\Entity;
 use models\ShipEntity;
+use models\EntityType;
 use models\EntityTypeCost;
 use bl\pipes\PipeSystemManager;
 use Yii;
@@ -62,9 +63,14 @@ class DeleteEntity extends JsonAction
         // Begin transaction
         $transaction = Yii::$app->db->beginTransaction();
         try {
-            // Store entity info before deletion (for pipe system recalculation)
+            // Store entity info before deletion (for pipe system recalculation and fog cache invalidation)
             $entityTypeId = $entity->entity_type_id;
             $regionId = !$isShipEntity ? $entity->region_id : null;
+
+            // Load entity type to check if it's an eye entity
+            // For ShipEntity, entityType relation doesn't exist, so load directly
+            $entityType = EntityType::findOne($entityTypeId);
+            $isEyeEntity = $entityType && $entityType->type === 'eye';
 
             // Refund resources if deleting a blueprint
             if ($entity->state === 'blueprint') {
@@ -79,6 +85,11 @@ class DeleteEntity extends JsonAction
             // Recalculate pipe systems if pipe entity was deleted (only for island, not ship)
             if (!$isShipEntity && $regionId && in_array($entityTypeId, [131, 132, 135, 136, 140, 141])) {
                 PipeSystemManager::recalculateSystems($regionId);
+            }
+
+            // Invalidate fog cache if eye entity was deleted
+            if (!$isShipEntity && $regionId && $isEyeEntity) {
+                \services\FogOfWarService::invalidateCache($regionId);
             }
 
             $transaction->commit();

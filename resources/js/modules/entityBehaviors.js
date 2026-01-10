@@ -434,6 +434,74 @@ class ShipEntityBehavior extends EntityBehavior {
 }
 
 /**
+ * Behavior for fluid pump entities (water pump, lava pump)
+ * Must be placed on water or lava respectively
+ */
+class FluidPumpEntityBehavior extends EntityBehavior {
+    constructor(game, entityType) {
+        super(game, entityType);
+        this.isWaterPump = entityType.folder === 'water_pump';
+        this.isLavaPump = entityType.folder === 'lava_pump';
+    }
+
+    canBuildAt(tileX, tileY) {
+        // 1. Check fog of war
+        if (!this.areAllTilesVisible(tileX, tileY)) {
+            return this.error('Cannot build in fog of war');
+        }
+
+        // 2. Check landing is correct fluid type
+        if (!this.areAllTilesCorrectFluid(tileX, tileY)) {
+            const fluidName = this.isWaterPump ? 'water' : 'lava';
+            return this.error(`Must be placed on ${fluidName}`);
+        }
+
+        // 3. Check entity collision
+        if (this.hasEntityCollision(tileX, tileY)) {
+            return this.error('Position is occupied');
+        }
+
+        return this.success();
+    }
+
+    /**
+     * Check if all tiles are correct fluid type
+     */
+    areAllTilesCorrectFluid(tileX, tileY) {
+        const width = parseInt(this.entityType.width) || 1;
+        const height = parseInt(this.entityType.height) || 1;
+        const requiredFluidType = this.isWaterPump ? 'water' : 'lava';
+
+        for (let dx = 0; dx < width; dx++) {
+            for (let dy = 0; dy < height; dy++) {
+                const landing = this.getLandingAt(tileX + dx, tileY + dy);
+
+                if (!landing) {
+                    return false;
+                }
+
+                if (landing.fluid_type !== requiredFluidType) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get landing at tile position
+     */
+    getLandingAt(tileX, tileY) {
+        const key = tileKey(tileX, tileY);
+        const landingId = this.game.tileDataMap.get(key);
+        if (!landingId) return null;
+
+        return this.game.landingTypes[landingId];
+    }
+}
+
+/**
  * Factory for creating entity behaviors
  */
 export class EntityBehaviorFactory {
@@ -464,12 +532,18 @@ export class EntityBehaviorFactory {
             return null;
         }
 
-        // Check for deposit-based extraction buildings first
+        // Check for fluid pumps first (by folder name)
+        if (entityType.folder === 'water_pump' || entityType.folder === 'lava_pump') {
+            const behavior = new FluidPumpEntityBehavior(game, entityType);
+            this.cache.set(entityTypeId, behavior);
+            return behavior;
+        }
+
+        // Check for deposit-based extraction buildings
         // Sawmills: 500-502, Stone Quarries: 503-505, Drills: 102/108/506
         // Mines: 507-509, Quarries: 510-512
-        // Fluid Pumps: 145-148
         const typeId = parseInt(entityTypeId);
-        if ((typeId >= 500 && typeId <= 512) || [102, 108].includes(typeId) || (typeId >= 145 && typeId <= 148)) {
+        if ((typeId >= 500 && typeId <= 512) || [102, 108].includes(typeId)) {
             const behavior = new DepositEntityBehavior(game, entityType);
             this.cache.set(entityTypeId, behavior);
             return behavior;
@@ -518,7 +592,8 @@ export {
     TreeEntityBehavior,
     EyeEntityBehavior,
     ShipEntityBehavior,
-    DepositEntityBehavior
+    DepositEntityBehavior,
+    FluidPumpEntityBehavior
 };
 
 export default EntityBehaviorFactory;

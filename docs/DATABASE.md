@@ -60,27 +60,28 @@
 ### landing (terrain types)
 Defines types of terrain tiles for the background layer.
 
-| Column            | Type                  | Description                          |
-|-------------------|-----------------------|--------------------------------------|
-| landing_id        | INT UNSIGNED AUTO_INC | Primary key                          |
-| is_buildable      | ENUM('yes','no')      | Can buildings be placed here?        |
-| folder            | VARCHAR(256)          | Folder name (e.g., 'grass', 'lava')  |
-| variations_count  | INT DEFAULT 5         | Procedurally generated variations    |
-| ai_seed           | BIGINT NULL           | Stable Diffusion seed for base image |
+| Column            | Type                                  | Description                          |
+|-------------------|---------------------------------------|--------------------------------------|
+| landing_id        | INT UNSIGNED AUTO_INC                 | Primary key                          |
+| is_buildable      | ENUM('yes','no')                      | Can buildings be placed here?        |
+| fluid_type        | ENUM('none','water','lava')           | Fluid type (for fluid pumps)         |
+| folder            | VARCHAR(256)                          | Folder name (e.g., 'grass', 'lava')  |
+| variations_count  | INT DEFAULT 5                         | Procedurally generated variations    |
+| ai_seed           | BIGINT NULL                           | Stable Diffusion seed for base image |
 
 **Landing Types:**
-| ID | Name        | Buildable | Description                      |
-|----|-------------|-----------|----------------------------------|
-| 1  | grass       | yes       | Basic green terrain              |
-| 2  | dirt        | yes       | Brown path                       |
-| 3  | sand        | yes       | Desert/beach                     |
-| 4  | water       | no        | Blue water                       |
-| 5  | stone       | no        | Gray rocky terrain (unbuildable) |
-| 6  | lava        | no        | Red/orange hazard                |
-| 7  | snow        | yes       | White winter                     |
-| 8  | swamp       | no        | Dark green marsh (unbuildable)   |
-| 9  | sky         | no        | Sky background                   |
-| 10 | island_edge | no        | Floating island bottom edge      |
+| ID | Name        | Buildable | fluid_type    | Description                      |
+|----|-------------|-----------|---------------|----------------------------------|
+| 1  | grass       | yes       | none          | Basic green terrain              |
+| 2  | dirt        | yes       | none          | Brown path                       |
+| 3  | sand        | yes       | none          | Desert/beach                     |
+| 4  | water       | no        | **water**     | Blue water (water pump required) |
+| 5  | stone       | no        | none          | Gray rocky terrain (unbuildable) |
+| 6  | lava        | no        | **lava**      | Red/orange hazard (lava pump)    |
+| 7  | snow        | yes       | none          | White winter                     |
+| 8  | swamp       | no        | none          | Dark green marsh (unbuildable)   |
+| 9  | sky         | no        | none          | Sky background                   |
+| 10 | island_edge | no        | none          | Floating island bottom edge      |
 
 ### deposit_type (deposit definitions)
 Defines types of natural resources (trees, rocks, ores) that exist in the world.

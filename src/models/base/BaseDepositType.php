@@ -11,7 +11,7 @@ namespace models\base;
  * @property string $type
  * @property string $name
  * @property string $description
- * @property string $image_url
+ * @property string $folder
  * @property string $extension
  * @property integer $max_durability
  * @property integer $width
@@ -39,11 +39,11 @@ class BaseDepositType extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseDepositTypePeer::DEPOSIT_TYPE_ID, BaseDepositTypePeer::TYPE, BaseDepositTypePeer::NAME, BaseDepositTypePeer::IMAGE_URL, BaseDepositTypePeer::RESOURCE_ID], 'required'],
+            [[BaseDepositTypePeer::DEPOSIT_TYPE_ID, BaseDepositTypePeer::TYPE, BaseDepositTypePeer::NAME, BaseDepositTypePeer::FOLDER, BaseDepositTypePeer::RESOURCE_ID], 'required'],
             [[BaseDepositTypePeer::DEPOSIT_TYPE_ID, BaseDepositTypePeer::MAX_DURABILITY, BaseDepositTypePeer::WIDTH, BaseDepositTypePeer::HEIGHT, BaseDepositTypePeer::RESOURCE_ID, BaseDepositTypePeer::RESOURCE_AMOUNT], 'integer'],
             [[BaseDepositTypePeer::TYPE, BaseDepositTypePeer::DESCRIPTION], 'string'],
             [[BaseDepositTypePeer::NAME], 'string', 'max' => 128],
-            [[BaseDepositTypePeer::IMAGE_URL, BaseDepositTypePeer::ICON_URL], 'string', 'max' => 256],
+            [[BaseDepositTypePeer::FOLDER, BaseDepositTypePeer::ICON_URL], 'string', 'max' => 256],
             [[BaseDepositTypePeer::EXTENSION], 'string', 'max' => 4],
             [[BaseDepositTypePeer::RESOURCE_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseResource::className(), 'targetAttribute' => [BaseDepositTypePeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]],
         ];
@@ -59,7 +59,7 @@ class BaseDepositType extends \yii\db\ActiveRecord
             BaseDepositTypePeer::TYPE => 'Type',
             BaseDepositTypePeer::NAME => 'Name',
             BaseDepositTypePeer::DESCRIPTION => 'Description',
-            BaseDepositTypePeer::IMAGE_URL => 'Image Url',
+            BaseDepositTypePeer::FOLDER => 'Folder',
             BaseDepositTypePeer::EXTENSION => 'Extension',
             BaseDepositTypePeer::MAX_DURABILITY => 'Max Durability',
             BaseDepositTypePeer::WIDTH => 'Width',
@@ -103,7 +103,7 @@ class BaseDepositType extends \yii\db\ActiveRecord
             'type' => BaseDepositTypePeer::TYPE,
             'name' => BaseDepositTypePeer::NAME,
             'description' => BaseDepositTypePeer::DESCRIPTION,
-            'image_url' => BaseDepositTypePeer::IMAGE_URL,
+            'folder' => BaseDepositTypePeer::FOLDER,
             'extension' => BaseDepositTypePeer::EXTENSION,
             'max_durability' => BaseDepositTypePeer::MAX_DURABILITY,
             'width' => BaseDepositTypePeer::WIDTH,

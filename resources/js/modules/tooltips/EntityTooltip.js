@@ -9,6 +9,7 @@ export class EntityTooltip extends BaseTooltip {
     constructor(game) {
         super(game);
         this.currentEntityKey = null;
+        this.updateInterval = null;
     }
 
     /**
@@ -161,6 +162,9 @@ export class EntityTooltip extends BaseTooltip {
         this.element.style.display = 'block';
         this.isVisible = true;
         this.updatePosition(screenX, screenY);
+
+        // Start auto-update interval for progress bars
+        this.startUpdateInterval();
     }
 
     /**
@@ -202,6 +206,7 @@ export class EntityTooltip extends BaseTooltip {
      * Hide tooltip
      */
     hide() {
+        this.stopUpdateInterval();
         this.hideTimeout = setTimeout(() => {
             if (this.element) {
                 this.element.style.display = 'none';
@@ -209,6 +214,75 @@ export class EntityTooltip extends BaseTooltip {
             this.isVisible = false;
             this.currentEntityKey = null;
         }, 100);
+    }
+
+    /**
+     * Start interval to update tooltip in real-time
+     */
+    startUpdateInterval() {
+        this.stopUpdateInterval();
+
+        // Update every 100ms for smooth progress bars
+        this.updateInterval = setInterval(() => {
+            if (this.isVisible && this.currentEntityKey) {
+                this.updateDynamicContent();
+            }
+        }, 100);
+    }
+
+    /**
+     * Stop update interval
+     */
+    stopUpdateInterval() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+    }
+
+    /**
+     * Update only dynamic content (progress bars, resources) without full re-render
+     */
+    updateDynamicContent() {
+        if (!this.currentEntityKey) return;
+
+        const entity = this.game.entityData.get(this.currentEntityKey);
+        if (!entity) return;
+
+        const entityType = this.game.entityTypes[entity.entity_type_id];
+        if (!entityType) return;
+
+        // Update construction progress bar
+        const constructionProgress = parseInt(entity.construction_progress) || 100;
+        if (constructionProgress < 100) {
+            const progressBar = this.element.querySelector('#tooltip-construction-progress-bar');
+            const progressText = this.element.querySelector('#tooltip-construction-progress-text');
+            if (progressBar && progressText) {
+                const constructionTicks = parseInt(entityType.construction_ticks) || 60;
+                const remainingSeconds = Math.ceil((constructionTicks * (100 - constructionProgress) / 100) / 60);
+                progressBar.style.width = `${constructionProgress}%`;
+                progressText.textContent = `${remainingSeconds}s`;
+            }
+        }
+
+        // Update crafting progress bar
+        const buildingState = this.game.resourceTransport?.buildings.get(entity.entity_id);
+        if (buildingState && buildingState.isCrafting()) {
+            const recipe = this.game.recipes?.[String(buildingState.craftingRecipeId)];
+            if (recipe) {
+                const totalTicks = buildingState.calculateCraftTime(parseInt(recipe.ticks));
+                const elapsed = totalTicks - buildingState.craftingTicksRemaining;
+                const progress = Math.min(100, Math.round((elapsed / totalTicks) * 100));
+                const secondsRemaining = Math.ceil(buildingState.craftingTicksRemaining / 60);
+
+                const progressBar = this.element.querySelector('#tooltip-crafting-progress-bar');
+                const progressText = this.element.querySelector('#tooltip-crafting-progress-text');
+                if (progressBar && progressText) {
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `${secondsRemaining}s`;
+                }
+            }
+        }
     }
 
     /**
@@ -287,10 +361,10 @@ export class EntityTooltip extends BaseTooltip {
         html += `<div style="margin-bottom:4px;font-weight:bold;color:#4682b4;">Construction:</div>`;
         html += `<div style="display:flex;align-items:center;margin-bottom:4px;">`;
         html += `<span>Building...</span>`;
-        html += `<span style="margin-left:auto;color:#aaa;">${remainingSeconds}s</span>`;
+        html += `<span id="tooltip-construction-progress-text" style="margin-left:auto;color:#aaa;">${remainingSeconds}s</span>`;
         html += `</div>`;
         html += `<div style="background:#333;height:8px;border-radius:4px;overflow:hidden;">`;
-        html += `<div style="width:${constructionProgress}%;height:100%;background:linear-gradient(90deg,#4682b4,#6ca0dc);transition:width 0.1s;"></div>`;
+        html += `<div id="tooltip-construction-progress-bar" style="width:${constructionProgress}%;height:100%;background:linear-gradient(90deg,#4682b4,#6ca0dc);transition:width 0.1s;"></div>`;
         html += `</div>`;
         html += `</div>`;
 
@@ -331,10 +405,10 @@ export class EntityTooltip extends BaseTooltip {
             html += `<img src="/assets/tiles/resources/${outputIcon}" width="16" height="16" style="margin-right:6px;">`;
         }
         html += `<span>${outputName}</span>`;
-        html += `<span style="margin-left:auto;color:#aaa;">${secondsRemaining}s</span>`;
+        html += `<span id="tooltip-crafting-progress-text" style="margin-left:auto;color:#aaa;">${secondsRemaining}s</span>`;
         html += `</div>`;
         html += `<div style="background:#333;height:8px;border-radius:4px;overflow:hidden;">`;
-        html += `<div style="width:${progress}%;height:100%;background:linear-gradient(90deg,#4a9,#6c6);transition:width 0.1s;"></div>`;
+        html += `<div id="tooltip-crafting-progress-bar" style="width:${progress}%;height:100%;background:linear-gradient(90deg,#4a9,#6c6);transition:width 0.1s;"></div>`;
         html += `</div>`;
         html += `</div>`;
 

@@ -120,6 +120,11 @@ class FinishConstruction extends JsonAction
                 }
 
                 $responseEntityId = $entityIdRaw;
+
+                // Invalidate fog cache if eye entity was finished (only for island entities)
+                if (!$isShipEntity && $entityType->type === 'eye') {
+                    \services\FogOfWarService::invalidateCache($entity->region_id);
+                }
             }
 
             $transaction->commit();

@@ -33,6 +33,7 @@ export class FogOfWar {
     /**
      * Load eye entities from initial config
      * Entity coordinates are stored as tiles
+     * NOTE: Does not recalculate visibility - must be called separately after map is loaded
      */
     loadInitialEyeEntities() {
         const eyeEntities = this.game.initialEyeEntities || [];
@@ -50,7 +51,8 @@ export class FogOfWar {
             });
         }
 
-        this.recalculateVisibility();
+        // DO NOT call recalculateVisibility() here - tileDataMap is not loaded yet!
+        // It will be called after map tiles are loaded in game.js
     }
 
     /**
@@ -95,18 +97,76 @@ export class FogOfWar {
     }
 
     /**
-     * Add circular visibility area
+     * Add visibility with line-of-sight raycasting
+     * Check DIRECT line of sight to each tile (identical to server-side)
      */
     addVisibilityCircle(centerX, centerY, radius) {
         const radiusSq = radius * radius;
 
-        for (let dy = -radius; dy <= radius; dy++) {
-            for (let dx = -radius; dx <= radius; dx++) {
-                if (dx * dx + dy * dy <= radiusSq) {
-                    this.visibleTiles.add(tileKey(centerX + dx, centerY + dy));
+        // Eye position always visible
+        this.visibleTiles.add(tileKey(centerX, centerY));
+
+        // Check direct line of sight to each tile in radius
+        for (let targetY = centerY - radius; targetY <= centerY + radius; targetY++) {
+            for (let targetX = centerX - radius; targetX <= centerX + radius; targetX++) {
+                const dx = targetX - centerX;
+                const dy = targetY - centerY;
+                if (dx * dx + dy * dy > radiusSq) continue;
+                if (targetX === centerX && targetY === centerY) continue;
+
+                // Check DIRECT ray to this specific tile
+                if (this.hasDirectLineOfSight(centerX, centerY, targetX, targetY)) {
+                    this.visibleTiles.add(tileKey(targetX, targetY));
                 }
             }
         }
+    }
+
+    /**
+     * Check if there's direct unobstructed line of sight to specific target
+     * Identical to server-side hasLineOfSight()
+     */
+    hasDirectLineOfSight(x0, y0, x1, y1) {
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        let x = x0, y = y0;
+
+        while (true) {
+            const isBlocking = this.isBlockingTile(x, y);
+
+            // Stop if blocked (except starting position)
+            if (isBlocking && (x !== x0 || y !== y0)) {
+                return false;
+            }
+
+            // Reached target - line of sight is clear!
+            if (x === x1 && y === y1) {
+                return true;
+            }
+
+            // Bresenham step
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 < dx) { err += dx; y += sy; }
+        }
+    }
+
+    /**
+     * Check if tile blocks line of sight
+     */
+    isBlockingTile(x, y) {
+        const key = tileKey(x, y);
+        const landingId = this.game.tileDataMap.get(key);
+
+        if (landingId === undefined) return true; // Off-map
+
+        const landing = this.game.landingTypes[landingId];
+        if (!landing) return true;
+
+        return landing.blocks_vision === 'yes';
     }
 
     /**
@@ -245,6 +305,84 @@ export class FogOfWar {
             this.clearFog();
         }
         this.game.needsReload = true;
+    }
+
+    /**
+     * Debug: Check if coordinate is visible and why
+     * Usage: game.fogOfWar.debugVisibility(32, 40)
+     */
+    debugVisibility(targetX, targetY) {
+        console.log(`\n=== DEBUG VISIBILITY FOR (${targetX}, ${targetY}) ===`);
+        console.log(`Total eye entities: ${this.eyeEntities.size}`);
+
+        const targetKey = tileKey(targetX, targetY);
+        const isVisible = this.visibleTiles.has(targetKey);
+        console.log(`Is visible: ${isVisible}`);
+
+        // Check each eye
+        for (const [id, eye] of this.eyeEntities) {
+            const dx = targetX - eye.x;
+            const dy = targetY - eye.y;
+            const distanceSq = dx * dx + dy * dy;
+            const powerSq = eye.power * eye.power;
+            const distance = Math.sqrt(distanceSq);
+
+            console.log(`\nEye ${id} at (${eye.x}, ${eye.y}) power=${eye.power}`);
+            console.log(`  Distance: ${distance.toFixed(2)} (in range: ${distanceSq <= powerSq})`);
+
+            if (distanceSq > powerSq) {
+                console.log(`  SKIP: out of range`);
+                continue;
+            }
+
+            // Cast ray and log each step
+            console.log(`  Casting ray:`);
+            const raySteps = this.debugCastRay(eye.x, eye.y, targetX, targetY);
+            raySteps.forEach((step, i) => {
+                const blockingText = step.isBlocking ? ' [BLOCKS]' : '';
+                console.log(`    Step ${i}: (${step.x}, ${step.y}) landing_id=${step.landingId}${blockingText}`);
+            });
+
+            const lastStep = raySteps[raySteps.length - 1];
+            if (lastStep.x === targetX && lastStep.y === targetY) {
+                console.log(`  RESULT: target is VISIBLE from this eye`);
+            } else {
+                console.log(`  RESULT: ray BLOCKED at (${lastStep.x}, ${lastStep.y})`);
+            }
+        }
+    }
+
+    /**
+     * Debug version of castRay that returns steps instead of adding tiles
+     */
+    debugCastRay(x0, y0, x1, y1) {
+        const steps = [];
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        let x = x0, y = y0;
+
+        while (true) {
+            const key = tileKey(x, y);
+            const landingId = this.game.tileDataMap.get(key);
+            const isBlocking = this.isBlockingTile(x, y);
+
+            steps.push({ x, y, landingId, isBlocking });
+
+            // Stop at blocking tile (but tile itself is in steps)
+            if (isBlocking && (x !== x0 || y !== y0)) break;
+
+            if (x === x1 && y === y1) break;
+
+            // Bresenham step
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 < dx) { err += dx; y += sy; }
+        }
+
+        return steps;
     }
 }
 

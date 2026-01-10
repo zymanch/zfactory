@@ -11,9 +11,11 @@ namespace models\base;
  * @property string $type
  * @property string $name
  * @property string $is_buildable
+ * @property string $fluid_type
  * @property string $folder
  * @property integer $variations_count
  * @property integer $ai_seed
+ * @property string $blocks_vision
  *
  * @property \models\EntityType[] $entityTypes
  * @property \models\LandingAdjacency[] $landingAdjacencies
@@ -39,7 +41,7 @@ class BaseLanding extends \yii\db\ActiveRecord
     {
         return [
             [[BaseLandingPeer::TYPE, BaseLandingPeer::NAME, BaseLandingPeer::FOLDER], 'required'],
-            [[BaseLandingPeer::TYPE, BaseLandingPeer::IS_BUILDABLE], 'string'],
+            [[BaseLandingPeer::TYPE, BaseLandingPeer::IS_BUILDABLE, BaseLandingPeer::FLUID_TYPE, BaseLandingPeer::BLOCKS_VISION], 'string'],
             [[BaseLandingPeer::VARIATIONS_COUNT, BaseLandingPeer::AI_SEED], 'integer'],
             [[BaseLandingPeer::NAME], 'string', 'max' => 64],
             [[BaseLandingPeer::FOLDER], 'string', 'max' => 256],
@@ -56,9 +58,11 @@ class BaseLanding extends \yii\db\ActiveRecord
             BaseLandingPeer::TYPE => 'Type',
             BaseLandingPeer::NAME => 'Name',
             BaseLandingPeer::IS_BUILDABLE => 'Is Buildable',
+            BaseLandingPeer::FLUID_TYPE => 'Fluid Type',
             BaseLandingPeer::FOLDER => 'Folder',
             BaseLandingPeer::VARIATIONS_COUNT => 'Variations Count',
             BaseLandingPeer::AI_SEED => 'Ai Seed',
+            BaseLandingPeer::BLOCKS_VISION => 'Blocks Vision',
         ];
     }
     /**
@@ -119,9 +123,11 @@ class BaseLanding extends \yii\db\ActiveRecord
             'type' => BaseLandingPeer::TYPE,
             'name' => BaseLandingPeer::NAME,
             'is_buildable' => BaseLandingPeer::IS_BUILDABLE,
+            'fluid_type' => BaseLandingPeer::FLUID_TYPE,
             'folder' => BaseLandingPeer::FOLDER,
             'variations_count' => BaseLandingPeer::VARIATIONS_COUNT,
             'ai_seed' => BaseLandingPeer::AI_SEED,
+            'blocks_vision' => BaseLandingPeer::BLOCKS_VISION,
         ];
     }
     

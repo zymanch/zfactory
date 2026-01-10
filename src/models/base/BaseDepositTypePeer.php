@@ -8,7 +8,7 @@ class BaseDepositTypePeer  {
     const TYPE = "type";
     const NAME = "name";
     const DESCRIPTION = "description";
-    const IMAGE_URL = "image_url";
+    const FOLDER = "folder";
     const EXTENSION = "extension";
     const MAX_DURABILITY = "max_durability";
     const WIDTH = "width";

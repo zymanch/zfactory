@@ -173,11 +173,13 @@ class PipeController extends Controller
      * Generate atlases for all states (normal, normal_selected, damaged, damaged_selected)
      * Creates 4 atlases from base sprites
      *
-     * Usage: php yii pipe/generate-all-atlases
+     * Usage: php yii pipe/generate-all-atlases [folder]
+     * Example: php yii pipe/generate-all-atlases pipe
+     * Example: php yii pipe/generate-all-atlases pipe_vertical
      */
-    public function actionGenerateAllAtlases()
+    public function actionGenerateAllAtlases($folder = 'pipe')
     {
-        $basePath = dirname(__DIR__, 2) . '/public/assets/tiles/entities/pipe';
+        $basePath = dirname(__DIR__, 2) . '/public/assets/tiles/entities/transporter/' . $folder;
 
         $states = ['normal', 'normal_selected', 'damaged', 'damaged_selected'];
 

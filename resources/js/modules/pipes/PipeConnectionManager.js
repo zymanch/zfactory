@@ -12,8 +12,18 @@ export class PipeConnectionManager {
     constructor(game) {
         this.game = game;
 
-        // Pipe entity type IDs (horizontal, vertical, tanks, underground)
+        // Pipe entity type IDs (all types with pipe_atlas variants)
         this.PIPE_TYPES = [131, 132, 135, 136, 140, 141];
+
+        // Map entity type IDs to their folder names
+        this.PIPE_FOLDERS = {
+            131: 'pipe',
+            132: 'pipe_vertical',
+            135: 'tank_small',
+            136: 'tank_large',
+            140: 'underground_pipe_in',
+            141: 'underground_pipe_out'
+        };
 
         // Variant names (0-15) corresponding to binary masks
         this.VARIANT_NAMES = [
@@ -45,21 +55,29 @@ export class PipeConnectionManager {
     /**
      * Load pipe variant textures from atlases (normal, normal_selected, damaged, damaged_selected)
      * Each atlas: 1024x64 (16 variants × 64px each)
+     * Loads atlases for all pipe types (horizontal, vertical, tanks, underground)
      */
     async loadVariantTextures() {
-        this.atlases = {};
+        this.atlases = {}; // atlases[entityTypeId][state] = texture
         const states = ['normal', 'normal_selected', 'damaged', 'damaged_selected'];
 
-        for (const state of states) {
-            const atlasUrl = this.game.assetUrl(
-                `${this.game.config.tilesPath}entities/transporter/pipe/pipe_atlas_${state}.png?v=${Date.now()}`
-            );
+        for (const typeId of this.PIPE_TYPES) {
+            const folder = this.PIPE_FOLDERS[typeId];
+            if (!folder) continue;
 
-            try {
-                const atlasTexture = await PIXI.Assets.load(atlasUrl);
-                this.atlases[state] = atlasTexture;
-            } catch (e) {
-                console.error(`Failed to load pipe atlas ${state}:`, e);
+            this.atlases[typeId] = {};
+
+            for (const state of states) {
+                const atlasUrl = this.game.assetUrl(
+                    `${this.game.config.tilesPath}entities/transporter/${folder}/pipe_atlas_${state}.png?v=${Date.now()}`
+                );
+
+                try {
+                    const atlasTexture = await PIXI.Assets.load(atlasUrl);
+                    this.atlases[typeId][state] = atlasTexture;
+                } catch (e) {
+                    console.error(`Failed to load pipe atlas ${folder}/${state}:`, e);
+                }
             }
         }
     }
@@ -168,15 +186,22 @@ export class PipeConnectionManager {
      * @returns {PIXI.Texture}
      */
     getPipeTexture(entity, isHovered = false) {
+        const typeId = parseInt(entity.entity_type_id);
         const baseState = this.getEntityState(entity);
         const state = isHovered ? `${baseState}_selected` : baseState;
         const variant = this.getConnectionVariant(entity);
 
-        // Get atlas for this state
-        const atlas = this.atlases[state];
+        // Get atlas for this entity type and state
+        const typeAtlases = this.atlases[typeId];
+        if (!typeAtlases) {
+            console.warn(`Pipe atlases not found for type ${typeId}`);
+            return this.game.textures[`entity_${typeId}_normal`];
+        }
+
+        const atlas = typeAtlases[state];
         if (!atlas) {
-            console.warn(`Pipe atlas not found: ${state}`);
-            return this.game.textures['entity_131_normal'];
+            console.warn(`Pipe atlas not found: type=${typeId}, state=${state}`);
+            return this.game.textures[`entity_${typeId}_normal`];
         }
 
         // Extract texture from atlas

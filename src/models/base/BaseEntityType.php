@@ -10,7 +10,7 @@ namespace models\base;
  * @property integer $entity_type_id
  * @property string $type
  * @property string $name
- * @property string $image_url
+ * @property string $folder
  * @property string $extension
  * @property integer $max_durability
  * @property integer $converts_to_landing_id
@@ -50,12 +50,12 @@ class BaseEntityType extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::IMAGE_URL], 'required'],
+            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::FOLDER], 'required'],
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::CENTER_POSITION_PX, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS], 'integer'],
             [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION], 'string'],
             [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
-            [[BaseEntityTypePeer::IMAGE_URL, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
+            [[BaseEntityTypePeer::FOLDER, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
             [[BaseEntityTypePeer::EXTENSION], 'string', 'max' => 4],
             [[BaseEntityTypePeer::CONVERTS_TO_LANDING_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseLanding::className(), 'targetAttribute' => [BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => BaseLandingPeer::LANDING_ID]],
         ];
@@ -70,7 +70,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::ENTITY_TYPE_ID => 'Entity Type ID',
             BaseEntityTypePeer::TYPE => 'Type',
             BaseEntityTypePeer::NAME => 'Name',
-            BaseEntityTypePeer::IMAGE_URL => 'Image Url',
+            BaseEntityTypePeer::FOLDER => 'Folder',
             BaseEntityTypePeer::EXTENSION => 'Extension',
             BaseEntityTypePeer::MAX_DURABILITY => 'Max Durability',
             BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => 'Converts To Landing ID',
@@ -155,7 +155,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'entity_type_id' => BaseEntityTypePeer::ENTITY_TYPE_ID,
             'type' => BaseEntityTypePeer::TYPE,
             'name' => BaseEntityTypePeer::NAME,
-            'image_url' => BaseEntityTypePeer::IMAGE_URL,
+            'folder' => BaseEntityTypePeer::FOLDER,
             'extension' => BaseEntityTypePeer::EXTENSION,
             'max_durability' => BaseEntityTypePeer::MAX_DURABILITY,
             'converts_to_landing_id' => BaseEntityTypePeer::CONVERTS_TO_LANDING_ID,

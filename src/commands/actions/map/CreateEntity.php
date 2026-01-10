@@ -184,8 +184,16 @@ class CreateEntity extends JsonAction
             return ['success' => false, 'error' => 'HQ can only be built on ship floors'];
         }
 
+        // Check if coordinate is visible (only for island placement)
+        if (!$isShipPlacement) {
+            $isVisible = \services\FogOfWarService::isCoordinateVisible($worldX, $worldY, $currentRegionId);
+            if (!$isVisible) {
+                return ['success' => false, 'error' => 'Cannot build in fog of war'];
+            }
+        }
+
         // Check building rules using behavior system (world coordinates)
-        // This checks: fog of war, landing buildability, entity collision, resource target
+        // This checks: landing buildability, entity collision, resource target
         $ruleCheck = BuildingRules::canPlace($entityTypeId, $worldX, $worldY, null, $currentRegionId);
         $targetEntity = $ruleCheck['targetEntity'];
 
@@ -355,6 +363,11 @@ class CreateEntity extends JsonAction
             // Recalculate pipe systems if pipe entity was created (only for island, not ship)
             if (!$isShipPlacement && in_array($entityTypeId, [131, 132, 135, 136, 140, 141])) {
                 PipeSystemManager::recalculateSystems($currentRegionId);
+            }
+
+            // Invalidate fog cache if eye entity was created (only for built entities)
+            if (!$isShipPlacement && $entityType->type === 'eye' && $state === 'built') {
+                \services\FogOfWarService::invalidateCache($currentRegionId);
             }
 
             // Return success result (transaction managed by calling method)

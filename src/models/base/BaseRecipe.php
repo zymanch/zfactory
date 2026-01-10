@@ -44,7 +44,7 @@ class BaseRecipe extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseRecipePeer::OUTPUT_RESOURCE_ID, BaseRecipePeer::INPUT1_RESOURCE_ID], 'required'],
+            [[BaseRecipePeer::OUTPUT_RESOURCE_ID], 'required'],
             [[BaseRecipePeer::OUTPUT_RESOURCE_ID, BaseRecipePeer::OUTPUT_AMOUNT, BaseRecipePeer::INPUT1_RESOURCE_ID, BaseRecipePeer::INPUT1_AMOUNT, BaseRecipePeer::INPUT2_RESOURCE_ID, BaseRecipePeer::INPUT2_AMOUNT, BaseRecipePeer::INPUT3_RESOURCE_ID, BaseRecipePeer::INPUT3_AMOUNT, BaseRecipePeer::TICKS], 'integer'],
             [[BaseRecipePeer::INPUT1_RESOURCE_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseResource::className(), 'targetAttribute' => [BaseRecipePeer::INPUT1_RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]],
             [[BaseRecipePeer::INPUT2_RESOURCE_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseResource::className(), 'targetAttribute' => [BaseRecipePeer::INPUT2_RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]],

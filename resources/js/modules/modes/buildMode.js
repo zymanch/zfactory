@@ -31,6 +31,9 @@ export class BuildMode extends GameModeBase {
         this.dragStartTile = { x: -1, y: -1 };
         this.dragEndTile = { x: -1, y: -1 };
         this.previewSprites = []; // Array of {sprite, x, y, valid, entityTypeId}
+
+        // Prevent double placement
+        this.isPlacing = false;
     }
 
     /**
@@ -385,6 +388,14 @@ export class BuildMode extends GameModeBase {
      * Sends tile coordinates directly (not pixels)
      */
     async placeBuilding(tileX, tileY) {
+        // Prevent double placement
+        if (this.isPlacing) {
+            console.log('[BuildMode.placeBuilding] Already placing, ignoring duplicate call');
+            return;
+        }
+
+        this.isPlacing = true;
+
         const requestBody = {
             entity_type_id: this.entityTypeId,
             x: tileX,
@@ -472,6 +483,9 @@ export class BuildMode extends GameModeBase {
             }
         } catch (e) {
             console.error('Error placing building:', e);
+        } finally {
+            // Reset flag to allow next placement
+            this.isPlacing = false;
         }
     }
 

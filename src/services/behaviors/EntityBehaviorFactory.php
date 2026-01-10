@@ -71,7 +71,7 @@ class EntityBehaviorFactory
 
     /**
      * Get behavior class by entity type ID
-     * Checks for specific IDs first, then falls back to type-based mapping
+     * Checks for specific folder names first, then IDs, then falls back to type-based mapping
      *
      * @param int $typeId
      * @param string $type
@@ -79,6 +79,16 @@ class EntityBehaviorFactory
      */
     private static function getBehaviorClassByTypeId($typeId, $type)
     {
+        // Get entity type to check folder
+        $entityType = EntityType::findOne($typeId);
+
+        if ($entityType) {
+            // Fluid Pumps (water_pump, lava_pump) - must be placed on water/lava
+            if (in_array($entityType->folder, ['water_pump', 'lava_pump'])) {
+                return FluidPumpEntityBehavior::class;
+            }
+        }
+
         // Deposit-based extraction buildings (sawmill, stone quarry, ore drill, mine, quarry)
         // Sawmills: 500-502, Stone Quarries: 503-505, Large Ore Drill: 506
         // Mines: 507-509, Quarries: 510-512

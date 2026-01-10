@@ -498,6 +498,10 @@ class ZFactoryGame {
         if (!this.tilesLoaded) {
             await this.loadMapTiles();
             this.tilesLoaded = true;
+
+            // Recalculate fog of war visibility after map is loaded
+            // (tileDataMap must be populated before fog calculation)
+            this.fogOfWar.recalculateVisibility();
         }
 
         // Load deposits after tiles (deposits need to be above landing layer)
@@ -579,10 +583,10 @@ class ZFactoryGame {
 
             const isVisible = !this.fogOfWar || this.fogOfWar.isEntityVisible(entity);
             const entityType = this.entityTypes[entity.entity_type_id];
-            const imageUrl = entityType?.image_url || '';
+            const folder = entityType?.folder || '';
 
-            // Check if this is a pipe entity (image_url starts with 'pipe' or 'tank' or 'underground_pipe')
-            const isPipeEntity = imageUrl.startsWith('pipe') || imageUrl.startsWith('tank') || imageUrl.startsWith('underground_pipe');
+            // Check if this is a pipe entity with connection variants
+            const isPipeEntity = this.pipeConnectionManager.isPipe(entity);
 
             // Handle conveyors separately (but exclude pipes)
             if (entityType && entityType.type === 'transporter' && !isPipeEntity) {
@@ -595,8 +599,8 @@ class ZFactoryGame {
                 }
             } else if (isPipeEntity) {
                 // Handle pipes with connection variants and fluid visualization
-                // Use fallback texture initially, will update after all entities loaded
-                const fallbackTexture = this.textures['entity_131_normal'] || this.textures[`entity_${entity.entity_type_id}_normal`];
+                // Use entity type's own texture as fallback, will update after all entities loaded
+                const fallbackTexture = this.textures[`entity_${entity.entity_type_id}_normal`];
                 if (fallbackTexture) {
                     // Create container for pipe + fluid sprite
                     const container = this.pipeRenderer.createPipeContainer(entity, fallbackTexture, isVisible);
@@ -683,10 +687,10 @@ class ZFactoryGame {
 
         this.hoveredEntity = isHovering ? key : null;
         const entityType = this.entityTypes[entity.entity_type_id];
-        const imageUrl = entityType?.image_url || '';
+        const folder = entityType?.folder || '';
 
-        // Check if this is a pipe entity
-        const isPipeEntity = imageUrl.startsWith('pipe') || imageUrl.startsWith('tank') || imageUrl.startsWith('underground_pipe');
+        // Check if this is a pipe entity with connection variants
+        const isPipeEntity = this.pipeConnectionManager.isPipe(entity);
 
         // Get hover sprite type based on current game mode
         const hoverSpriteType = this.gameModeManager.getHoverSpriteType();

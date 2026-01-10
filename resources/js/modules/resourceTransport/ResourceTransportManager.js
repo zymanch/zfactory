@@ -654,23 +654,30 @@ export class ResourceTransportManager {
     }
 
     /**
-     * Try to start mining craft (deposit → raw)
+     * Try to start mining craft (deposit → raw OR fluid extraction without input)
      */
     tryStartMiningCraft(state) {
         for (const recipeId of state.recipeIds) {
             const recipe = this.game.recipes[recipeId];
             if (!recipe) continue;
 
-            // Check deposit resource
-            const inputAmount = state.getResourceAmount(parseInt(recipe.input1_resource_id));
-            if (inputAmount < parseInt(recipe.input1_amount)) continue;
+            // Check deposit resource (if recipe requires input)
+            // Fluid pumps (water, lava) have no input - they extract from landing
+            if (recipe.input1_resource_id) {
+                const inputAmount = state.getResourceAmount(parseInt(recipe.input1_resource_id));
+                if (inputAmount < parseInt(recipe.input1_amount)) continue;
+            }
 
             // Check output limit (max 10)
             const outputAmount = state.getResourceAmount(parseInt(recipe.output_resource_id));
             if (outputAmount >= 10) continue;
 
+            // Consume input if present
+            if (recipe.input1_resource_id) {
+                state.removeResource(parseInt(recipe.input1_resource_id), parseInt(recipe.input1_amount));
+            }
+
             // Start crafting
-            state.removeResource(parseInt(recipe.input1_resource_id), parseInt(recipe.input1_amount));
             state.craftingRecipeId = recipeId;
             state.craftingTicksRemaining = state.calculateCraftTime(parseInt(recipe.ticks));
             this.pendingSync = true;

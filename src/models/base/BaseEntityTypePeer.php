@@ -7,7 +7,7 @@ class BaseEntityTypePeer  {
     const ENTITY_TYPE_ID = "entity_type_id";
     const TYPE = "type";
     const NAME = "name";
-    const IMAGE_URL = "image_url";
+    const FOLDER = "folder";
     const EXTENSION = "extension";
     const MAX_DURABILITY = "max_durability";
     const CONVERTS_TO_LANDING_ID = "converts_to_landing_id";
