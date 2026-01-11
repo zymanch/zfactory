@@ -538,11 +538,11 @@ class ZFactoryGame {
 
             // Initialize resource renderer (visual layer for resources on conveyors/manipulators)
             await this.resourceRenderer.init();
+        }
 
-            // Render electrification layer after entities are loaded
-            if (this.electrificationLayer) {
-                this.electrificationLayer.render();
-            }
+        // Render electrification layer when viewport changes (or on initial load)
+        if (this.electrificationLayer && this.entitiesLoaded) {
+            this.electrificationLayer.render();
         }
 
         const viewport = this.calculateViewport();
