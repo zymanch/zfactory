@@ -876,6 +876,14 @@ class ZFactoryGame {
                         this.loadViewport();
                     }
                 }
+
+                // Invalidate electricity network cache if electricity entity was deleted
+                if (this.electricityManager) {
+                    const entityType = this.entityTypes[entity.entity_type_id];
+                    if (entityType && entityType.type === 'electricity') {
+                        this.electricityManager.invalidateNetworkCache();
+                    }
+                }
             } else {
                 console.error('Failed to delete entity:', data.error);
             }

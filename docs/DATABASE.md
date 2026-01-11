@@ -188,6 +188,9 @@ Defines types of entities that can be placed on the map.
 | power                | INT UNSIGNED DEFAULT 1                                                            | Visibility radius for eye type        |
 | parent_entity_type_id| INT UNSIGNED NULL                                                                 | Parent entity for orientation variants|
 | orientation          | ENUM('none','up','right','down','left') DEFAULT 'none'                            | Entity orientation/direction          |
+| storage_type          | ENUM('none', 'unlimited', 'limited') DEFAULT 'none'                              | Storage capacity type                 |
+| storage_resource_count| INT UNSIGNED NULL                                                                 | Total max resources                   |
+| storage_per_resource  | INT UNSIGNED NULL                                                                 | Max per resource type                 |
 
 **Entity Type Categories:**
 - `building` — производственные здания (furnace, assembler) - стандартные правила постройки
@@ -280,6 +283,33 @@ Electricity entities use the `power` field with different meanings:
 - **Pylons**: power = transmission radius in tiles (7, 15, 30)
 - **Batteries**: power = storage capacity (100, 500, 2000)
 - **Generators**: power = production rate per tick (10, 5, 25)
+
+**Storage System:**
+The storage system uses three columns to control entity capacity:
+
+- **storage_type** - Storage capacity type:
+  - `'none'` - Entity doesn't store resources (transporters, manipulators, pylons)
+  - `'unlimited'` - Unlimited storage (HQ)
+  - `'limited'` - Limited capacity (buildings, batteries, storage chests)
+
+- **storage_resource_count** - Maximum total resources across all types
+  - Example: Storage Chest with 1000 can hold 1000 total items (500 Iron + 300 Copper + 200 Coal)
+  - NULL for unlimited/none types
+
+- **storage_per_resource** - Maximum amount of each resource type
+  - Example: Crafting building with 10 can hold max 10 Iron + 10 Copper + 10 Coal
+  - Prevents single resource from filling entire capacity
+  - NULL for unlimited/none types
+
+**Storage Capacity Examples:**
+| Entity Type          | storage_type | storage_resource_count | storage_per_resource | Behavior |
+|----------------------|--------------|------------------------|----------------------|----------|
+| Crafting Buildings   | limited      | 50                     | 10                   | Max 10 per resource, 50 total |
+| Storage Chest        | limited      | 1000                   | 100                  | Max 100 per resource, 1000 total |
+| Small Battery        | limited      | 100                    | 100                  | Only electricity (resource_id=400) |
+| Tanks (135, 136)     | limited      | 5000/25000             | 5000/25000           | Only fluids, single type |
+| HQ                   | unlimited    | NULL                   | NULL                 | No limits |
+| Conveyors/Pipes      | none         | NULL                   | NULL                 | Transport only |
 
 **Orientation System:**
 - Сущности с `parent_entity_type_id` - это варианты ориентации базовой сущности

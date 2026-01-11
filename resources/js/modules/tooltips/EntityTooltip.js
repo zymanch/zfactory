@@ -123,6 +123,7 @@ export class EntityTooltip extends BaseTooltip {
             }
         }
 
+
         // Resources (if any)
         const resources = await this.getEntityResources(entity.entity_id);
         if (resources && resources.length > 0) {
@@ -425,8 +426,10 @@ export class EntityTooltip extends BaseTooltip {
         }
 
         // Get entity type power for speed calculation
+        // For electricity entities, power is output capacity, not speed
         const entityType = this.game.entityTypes?.[entityTypeId];
-        const power = parseInt(entityType?.power) || 100;
+        const isElectricity = entityType?.type === 'electricity';
+        const power = isElectricity ? 100 : (parseInt(entityType?.power) || 100);
 
         let html = `<div style="border-top:1px solid #4a4a5a;padding-top:6px;margin-top:6px;">`;
         html += `<div style="margin-bottom:4px;font-weight:bold;">Recipes:</div>`;

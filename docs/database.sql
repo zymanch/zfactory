@@ -89,55 +89,58 @@ CREATE TABLE IF NOT EXISTS `entity_type` (
   `orientation` enum('none','up','right','down','left') NOT NULL DEFAULT 'none',
   `animation_fps` decimal(5,2) DEFAULT NULL COMMENT 'Animation speed in frames per second. NULL = no animation',
   `description` text DEFAULT NULL COMMENT 'Описание entity на русском языке',
-  `construction_ticks` int(11) NOT NULL DEFAULT 60 COMMENT 'Количество тиков для строительства'
+  `construction_ticks` int(11) NOT NULL DEFAULT 60 COMMENT 'Количество тиков для строительства',
+  `storage_type` enum('none','unlimited','limited') NOT NULL DEFAULT 'none' COMMENT 'Storage capacity type',
+  `storage_resource_count` int(10) unsigned DEFAULT NULL COMMENT 'Total max resources',
+  `storage_per_resource` int(10) unsigned DEFAULT NULL COMMENT 'Max per resource type'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`, `animation_fps`, `description`) VALUES
+INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`, `animation_fps`, `description`, `storage_type`, `storage_resource_count`, `storage_per_resource`) VALUES
     -- Transporters (with orientation variants) - animation: 4 FPS = 8 frames / 2 sec (resource travel time per tile)
-    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'png', 100, 1, 1, 'conveyor/normal.png', 100, NULL, 'right', 4.00, 'Транспортная лента для перемещения ресурсов'),
-    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'png', 100, 1, 1, 'conveyor_up/normal.png', 100, 100, 'up', 4.00, 'Транспортная лента (вверх)'),
-    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'png', 100, 1, 1, 'conveyor_down/normal.png', 100, 100, 'down', 4.00, 'Транспортная лента (вниз)'),
-    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'png', 100, 1, 1, 'conveyor_left/normal.png', 100, 100, 'left', 4.00, 'Транспортная лента (влево)'),
+    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'png', 100, 1, 1, 'conveyor/normal.png', 100, NULL, 'right', 4.00, 'Транспортная лента для перемещения ресурсов', 'none', NULL, NULL),
+    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'png', 100, 1, 1, 'conveyor_up/normal.png', 100, 100, 'up', 4.00, 'Транспортная лента (вверх)', 'none', NULL, NULL),
+    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'png', 100, 1, 1, 'conveyor_down/normal.png', 100, 100, 'down', 4.00, 'Транспортная лента (вниз)', 'none', NULL, NULL),
+    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'png', 100, 1, 1, 'conveyor_left/normal.png', 100, 100, 'left', 4.00, 'Транспортная лента (влево)', 'none', NULL, NULL),
     -- Buildings - power=100 means baseline crafting speed
-    (101, 'building', 'Small Furnace', 'furnace', 'png', 200, 2, 2, 'furnace/normal.png', 100, NULL, 'none', NULL, 'Небольшая печь для переплавки руды'),
-    (103, 'building', 'Assembly Machine', 'assembler', 'png', 400, 3, 3, 'assembler/normal.png', 100, NULL, 'none', NULL, 'Сборочная машина для создания деталей'),
-    (104, 'storage', 'Storage Chest', 'chest', 'png', 150, 1, 1, 'chest/normal.png', 1, NULL, 'none', NULL, 'Хранилище для ресурсов'),
-    (105, 'building', 'Power Pole', 'power_pole', 'png', 100, 1, 1, 'power_pole/normal.png', 1, NULL, 'none', NULL, 'Электрический столб'),
-    (106, 'building', 'Steam Engine', 'steam_engine', 'png', 350, 2, 3, 'steam_engine/normal.png', 1, NULL, 'none', NULL, 'Паровой генератор'),
-    (107, 'building', 'Boiler', 'boiler', 'png', 250, 2, 2, 'boiler/normal.png', 100, NULL, 'none', NULL, 'Котел для переработки нефти'),
+    (101, 'building', 'Small Furnace', 'furnace', 'png', 200, 2, 2, 'furnace/normal.png', 100, NULL, 'none', NULL, 'Небольшая печь для переплавки руды', 'limited', 50, 10),
+    (103, 'building', 'Assembly Machine', 'assembler', 'png', 400, 3, 3, 'assembler/normal.png', 100, NULL, 'none', NULL, 'Сборочная машина для создания деталей', 'limited', 50, 10),
+    (104, 'storage', 'Storage Chest', 'chest', 'png', 150, 1, 1, 'chest/normal.png', 1, NULL, 'none', NULL, 'Хранилище для ресурсов', 'limited', 1000, 100),
+    (105, 'building', 'Power Pole', 'power_pole', 'png', 100, 1, 1, 'power_pole/normal.png', 1, NULL, 'none', NULL, 'Электрический столб', 'none', NULL, NULL),
+    (106, 'building', 'Steam Engine', 'steam_engine', 'png', 350, 2, 3, 'steam_engine/normal.png', 1, NULL, 'none', NULL, 'Паровой генератор', 'none', NULL, NULL),
+    (107, 'building', 'Boiler', 'boiler', 'png', 250, 2, 2, 'boiler/normal.png', 100, NULL, 'none', NULL, 'Котел для переработки нефти', 'limited', 50, 10),
     -- Ore Drills (requires iron/copper deposits) - power=100 means baseline mining speed
-    (102, 'mining', 'Small Ore Drill', 'drill', 'png', 300, 1, 1, 'drill/normal.png', 100, NULL, 'none', NULL, 'Небольшая буровая установка для добычи железа и меди'),
-    (108, 'mining', 'Medium Ore Drill', 'drill_fast', 'png', 250, 2, 2, 'drill_fast/normal.png', 150, NULL, 'none', NULL, 'Средняя буровая установка для добычи железа и меди'),
-    (506, 'mining', 'Large Ore Drill', 'drill_large', 'png', 400, 3, 3, 'drill_large/normal.png', 200, NULL, 'none', NULL, 'Большая буровая установка для добычи железа и меди'),
+    (102, 'mining', 'Small Ore Drill', 'drill', 'png', 300, 1, 1, 'drill/normal.png', 100, NULL, 'none', NULL, 'Небольшая буровая установка для добычи железа и меди', 'limited', 10, 10),
+    (108, 'mining', 'Medium Ore Drill', 'drill_fast', 'png', 250, 2, 2, 'drill_fast/normal.png', 150, NULL, 'none', NULL, 'Средняя буровая установка для добычи железа и меди', 'limited', 10, 10),
+    (506, 'mining', 'Large Ore Drill', 'drill_large', 'png', 400, 3, 3, 'drill_large/normal.png', 200, NULL, 'none', NULL, 'Большая буровая установка для добычи железа и меди', 'limited', 10, 10),
     -- Manipulators (with orientation variants) - power=100 means full swing in 30 ticks
-    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'png', 80, 1, 1, 'manipulator_short/normal.png', 100, NULL, 'right', NULL, 'Манипулятор с коротким захватом'),
-    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'png', 80, 1, 1, 'manipulator_short_up/normal.png', 100, 200, 'up', NULL, 'Манипулятор с коротким захватом (вверх)'),
-    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'png', 80, 1, 1, 'manipulator_short_down/normal.png', 100, 200, 'down', NULL, 'Манипулятор с коротким захватом (вниз)'),
-    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'png', 80, 1, 1, 'manipulator_short_left/normal.png', 100, 200, 'left', NULL, 'Манипулятор с коротким захватом (влево)'),
-    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'png', 80, 1, 1, 'manipulator_long/normal.png', 100, NULL, 'right', NULL, 'Манипулятор с длинным захватом'),
-    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'png', 80, 1, 1, 'manipulator_long_up/normal.png', 100, 201, 'up', NULL, 'Манипулятор с длинным захватом (вверх)'),
-    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'png', 80, 1, 1, 'manipulator_long_down/normal.png', 100, 201, 'down', NULL, 'Манипулятор с длинным захватом (вниз)'),
-    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'png', 80, 1, 1, 'manipulator_long_left/normal.png', 100, 201, 'left', NULL, 'Манипулятор с длинным захватом (влево)'),
+    (200, 'manipulator', 'Short Manipulator', 'manipulator_short', 'png', 80, 1, 1, 'manipulator_short/normal.png', 100, NULL, 'right', NULL, 'Манипулятор с коротким захватом', 'none', NULL, NULL),
+    (210, 'manipulator', 'Short Manipulator', 'manipulator_short_up', 'png', 80, 1, 1, 'manipulator_short_up/normal.png', 100, 200, 'up', NULL, 'Манипулятор с коротким захватом (вверх)', 'none', NULL, NULL),
+    (211, 'manipulator', 'Short Manipulator', 'manipulator_short_down', 'png', 80, 1, 1, 'manipulator_short_down/normal.png', 100, 200, 'down', NULL, 'Манипулятор с коротким захватом (вниз)', 'none', NULL, NULL),
+    (212, 'manipulator', 'Short Manipulator', 'manipulator_short_left', 'png', 80, 1, 1, 'manipulator_short_left/normal.png', 100, 200, 'left', NULL, 'Манипулятор с коротким захватом (влево)', 'none', NULL, NULL),
+    (201, 'manipulator', 'Long Manipulator', 'manipulator_long', 'png', 80, 1, 1, 'manipulator_long/normal.png', 100, NULL, 'right', NULL, 'Манипулятор с длинным захватом', 'none', NULL, NULL),
+    (213, 'manipulator', 'Long Manipulator', 'manipulator_long_up', 'png', 80, 1, 1, 'manipulator_long_up/normal.png', 100, 201, 'up', NULL, 'Манипулятор с длинным захватом (вверх)', 'none', NULL, NULL),
+    (214, 'manipulator', 'Long Manipulator', 'manipulator_long_down', 'png', 80, 1, 1, 'manipulator_long_down/normal.png', 100, 201, 'down', NULL, 'Манипулятор с длинным захватом (вниз)', 'none', NULL, NULL),
+    (215, 'manipulator', 'Long Manipulator', 'manipulator_long_left', 'png', 80, 1, 1, 'manipulator_long_left/normal.png', 100, 201, 'left', NULL, 'Манипулятор с длинным захватом (влево)', 'none', NULL, NULL),
     -- Crystal Towers (eye type - visibility radius = power)
-    (400, 'eye', 'Small Crystal Tower', 'tower_crystal_small', 'png', 100, 1, 1, 'tower_crystal_small/normal.png', 7, NULL, 'none', NULL, 'Небольшая кристальная башня (радиус обзора: 7)'),
-    (401, 'eye', 'Medium Crystal Tower', 'tower_crystal_medium', 'png', 200, 1, 2, 'tower_crystal_medium/normal.png', 15, NULL, 'none', NULL, 'Средняя кристальная башня (радиус обзора: 15)'),
-    (402, 'eye', 'Large Crystal Tower', 'tower_crystal_large', 'png', 300, 2, 3, 'tower_crystal_large/normal.png', 30, NULL, 'none', NULL, 'Большая кристальная башня (радиус обзора: 30)'),
+    (400, 'eye', 'Small Crystal Tower', 'tower_crystal_small', 'png', 100, 1, 1, 'tower_crystal_small/normal.png', 7, NULL, 'none', NULL, 'Небольшая кристальная башня (радиус обзора: 7)', 'none', NULL, NULL),
+    (401, 'eye', 'Medium Crystal Tower', 'tower_crystal_medium', 'png', 200, 1, 2, 'tower_crystal_medium/normal.png', 15, NULL, 'none', NULL, 'Средняя кристальная башня (радиус обзора: 15)', 'none', NULL, NULL),
+    (402, 'eye', 'Large Crystal Tower', 'tower_crystal_large', 'png', 300, 2, 3, 'tower_crystal_large/normal.png', 30, NULL, 'none', NULL, 'Большая кристальная башня (радиус обзора: 30)', 'none', NULL, NULL),
     -- Sawmills (requires trees)
-    (500, 'mining', 'Small Sawmill', 'sawmill_small', 'png', 200, 1, 1, 'sawmill_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая лесопилка для переработки древесины'),
-    (501, 'mining', 'Medium Sawmill', 'sawmill_medium', 'png', 400, 3, 3, 'sawmill_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя лесопилка для переработки древесины'),
-    (502, 'mining', 'Large Sawmill', 'sawmill_large', 'png', 600, 5, 5, 'sawmill_large/normal.png', 200, NULL, 'none', NULL, 'Большая лесопилка для переработки древесины'),
+    (500, 'mining', 'Small Sawmill', 'sawmill_small', 'png', 200, 1, 1, 'sawmill_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая лесопилка для переработки древесины', 'limited', 10, 10),
+    (501, 'mining', 'Medium Sawmill', 'sawmill_medium', 'png', 400, 3, 3, 'sawmill_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя лесопилка для переработки древесины', 'limited', 10, 10),
+    (502, 'mining', 'Large Sawmill', 'sawmill_large', 'png', 600, 5, 5, 'sawmill_large/normal.png', 200, NULL, 'none', NULL, 'Большая лесопилка для переработки древесины', 'limited', 10, 10),
     -- Stone Quarries (requires rocks)
-    (503, 'mining', 'Small Stone Quarry', 'quarry_stone_small', 'png', 250, 1, 1, 'quarry_stone_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая каменоломня для добычи камня'),
-    (504, 'mining', 'Medium Stone Quarry', 'quarry_stone_medium', 'png', 500, 3, 3, 'quarry_stone_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя каменоломня для добычи камня'),
-    (505, 'mining', 'Large Stone Quarry', 'quarry_stone_large', 'png', 750, 5, 5, 'quarry_stone_large/normal.png', 200, NULL, 'none', NULL, 'Большая каменоломня для добычи камня'),
+    (503, 'mining', 'Small Stone Quarry', 'quarry_stone_small', 'png', 250, 1, 1, 'quarry_stone_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая каменоломня для добычи камня', 'limited', 10, 10),
+    (504, 'mining', 'Medium Stone Quarry', 'quarry_stone_medium', 'png', 500, 3, 3, 'quarry_stone_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя каменоломня для добычи камня', 'limited', 10, 10),
+    (505, 'mining', 'Large Stone Quarry', 'quarry_stone_large', 'png', 750, 5, 5, 'quarry_stone_large/normal.png', 200, NULL, 'none', NULL, 'Большая каменоломня для добычи камня', 'limited', 10, 10),
     -- Mines (requires silver/gold deposits)
-    (507, 'mining', 'Small Mine', 'mine_small', 'png', 300, 1, 1, 'mine_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая шахта для добычи серебра и золота'),
-    (508, 'mining', 'Medium Mine', 'mine_medium', 'png', 600, 2, 2, 'mine_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя шахта для добычи серебра и золота'),
-    (509, 'mining', 'Large Mine', 'mine_large', 'png', 900, 3, 3, 'mine_large/normal.png', 200, NULL, 'none', NULL, 'Большая шахта для добычи серебра и золота'),
+    (507, 'mining', 'Small Mine', 'mine_small', 'png', 300, 1, 1, 'mine_small/normal.png', 100, NULL, 'none', NULL, 'Небольшая шахта для добычи серебра и золота', 'limited', 10, 10),
+    (508, 'mining', 'Medium Mine', 'mine_medium', 'png', 600, 2, 2, 'mine_medium/normal.png', 150, NULL, 'none', NULL, 'Средняя шахта для добычи серебра и золота', 'limited', 10, 10),
+    (509, 'mining', 'Large Mine', 'mine_large', 'png', 900, 3, 3, 'mine_large/normal.png', 200, NULL, 'none', NULL, 'Большая шахта для добычи серебра и золота', 'limited', 10, 10),
     -- Quarries (requires aluminum/titanium deposits)
-    (510, 'mining', 'Small Quarry', 'quarry_small', 'png', 350, 1, 1, 'quarry_small/normal.png', 100, NULL, 'none', NULL, 'Небольшой карьер для добычи алюминия и титана'),
-    (511, 'mining', 'Medium Quarry', 'quarry_medium', 'png', 700, 2, 2, 'quarry_medium/normal.png', 150, NULL, 'none', NULL, 'Средний карьер для добычи алюминия и титана'),
-    (512, 'mining', 'Large Quarry', 'quarry_large', 'png', 1050, 3, 3, 'quarry_large/normal.png', 200, NULL, 'none', NULL, 'Большой карьер для добычи алюминия и титана');
+    (510, 'mining', 'Small Quarry', 'quarry_small', 'png', 350, 1, 1, 'quarry_small/normal.png', 100, NULL, 'none', NULL, 'Небольшой карьер для добычи алюминия и титана', 'limited', 10, 10),
+    (511, 'mining', 'Medium Quarry', 'quarry_medium', 'png', 700, 2, 2, 'quarry_medium/normal.png', 150, NULL, 'none', NULL, 'Средний карьер для добычи алюминия и титана', 'limited', 10, 10),
+    (512, 'mining', 'Large Quarry', 'quarry_large', 'png', 1050, 3, 3, 'quarry_large/normal.png', 200, NULL, 'none', NULL, 'Большой карьер для добычи алюминия и титана', 'limited', 10, 10);
 
 -- --------------------------------------------------------
 -- Table structure: deposit_type (natural resource types)

@@ -126,26 +126,25 @@ class FinishConstruction extends JsonAction
                     \services\FogOfWarService::invalidateCache($entity->region_id);
                 }
 
-                // Recalculate electricity systems if electricity entity was finished
-                if (!$isShipEntity && $entityType->type === 'electricity') {
-                    \bl\electricity\ElectricitySystemManager::recalculateSystems($entity->region_id);
-                }
             }
 
             $transaction->commit();
 
-            return $this->success([
+            $response = [
                 'entity_id' => $responseEntityId,
                 'state' => $converted ? 'converted' : 'built',
                 'construction_progress' => $converted ? null : ($isShipEntity ? null : $entity->construction_progress),
                 'durability' => $converted ? null : $entity->durability,
                 'converted' => $converted,
                 'converted_to_landing_id' => $converted ? $convertsToLandingId : null,
-            ]);
+            ];
+
+            return $this->success($response);
 
         } catch (\Exception $e) {
             $transaction->rollBack();
             return $this->error($e->getMessage());
         }
     }
+
 }

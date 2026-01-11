@@ -41,6 +41,7 @@ class SaveState extends JsonAction
                 $this->saveTransportStates($data['manipulatorStates']);
             }
 
+
             $transaction->commit();
 
             return $this->success();
@@ -162,4 +163,5 @@ class SaveState extends JsonAction
             }
         }
     }
+
 }

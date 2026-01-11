@@ -476,6 +476,14 @@ export class BuildMode extends GameModeBase {
                 this.game.renderEntities([data.entity]);
                 this.handleEyeEntityPlacement(data.entity);
 
+                // Invalidate electricity network cache if electricity entity was placed
+                if (this.game.electricityManager) {
+                    const entityType = this.game.entityTypes[data.entity.entity_type_id];
+                    if (entityType && entityType.type === 'electricity') {
+                        this.game.electricityManager.invalidateNetworkCache();
+                    }
+                }
+
                 // Stay in build mode to allow continuous building
                 // (removed automatic return to normal mode)
             } else if (data.result !== 'ok') {
@@ -952,6 +960,17 @@ export class BuildMode extends GameModeBase {
                 // Handle eye entities for fog of war
                 for (const entity of data.entities) {
                     this.handleEyeEntityPlacement(entity);
+                }
+
+                // Invalidate electricity network cache if any electricity entities were placed
+                if (this.game.electricityManager) {
+                    for (const entity of data.entities) {
+                        const entityType = this.game.entityTypes[entity.entity_type_id];
+                        if (entityType && entityType.type === 'electricity') {
+                            this.game.electricityManager.invalidateNetworkCache();
+                            break; // Only need to invalidate once
+                        }
+                    }
                 }
 
                 console.log(`Placed ${data.count} entities`);

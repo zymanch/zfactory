@@ -206,6 +206,14 @@ export class ConstructionManager {
                         }
                     }
 
+                    // Invalidate electricity network cache if electricity entity was finished
+                    if (this.game.electricityManager) {
+                        const entityType = this.game.entityTypes[entityData.entity_type_id];
+                        if (entityType && entityType.type === 'electricity') {
+                            this.game.electricityManager.invalidateNetworkCache();
+                        }
+                    }
+
                     console.log(`Construction finished for entity ${entityId}`);
                 }
             } else {

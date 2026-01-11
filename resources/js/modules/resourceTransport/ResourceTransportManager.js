@@ -122,6 +122,7 @@ export class ResourceTransportManager {
                 case 'mining':
                 case 'storage':
                 case 'special':
+                case 'electricity':  // Add electricity type (generators, solar panels)
                     this.buildings.set(entity.entity_id, new BuildingState(entity, entityType, this.game));
                     break;
             }
@@ -271,11 +272,13 @@ export class ResourceTransportManager {
                     const outputResource = this.game.resources[recipe.output_resource_id];
 
                     console.log(`[Craft Complete] Entity ${entityId}: +${outputAmount} ${outputResource?.name || outputResourceId}`);
-                    console.log(`[Craft Complete] About to check if fluid...`);
+                    console.log(`[Craft Complete] About to check resource type...`);
 
                     // Check if output is fluid (resource_id 300-303)
                     const isFluid = outputResourceId >= 300 && outputResourceId <= 303;
-                    console.log(`[Craft Complete] Is fluid: ${isFluid}`);
+                    // Check if output is electricity (resource_id 400)
+                    const isElectricity = outputResourceId === 400;
+                    console.log(`[Craft Complete] Is fluid: ${isFluid}, is electricity: ${isElectricity}`);
 
                     if (isFluid) {
                         console.log(`[Craft Complete] Entering fluid branch...`);
@@ -309,6 +312,55 @@ export class ResourceTransportManager {
                             }
                         } else {
                             console.warn(`[Pump] No pipe connected at output position (${state.x}, ${state.y})`);
+                        }
+                    } else if (isElectricity) {
+                        // Safety check for electricityManager
+                        if (!this.game || !this.game.electricityManager) {
+                            state.addResource(outputResourceId, outputAmount);
+                        } else {
+                            // Get network of connected electricity entities
+                            const network = this.game.electricityManager.getNetwork(entityId);
+                            const batteries = [];
+
+                            // Find all batteries in network (entity types 910-912)
+                            for (const connectedId of network) {
+                                const entityData = this.game.entityData.get(`entity_${connectedId}`);
+                                if (!entityData) continue;
+
+                                const entityTypeId = entityData.entity_type_id;
+                                if (entityTypeId >= 910 && entityTypeId <= 912) {
+                                    const batteryState = this.buildings.get(connectedId);
+                                    if (batteryState) {
+                                        batteries.push({
+                                            id: connectedId,
+                                            state: batteryState,
+                                            entityType: this.game.entityTypes[entityTypeId]
+                                        });
+                                    }
+                                }
+                            }
+
+                            let remainingOutput = outputAmount;
+
+                            // Fill batteries sequentially (one at a time to full capacity)
+                            for (const battery of batteries) {
+                                if (remainingOutput <= 0) break;
+
+                                const capacity = parseInt(battery.entityType.storage_per_resource) || 0;
+                                const currentAmount = battery.state.getResourceAmount(outputResourceId);
+                                const freeSpace = capacity - currentAmount;
+
+                                if (freeSpace > 0) {
+                                    const toTransfer = Math.min(remainingOutput, freeSpace);
+                                    battery.state.addResource(outputResourceId, toTransfer);
+                                    remainingOutput -= toTransfer;
+                                }
+                            }
+
+                            // If electricity remains (no batteries or all full), store in generator
+                            if (remainingOutput > 0) {
+                                state.addResource(outputResourceId, remainingOutput);
+                            }
                         }
                     } else {
                         // Normal resource - store in building
@@ -648,7 +700,7 @@ export class ResourceTransportManager {
 
         if (state.type === 'mining') {
             this.tryStartMiningCraft(state);
-        } else if (state.type === 'building') {
+        } else if (state.type === 'building' || state.type === 'electricity') {
             this.tryStartBuildingCraft(state);
         }
     }
@@ -668,9 +720,10 @@ export class ResourceTransportManager {
                 if (inputAmount < parseInt(recipe.input1_amount)) continue;
             }
 
-            // Check output limit (max 10)
+            // Check output limit
             const outputAmount = state.getResourceAmount(parseInt(recipe.output_resource_id));
-            if (outputAmount >= 10) continue;
+            const maxOutput = parseInt(state.storagePerResource) || 10;
+            if (outputAmount >= maxOutput) continue;
 
             // Consume input if present
             if (recipe.input1_resource_id) {
@@ -697,13 +750,16 @@ export class ResourceTransportManager {
             if (!recipe) continue;
 
             // Check all inputs
-            const input1ResourceId = parseInt(recipe.input1_resource_id);
-            const input1AmountNeeded = parseInt(recipe.input1_amount);
+            // Input1 is optional (e.g., solar panels have no input)
+            if (recipe.input1_resource_id) {
+                const input1ResourceId = parseInt(recipe.input1_resource_id);
+                const input1AmountNeeded = parseInt(recipe.input1_amount);
 
-            // Skip check if input amount is 0 (like Sunlight - not consumed)
-            if (input1AmountNeeded > 0) {
-                const input1Amount = state.getResourceAmount(input1ResourceId);
-                if (input1Amount < input1AmountNeeded) continue;
+                // Skip check if input amount is 0 (not consumed, like sunlight)
+                if (input1AmountNeeded > 0) {
+                    const input1Amount = state.getResourceAmount(input1ResourceId);
+                    if (input1Amount < input1AmountNeeded) continue;
+                }
             }
 
             if (recipe.input2_resource_id) {
@@ -737,11 +793,16 @@ export class ResourceTransportManager {
 
             // Check output limit
             const outputAmount = state.getResourceAmount(parseInt(recipe.output_resource_id));
-            if (outputAmount >= 10) continue;
+            const maxOutput = parseInt(state.storagePerResource) || 10;
+            if (outputAmount >= maxOutput) continue;
 
-            // Consume inputs (only if amount > 0, skip Sunlight and similar non-consumed inputs)
-            if (input1AmountNeeded > 0) {
-                state.removeResource(input1ResourceId, input1AmountNeeded);
+            // Consume inputs (only if resource exists and amount > 0)
+            if (recipe.input1_resource_id) {
+                const input1ResourceId = parseInt(recipe.input1_resource_id);
+                const input1AmountNeeded = parseInt(recipe.input1_amount);
+                if (input1AmountNeeded > 0) {
+                    state.removeResource(input1ResourceId, input1AmountNeeded);
+                }
             }
             if (recipe.input2_resource_id) {
                 const input2ResourceId = parseInt(recipe.input2_resource_id);
@@ -979,7 +1040,8 @@ export class ResourceTransportManager {
             craftingStates: [],
             transporterStates: [],
             splitterStates: [],
-            manipulatorStates: []
+            manipulatorStates: [],
+            electricitySystems: []
         };
 
         // Building resources and crafting
@@ -1013,6 +1075,16 @@ export class ResourceTransportManager {
             const saveData = state.getSaveData();
             if (saveData) {
                 data.manipulatorStates.push(saveData);
+            }
+        }
+
+        // Electricity systems
+        if (this.game.electricityManager) {
+            for (const [systemId, system] of this.game.electricityManager.systems) {
+                data.electricitySystems.push({
+                    system_id: systemId,
+                    total_electricity: system.total_electricity
+                });
             }
         }
 

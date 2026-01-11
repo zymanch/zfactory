@@ -1,92 +1,130 @@
 /**
  * Manages electricity systems on the client side
- * Handles system data, lookups, and provides info for tooltips
+ * Networks are calculated client-side using BFS algorithm
+ * Electricity is stored in entity_resource (like normal resources)
  */
 export class ElectricitySystemManager {
     constructor(game) {
         this.game = game;
-        this.systems = new Map(); // system_id => system data
-        this.entityToSystem = new Map(); // entity_id => system_id
+        this.networkCache = new Map(); // entityId => Set<entityId>
     }
 
     /**
-     * Load systems data from server
-     * @param {Object} systemsData - Object with system_id as keys
+     * Find all electricity entities connected to given entity via BFS
+     * @param {number} entityId - Starting entity
+     * @returns {Set<number>} Set of connected entity IDs
      */
-    loadSystems(systemsData) {
-        this.systems.clear();
-        this.entityToSystem.clear();
+    findConnectedEntities(entityId) {
+        const connected = new Set();
+        const queue = [entityId];
+        connected.add(entityId);
 
-        for (const systemId in systemsData) {
-            const system = systemsData[systemId];
-            this.systems.set(parseInt(systemId), system);
+        // Safety check
+        if (!this.game || !this.game.entityData) {
+            console.warn('[ElectricitySystemManager] entityData not available');
+            return connected;
+        }
 
-            // Map each entity to its system
-            for (const entityId of system.entity_ids) {
-                this.entityToSystem.set(entityId, parseInt(systemId));
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            const currentEntity = this.getEntityData(currentId);
+            if (!currentEntity) continue;
+
+            const entityType = this.game.entityTypes[currentEntity.entity_type_id];
+            if (!entityType) continue;
+
+            const role = this.getElectricityRole(currentEntity.entity_type_id);
+            if (!role) continue;
+
+            const radius = this.getPowerRadius(currentEntity.entity_type_id);
+
+            // Find all electricity entities within radius
+            for (const [key, otherEntity] of this.game.entityData.entries()) {
+                const otherId = otherEntity.entity_id;
+
+                if (connected.has(otherId)) continue;
+                if (otherEntity.state !== 'built') continue;
+
+                const otherRole = this.getElectricityRole(otherEntity.entity_type_id);
+                if (!otherRole) continue;
+
+                const dx = otherEntity.x - currentEntity.x;
+                const dy = otherEntity.y - currentEntity.y;
+                const distSq = dx * dx + dy * dy;
+
+                // Check connection in BOTH directions:
+                // 1. Can current entity reach other? (current has radius)
+                // 2. Can other entity reach current? (other has radius)
+                let isConnected = false;
+
+                // Check if current entity can reach other
+                if (radius > 0) {
+                    const radiusSq = radius * radius;
+                    if (distSq <= radiusSq) {
+                        isConnected = true;
+                    }
+                }
+
+                // Check if other entity can reach current
+                if (!isConnected) {
+                    const otherRadius = this.getPowerRadius(otherEntity.entity_type_id);
+                    if (otherRadius > 0) {
+                        const otherRadiusSq = otherRadius * otherRadius;
+                        if (distSq <= otherRadiusSq) {
+                            isConnected = true;
+                        }
+                    }
+                }
+
+                if (isConnected) {
+                    connected.add(otherId);
+                    queue.push(otherId);
+                }
             }
         }
 
-        console.log(`[ElectricitySystemManager] Loaded ${this.systems.size} electricity systems`);
+        return connected;
     }
 
     /**
-     * Get system for specific entity
+     * Get entity data by ID
      * @param {number} entityId
      * @returns {Object|null}
      */
-    getSystemForEntity(entityId) {
-        const systemId = this.entityToSystem.get(entityId);
-        return systemId ? this.systems.get(systemId) : null;
+    getEntityData(entityId) {
+        if (!this.game || !this.game.entityData) {
+            return null;
+        }
+        const key = `entity_${entityId}`;
+        return this.game.entityData.get(key);
     }
 
     /**
-     * Get system information for tooltip
+     * Invalidate network cache when entities change
+     */
+    invalidateNetworkCache() {
+        this.networkCache.clear();
+    }
+
+    /**
+     * Get cached or calculate network
      * @param {number} entityId
-     * @returns {Object|null}
+     * @returns {Set<number>}
      */
-    getSystemInfo(entityId) {
-        const system = this.getSystemForEntity(entityId);
-        if (!system) return null;
-
-        const fillPercent = system.total_capacity > 0
-            ? Math.round((system.total_electricity / system.total_capacity) * 100)
-            : 0;
-
-        return {
-            totalElectricity: system.total_electricity,
-            totalCapacity: system.total_capacity,
-            fillPercent: fillPercent,
-            isPowered: system.total_electricity > 0,
-        };
-    }
-
-    /**
-     * Check if entity has enough electricity
-     * @param {number} entityId
-     * @param {number} amount - Amount needed (default 1)
-     * @returns {boolean}
-     */
-    hasElectricity(entityId, amount = 1) {
-        const system = this.getSystemForEntity(entityId);
-        if (!system) return false;
-
-        return system.total_electricity >= amount;
-    }
-
-    /**
-     * Update system electricity amount (client-side state)
-     * @param {number} systemId
-     * @param {number} newAmount
-     */
-    updateSystemElectricity(systemId, newAmount) {
-        const system = this.systems.get(systemId);
-        if (!system) {
-            console.warn(`[ElectricitySystemManager] System ${systemId} not found`);
-            return;
+    getNetwork(entityId) {
+        if (this.networkCache.has(entityId)) {
+            return this.networkCache.get(entityId);
         }
 
-        system.total_electricity = Math.max(0, Math.min(newAmount, system.total_capacity));
+        const network = this.findConnectedEntities(entityId);
+
+        // Cache for all entities in network
+        for (const id of network) {
+            this.networkCache.set(id, network);
+        }
+
+
+        return network;
     }
 
     /**
@@ -128,6 +166,38 @@ export class ElectricitySystemManager {
             return (parseInt(entityType.power) || 0) * 64;
         }
         return 0;
+    }
+
+    /**
+     * Check if entity has enough electricity in its network
+     * @param {number} entityId - Entity ID
+     * @param {number} amount - Amount needed
+     * @returns {boolean}
+     */
+    hasElectricity(entityId, amount = 1) {
+        // Get network for this entity
+        const network = this.getNetwork(entityId);
+
+        let totalElectricity = 0;
+
+        // Sum electricity from all batteries and generators in network
+        for (const connectedId of network) {
+            const entityData = this.getEntityData(connectedId);
+            if (!entityData) continue;
+
+            const entityTypeId = entityData.entity_type_id;
+            const role = this.getElectricityRole(entityTypeId);
+
+            // Only batteries and generators can store electricity
+            if (role === 'battery' || role === 'generator') {
+                const buildingState = this.game.resourceTransportManager?.buildings.get(connectedId);
+                if (buildingState) {
+                    totalElectricity += buildingState.getResourceAmount(400); // resource_id=400 is electricity
+                }
+            }
+        }
+
+        return totalElectricity >= amount;
     }
 
     /**

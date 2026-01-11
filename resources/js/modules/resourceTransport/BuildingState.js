@@ -6,8 +6,11 @@ export class BuildingState {
         this.entityId = entity.entity_id;
         this.x = parseInt(entity.x);
         this.y = parseInt(entity.y);
-        this.type = entityType.type; // 'building' | 'mining' | 'storage'
+        this.type = entityType.type; // 'building' | 'mining' | 'storage' | 'electricity'
         this.power = parseInt(entityType.power) || 100;
+
+        // For electricity entities, power is generation capacity, not crafting speed
+        this.craftingPower = (entityType.type === 'electricity') ? 100 : this.power;
 
         // Resources inside: Map<resourceId, amount>
         this.resources = new Map();
@@ -24,8 +27,10 @@ export class BuildingState {
         this.craftingRecipeId = null;
         this.craftingTicksRemaining = 0;
 
-        // For storage: max slots = power
-        this.maxSlots = this.type === 'storage' ? this.power : null;
+        // Storage columns from entity_type
+        this.storageType = entityType.storage_type || 'none';
+        this.storageResourceCount = parseInt(entityType.storage_resource_count) || null;
+        this.storagePerResource = parseInt(entityType.storage_per_resource) || null;
     }
 
     /**
@@ -107,9 +112,15 @@ export class BuildingState {
 
         switch (this.type) {
             case 'building':
-                // Only accept input resources, max 10 of each
+            case 'electricity':
+                // Only accept input resources
                 if (!this.inputResourceIds.has(resourceId)) return 'no';
-                if (this.getResourceAmount(resourceId) >= 10) return 'no';
+
+                // Check per-resource limit
+                if (this.storagePerResource) {
+                    if (this.getResourceAmount(resourceId) >= this.storagePerResource) return 'no';
+                }
+
                 return 'yes';
 
             case 'mining':
@@ -120,14 +131,24 @@ export class BuildingState {
             case 'special':
                 // Accept any resource if there's space
                 // 'special' buildings like HQ work like storage
-                const maxStack = parseInt(resource.max_stack) || 100;
-                const current = this.getResourceAmount(resourceId);
 
-                // Check if existing stack has room
-                if (current > 0 && current < maxStack) return 'yes';
+                // Unlimited storage (e.g., HQ)
+                if (this.storageType === 'unlimited') return 'yes';
 
-                // Check if there's a free slot
-                if (this.maxSlots && this.resources.size >= this.maxSlots) return 'no';
+                // Check total resource count limit
+                if (this.storageResourceCount) {
+                    let totalResources = 0;
+                    for (const amount of this.resources.values()) {
+                        totalResources += amount;
+                    }
+                    if (totalResources >= this.storageResourceCount) return 'no';
+                }
+
+                // Check per-resource limit
+                if (this.storagePerResource) {
+                    const current = this.getResourceAmount(resourceId);
+                    if (current >= this.storagePerResource) return 'no';
+                }
 
                 return 'yes';
 
@@ -145,6 +166,7 @@ export class BuildingState {
 
         switch (this.type) {
             case 'building':
+            case 'electricity':
                 // Only give output resources
                 for (const resourceId of this.outputResourceIds) {
                     const amount = this.getResourceAmount(resourceId);
@@ -255,9 +277,10 @@ export class BuildingState {
 
     /**
      * Calculate craft time adjusted by power
+     * For electricity entities, uses craftingPower (100) instead of power (generation capacity)
      */
     calculateCraftTime(baseTicks) {
-        return Math.ceil(baseTicks * (100 / this.power));
+        return Math.ceil(baseTicks * (100 / this.craftingPower));
     }
 }
 

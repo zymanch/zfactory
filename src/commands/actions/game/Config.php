@@ -57,7 +57,7 @@ class Config extends JsonAction
 
         return $this->castNumericFieldsIndexed(
             $result,
-            ['entity_type_id', 'power', 'max_durability', 'width', 'height']
+            ['entity_type_id', 'power', 'max_durability', 'width', 'height', 'storage_resource_count', 'storage_per_resource']
         );
     }
 
@@ -325,6 +325,7 @@ class Config extends JsonAction
 
         return $result;
     }
+
 
     public function run()
     {
