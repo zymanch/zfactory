@@ -1,17 +1,41 @@
 # Project CLAUDE.md
 
-## Auto-load Documentation
+## Documentation Strategy
 
-**ОБЯЗАТЕЛЬНО**: В начале каждой сессии прочитай ВСЮ документацию проекта:
+### 📘 Full Documentation (docs/)
 
 ```
-docs/PROJECT.md      - Описание проекта, структура, команды
-docs/DATABASE.md     - Схема БД, таблицы, поля
-docs/GAME_ENGINE.md  - PixiJS, камера, рендеринг, API
-docs/ADMIN.md        - Admin Panel: редактор карты, депозиты, регионы
+docs/PROJECT.md      - Project overview, structure, commands
+docs/DATABASE.md     - Complete DB schema, tables, fields
+docs/GAME_ENGINE.md  - PixiJS engine, camera, rendering, API
+docs/ADMIN.md        - Admin panel: map editor, deposits, regions
 ```
 
-Используй Read tool для всех файлов в папке `docs/` перед началом работы.
+### 🎯 When to Read Full Documentation
+
+**Working WITHOUT agents (regular mode):**
+- **ОБЯЗАТЕЛЬНО**: Read ALL documentation at session start
+- Use Read tool for all files in `docs/` folder
+
+**Working WITH agents (agent mode):**
+- Agents already contain necessary context for their domain
+- Read full docs only when:
+  - Task spans multiple agent domains (entity + recipe + sprites)
+  - Non-standard cases outside agent workflows
+  - Need to study complete system architecture
+  - Debugging complex cross-system issues
+
+**Examples requiring docs even with agents:**
+```
+❌ "entity-architect - create furnace"
+   → Agent has enough context, no docs needed
+
+✅ "Implement new resource system affecting entities, recipes, sprites, and API"
+   → Read docs/DATABASE.md, docs/GAME_ENGINE.md (cross-functional)
+
+✅ "Why does fog of war interact with electricity system?"
+   → Read docs/GAME_ENGINE.md (architecture understanding)
+```
 
 ## Quick Reference
 
@@ -65,3 +89,80 @@ npm run assets          # Build JS/CSS
 php yii migrate         # Run migrations
 composer run ar         # Generate models
 ```
+
+## Project Agents
+
+Проект содержит специализированных агентов в `.claude/agents/`:
+
+| Agent | Назначение | Контекст внутри |
+|-------|-----------|-----------------|
+| **entity-architect** | Создание новых entity types | DB schema, PHP classes, behaviors, sprites workflow |
+| **recipe-balancer** | Балансировка экономики | Production chains, rate calculations, balance formulas |
+| **ai-sprite-wizard** | Генерация спрайтов FLUX.1 | ComfyUI API, prompt patterns, atlas generation |
+| **pixi-renderer** | Оптимизация PixiJS | Layer system, batching, culling, effects |
+| **game-mechanic** | Разработка механик | Network algorithms, manager patterns, integration |
+| **js-test-writer** | JavaScript тестирование | Vitest setup, mocking patterns, coverage |
+| **maria** | Database optimization | Schema design, query optimization, MariaDB tuning |
+
+### What Agents Contain
+
+**Embedded in each agent:**
+- ✅ Domain-specific context (their area only)
+- ✅ Workflows and patterns ("how to do")
+- ✅ Rules and best practices
+- ✅ Integration points with other agents
+- ✅ Quick reference for their domain
+
+**NOT in agents (use docs/ for):**
+- ❌ Complete database schema (all tables, all fields)
+- ❌ All API endpoints with full specs
+- ❌ Complete file structure (all files, all classes)
+- ❌ Historical context and architecture decisions
+- ❌ Cross-domain complete workflows
+
+### Usage
+
+**Activate agent:**
+```
+Действуй как entity-architect в этой сессии
+Загрузи recipe-balancer агента
+ai-sprite-wizard сессия
+```
+
+**Agent modes:**
+- **Quick Mode** (0-20 iterations): Work in current session, memory indicator at end
+- **Persistent Mode** (20+ iterations): Task tool with history in T-XXX file
+
+**Read .claude/README.md for complete agent guide**
+
+### Decision Tree: Docs vs Agents
+
+```
+Question: Do I need full documentation?
+
+├─ Working on single-domain task? (entity creation, balance, sprites, tests)
+│  └─ NO DOCS → Use specialized agent (entity-architect, recipe-balancer, etc.)
+│
+├─ Task involves 2+ domains? (entity + recipes, mechanic + rendering, etc.)
+│  └─ PARTIAL DOCS → Agent + relevant docs sections
+│
+├─ Architecture question? (why systems interact certain way, design decisions)
+│  └─ FULL DOCS → Read docs/GAME_ENGINE.md, docs/PROJECT.md
+│
+├─ Database-wide changes? (new tables, schema refactoring)
+│  └─ FULL DOCS → Read docs/DATABASE.md
+│
+└─ Not using any agent? (general task, exploration)
+   └─ FULL DOCS → Read ALL docs at session start
+```
+
+**Examples:**
+
+| Task | Strategy |
+|------|----------|
+| "Create advanced furnace 3×3" | ✅ **entity-architect only** |
+| "Create furnace and balance its recipes" | ✅ **entity-architect** + **recipe-balancer** |
+| "Add pollution mechanic (entities, rendering, DB)" | ⚠️ **game-mechanic** + read docs/DATABASE.md, docs/GAME_ENGINE.md |
+| "Refactor API structure" | ⚠️ Read docs/GAME_ENGINE.md (full architecture) |
+| "Fix bug in fog of war" | 📖 Read docs/GAME_ENGINE.md (no specific agent) |
+| "Optimize all database queries" | 📖 **maria** + read docs/DATABASE.md |
