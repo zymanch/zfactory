@@ -6,6 +6,8 @@ use commands\actions\JsonAction;
 use models\Entity;
 use models\ShipEntity;
 use models\Region;
+use models\PipeSystem;
+use models\PipeSystemMember;
 
 /**
  * AJAX: Load all entities (called once on init)
@@ -13,6 +15,38 @@ use models\Region;
  */
 class Entities extends JsonAction
 {
+    protected function getPipeSystems($regionId)
+    {
+        $systems = PipeSystem::find()
+            ->where(['region_id' => $regionId])
+            ->asArray()
+            ->all();
+
+        $result = [];
+        foreach ($systems as $system) {
+            $systemId = (int)$system['pipe_system_id'];
+
+            // Get all entity_ids in this system
+            $members = PipeSystemMember::find()
+                ->where(['pipe_system_id' => $systemId])
+                ->select(['entity_id'])
+                ->asArray()
+                ->all();
+
+            $entityIds = array_map(function($m) { return (int)$m['entity_id']; }, $members);
+
+            $result[$systemId] = [
+                'pipe_system_id' => $systemId,
+                'resource_id' => $system['resource_id'] ? (int)$system['resource_id'] : null,
+                'current_amount' => (int)$system['current_amount'],
+                'max_capacity' => (int)$system['max_capacity'],
+                'entity_ids' => $entityIds,
+            ];
+        }
+
+        return $result;
+    }
+
     public function run()
     {
         // Get current region ID
@@ -62,6 +96,9 @@ class Entities extends JsonAction
             }
         }
 
-        return $this->success(['entities' => $entities]);
+        return $this->success([
+            'entities' => $entities,
+            'pipeSystems' => $this->getPipeSystems($currentRegionId),
+        ]);
     }
 }

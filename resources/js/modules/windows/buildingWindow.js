@@ -174,7 +174,7 @@ export class BuildingWindow {
         item.dataset.entityTypeId = typeId;
 
         // Create tooltip with name, description and cost information
-        const costs = this.game.entityTypeCosts[typeId];
+        const costs = this.game.entityTypes[typeId]?.costs;
         let tooltipHtml = `<strong>${entityType.name}</strong>`;
 
         // Add description if available

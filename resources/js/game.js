@@ -47,8 +47,6 @@ class ZFactoryGame {
         this.depositTypes = {};
         this.resources = {};
         this.recipes = {};
-        this.entityTypeRecipes = {};
-        this.entityTypeCosts = {};
         this.userResources = {};
 
         // Entity management
@@ -290,27 +288,21 @@ class ZFactoryGame {
         this.LANDING_SHIP_EDGE_ID = this.config.landingShipEdgeId;
 
         this.landingTypes = data.landing;
-        this.entityTypes = data.entityTypes;
+        this.entityTypes = data.entityTypes;  // Теперь содержит costs, recipes, behavior
         this.depositTypes = data.depositTypes || {};
         this.resources = data.resources || {};
         this.recipes = data.recipes || {};
-        this.entityTypeRecipes = data.entityTypeRecipes || {};
-        this.entityTypeCosts = data.entityTypeCosts || {};
+        // УБРАЛИ: entityTypeRecipes, entityTypeCosts (теперь в entityTypes)
+        // УБРАЛИ: eyeEntities (фильтруем из entities на клиенте)
         this.userResources = data.userResources || {};
         this.initialBuildPanel = data.buildPanel || [];
-        this.initialEyeEntities = data.eyeEntities || [];
         this.initialDeposits = data.deposits || [];
         this.initialCameraPosition = data.cameraPosition || { x: 0, y: 0, zoom: 1 };
         this.initialEntityResources = data.entityResources || [];
         this.initialCraftingStates = data.craftingStates || [];
         this.initialTransportStates = data.transportStates || [];
-        this.pipeSystems = data.pipeSystems || {};
+        // УБРАЛИ: pipeSystems (теперь в /game/entities)
         this.electricitySystems = data.electricitySystems || {};
-
-        // Load pipe systems data
-        if (this.pipeSystemManager && this.pipeSystems) {
-            this.pipeSystemManager.loadSystems(this.pipeSystems);
-        }
 
         // Load electricity systems data
         if (this.electricityManager && this.electricitySystems) {
@@ -324,7 +316,7 @@ class ZFactoryGame {
             region: data.region || null
         };
 
-        // Initialize building rules from server config
+        // Initialize building rules (deprecated, now behaviors in entityTypes)
         if (this.buildingRules && data.buildingRules) {
             this.buildingRules.init(data.buildingRules);
         }
@@ -591,6 +583,17 @@ class ZFactoryGame {
         const data = await response.json();
 
         if (data.result === 'ok') {
+            // Store pipeSystems and initialize pipe system manager
+            if (data.pipeSystems) {
+                this.pipeSystemManager.loadSystems(data.pipeSystems);
+            }
+
+            // Filter eye entities from entities (entity type with type='eye')
+            this.initialEyeEntities = data.entities.filter(e => {
+                const type = this.entityTypes[e.entity_type_id];
+                return type && type.type === 'eye';
+            });
+
             this.renderEntities(data.entities);
         }
     }

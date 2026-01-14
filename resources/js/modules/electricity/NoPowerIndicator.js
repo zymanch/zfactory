@@ -82,7 +82,7 @@ export class NoPowerIndicator {
         if (!entityType) return false;
 
         // Get recipes for this entity type
-        const recipeIds = this.game.entityTypeRecipes?.[entity.entity_type_id] || [];
+        const recipeIds = entityType.recipes || [];
 
         for (const recipeId of recipeIds) {
             const recipe = this.game.recipes?.[recipeId];

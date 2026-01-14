@@ -297,7 +297,7 @@ export class BuildMode extends GameModeBase {
      * Check if user can afford building
      */
     canAffordBuilding(entityTypeId) {
-        const costs = this.game.entityTypeCosts[entityTypeId];
+        const costs = this.game.entityTypes[entityTypeId]?.costs;
         if (!costs) return true; // No cost = free
 
         for (const [resourceId, quantity] of Object.entries(costs)) {
@@ -422,7 +422,7 @@ export class BuildMode extends GameModeBase {
 
             if (data.result === 'ok' && data.entity) {
                 // Update local user resources (deduct building cost)
-                const costs = this.game.entityTypeCosts[this.entityTypeId];
+                const costs = this.game.entityTypes[this.entityTypeId]?.costs;
                 if (costs) {
                     for (const [resourceId, quantity] of Object.entries(costs)) {
                         const rid = parseInt(resourceId);
@@ -994,7 +994,7 @@ export class BuildMode extends GameModeBase {
      */
     updateUserResourcesForMultiple(placements) {
         for (const placement of placements) {
-            const costs = this.game.entityTypeCosts[placement.entity_type_id];
+            const costs = this.game.entityTypes[placement.entity_type_id]?.costs;
 
             if (costs) {
                 for (const [resourceId, quantity] of Object.entries(costs)) {

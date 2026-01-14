@@ -420,7 +420,7 @@ export class EntityTooltip extends BaseTooltip {
      * Get recipes HTML for entity type
      */
     getRecipesHtml(entityTypeId) {
-        const recipeIds = this.game.entityTypeRecipes?.[entityTypeId];
+        const recipeIds = this.game.entityTypes[entityTypeId]?.recipes;
         if (!recipeIds || recipeIds.length === 0) {
             return null;
         }

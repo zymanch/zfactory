@@ -37,7 +37,7 @@ export class BuildingState {
      * Initialize available recipes and input/output resource sets
      */
     initRecipes(entityTypeId, game) {
-        const recipeIds = game.entityTypeRecipes?.[entityTypeId] || [];
+        const recipeIds = game.entityTypes[entityTypeId]?.recipes || [];
         this.recipeIds = recipeIds;
 
         for (const recipeId of recipeIds) {

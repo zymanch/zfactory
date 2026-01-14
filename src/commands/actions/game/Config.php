@@ -18,6 +18,7 @@ use models\DepositType;
 use models\PipeSystem;
 use models\PipeSystemMember;
 use services\BuildingRules;
+use services\behaviors\EntityBehaviorFactory;
 use Yii;
 
 /**
@@ -45,13 +46,22 @@ class Config extends JsonAction
     protected function getEntityTypes()
     {
         $entityTypes = EntityType::find()->indexBy('entity_type_id')->all();
-        $result = [];
+        $entityTypeCosts = $this->getEntityTypeCosts();
+        $entityTypeRecipes = $this->getEntityTypeRecipes();
+        $behaviors = EntityBehaviorFactory::getAllClientBehaviors();
 
+        $result = [];
         foreach ($entityTypes as $id => $entityType) {
             $data = $entityType->toArray();
             // Add URL fields for frontend
             $data['atlas_url'] = $entityType->getAtlasUrl();
             $data['icon_url'] = $entityType->getIconUrl();
+
+            // Add costs, recipes, behavior
+            $data['costs'] = $entityTypeCosts[$id] ?? [];
+            $data['recipes'] = $entityTypeRecipes[$id] ?? [];
+            $data['behavior'] = $behaviors[$id] ?? null;
+
             $result[$id] = $data;
         }
 
@@ -330,28 +340,27 @@ class Config extends JsonAction
     public function run()
     {
         $currentRegionId = $this->getCurrentRegionId();
-        $entityTypes = $this->getEntityTypes();
 
         return $this->success([
             'landing' => $this->getLandingTypes(),
-            'entityTypes' => $entityTypes,
+            'entityTypes' => $this->getEntityTypes(),  // Теперь включает costs, recipes, behavior
             'depositTypes' => $this->getDepositTypes(),
-            'eyeEntities' => $this->getEyeEntities($entityTypes, $currentRegionId),
+            // УБРАЛИ: eyeEntities (фильтруем на клиенте)
             'deposits' => $this->getDeposits($currentRegionId),
             'resources' => $this->getResources(),
             'recipes' => $this->getRecipes(),
-            'entityTypeRecipes' => $this->getEntityTypeRecipes(),
-            'entityTypeCosts' => $this->getEntityTypeCosts(),
+            // УБРАЛИ: entityTypeRecipes (теперь в entityTypes)
+            // УБРАЛИ: entityTypeCosts (теперь в entityTypes)
             'userResources' => $this->getUserResources(),
             'entityResources' => $this->getEntityResources($currentRegionId),
             'craftingStates' => $this->getCraftingStates($currentRegionId),
             'transportStates' => $this->getTransportStates($currentRegionId),
-            'pipeSystems' => $this->getPipeSystems($currentRegionId),
+            // УБРАЛИ: pipeSystems (перемещены в /game/entities)
+            // УБРАЛИ: buildingRules (теперь в entityTypes)
             'region' => $this->getRegion($currentRegionId),
             'buildPanel' => $this->getBuildPanel(),
             'cameraPosition' => $this->getCameraPosition(),
             'config' => $this->getConfig($currentRegionId),
-            'buildingRules' => $this->getBuildingRules(),
         ]);
     }
 }

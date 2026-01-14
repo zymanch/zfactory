@@ -367,7 +367,7 @@ export class EntityInfoWindow {
      * Render available recipes
      */
     renderRecipes(entityType) {
-        const recipeIds = this.game.entityTypeRecipes?.[entityType.entity_type_id];
+        const recipeIds = entityType.recipes;
         if (!recipeIds || recipeIds.length === 0) {
             return '';
         }

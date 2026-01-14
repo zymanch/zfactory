@@ -46,10 +46,12 @@ export class ResourcePanel extends BasePanel {
         }
 
         // Add resources used in any building cost (even if player has 0)
-        for (const entityTypeId in this.game.entityTypeCosts) {
-            const costs = this.game.entityTypeCosts[entityTypeId];
-            for (const resourceId in costs) {
-                displayedResources.add(parseInt(resourceId));
+        for (const entityTypeId in this.game.entityTypes) {
+            const costs = this.game.entityTypes[entityTypeId]?.costs;
+            if (costs) {
+                for (const resourceId in costs) {
+                    displayedResources.add(parseInt(resourceId));
+                }
             }
         }
 

@@ -46,22 +46,17 @@ class BuildingRules
      * Get rules for client-side validation
      * Returns behavior info for all entity types
      *
+     * NOTE: This method is now deprecated as behaviors are included directly in entityTypes.
+     * Keeping for backwards compatibility temporarily.
+     *
      * @return array
      */
     public static function getClientRules(): array
     {
-        $miningTypes = EntityBehaviorFactory::getMiningEntityTypes();
-        $resourceTypes = EntityBehaviorFactory::getResourceEntityTypes();
-
-        // Build requiresTarget map for mining entities
-        $requiresTarget = [];
-        foreach ($miningTypes as $miningTypeId) {
-            $requiresTarget[$miningTypeId] = $resourceTypes;
-        }
-
+        // DEPRECATED: behaviors now included in entityTypes
+        // DEPRECATED: requiresTarget can be determined by entityType.type === 'mining'
+        // DEPRECATED: resourceEntityTypes replaced by deposits system
         return [
-            'requiresTarget' => $requiresTarget,
-            'resourceEntityTypes' => $resourceTypes,
             'behaviors' => EntityBehaviorFactory::getAllClientBehaviors(),
         ];
     }

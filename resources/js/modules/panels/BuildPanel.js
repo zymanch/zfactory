@@ -137,7 +137,7 @@ export class BuildPanel extends BasePanel {
      * Check if user can afford building
      */
     canAffordBuilding(entityTypeId) {
-        const costs = this.game.entityTypeCosts[entityTypeId];
+        const costs = this.game.entityTypes[entityTypeId]?.costs;
         if (!costs) return true; // No cost = free
 
         for (const [resourceId, quantity] of Object.entries(costs)) {

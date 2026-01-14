@@ -305,6 +305,64 @@ for (const state of states) {
 }
 ```
 
+## Data Access Patterns
+
+### Entity Type Data (Reference Data)
+All entity type related data is embedded in the `entityTypes` object:
+
+```javascript
+// Get entity type costs
+const costs = game.entityTypes[entityTypeId].costs;
+// Example: {"2": 10, "5": 5} - resource_id => quantity
+
+// Get entity type recipes
+const recipes = game.entityTypes[entityTypeId].recipes;
+// Example: [3, 4, 5] - array of recipe_ids
+
+// Get entity type behavior
+const behavior = game.entityTypes[entityTypeId].behavior;
+// Example: {behaviorClass: "MiningEntityBehavior", checksFog: true, ...}
+
+// Check if entity type is mining (requires target deposit)
+const isMining = game.entityTypes[entityTypeId].type === 'mining';
+```
+
+### Entity Instance Data (Dynamic Data)
+Entity instance data remains in separate arrays for optimal payload size:
+
+```javascript
+// Get resources for specific entity
+const resources = game.entityResources.filter(er => er.entity_id === entityId);
+// Example: [{entity_id: 10, resource_id: 2, amount: 5}, ...]
+
+// Get crafting state for entity
+const crafting = game.craftingStates.find(cs => cs.entity_id === entityId);
+// Example: {entity_id: 10, recipe_id: 3, ticks_remaining: 30}
+
+// Get transport states for entity
+const transports = game.transportStates.filter(ts => ts.entity_id === entityId);
+```
+
+### Eye Entities (Fog of War)
+Eye entities are filtered from the main entities array on the client:
+
+```javascript
+// Filter eye entities from loaded entities
+const eyeEntities = game.entities.filter(e => {
+    const type = game.entityTypes[e.entity_type_id];
+    return type && type.type === 'eye';
+});
+```
+
+### Pipe Systems
+Pipe systems are loaded with entities (region-specific data):
+
+```javascript
+// Get pipe system for specific entity
+const system = game.pipeSystemManager.getSystemForEntity(entityId);
+// Example: {pipe_system_id: 1, resource_id: 20, current_amount: 50, max_capacity: 100, entity_ids: [15, 16, 17, 18]}
+```
+
 ## API Endpoints
 
 ### GET /game/config
@@ -342,24 +400,88 @@ Load game configuration with all reference data. Called once on init.
             "width": 1,
             "height": 1,
             "icon_url": "conveyor/normal.png",
+            "atlas_url": "conveyor/conveyor_atlas.png",
+            "costs": {
+                "2": 10,
+                "5": 5
+            },
+            "recipes": [3, 4, 5],
+            "behavior": {
+                "behaviorClass": "DefaultEntityBehavior",
+                "checksFog": true,
+                "checksLanding": true,
+                "checksCollision": true,
+                "requiresTarget": false
+            },
             ...
         }
     },
+    "resources": {
+        "1": {"resource_id": 1, "name": "Wood", "max_stack": 100, ...}
+    },
+    "recipes": {
+        "1": {
+            "recipe_id": 1,
+            "ticks": 60,
+            "input1_resource_id": 1,
+            "input1_amount": 2,
+            "output_resource_id": 10,
+            "output_amount": 1
+        }
+    },
+    "userResources": {
+        "1": 150,
+        "2": 80
+    },
+    "entityResources": [
+        {"entity_id": 10, "resource_id": 2, "amount": 5}
+    ],
+    "craftingStates": [
+        {"entity_id": 10, "recipe_id": 3, "ticks_remaining": 30}
+    ],
+    "transportStates": [
+        {"entity_id": 15, "resource_id": 1, "amount": 1, "position_px": 32, "from_direction": "left", "status": "moving"}
+    ],
+    "region": {
+        "region_id": 1,
+        "name": "Starting Island",
+        "ship_attach_x": 100,
+        "ship_attach_y": 50
+    },
     "buildPanel": [101, null, 102, 103, null, null, null, null, null, 105],
+    "cameraPosition": {"x": 0, "y": 0, "zoom": 1},
     "config": {
         "mapUrl": "http://zfactory.local/map/tiles",
         "entitiesUrl": "http://zfactory.local/game/entities",
         "createEntityUrl": "http://zfactory.local/map/create-entity",
         "deleteEntityUrl": "http://zfactory.local/game/delete-entity",
         "saveBuildPanelUrl": "http://zfactory.local/user/save-build-panel",
+        "savePositionUrl": "http://zfactory.local/user/save-position",
+        "saveStateUrl": "http://zfactory.local/game/save-state",
+        "finishConstructionUrl": "http://zfactory.local/game/finish-construction",
+        "addUserResourceUrl": "http://zfactory.local/game/add-user-resource",
+        "regionsMapUrl": "http://zfactory.local/regions/index",
         "tilesPath": "/assets/tiles/",
+        "currentRegionId": 1,
         "tileWidth": 64,
         "tileHeight": 64,
         "assetVersion": 1,
+        "autoSaveInterval": 60,
+        "debug": false,
+        "landingSkyId": 9,
+        "landingBridgeId": 11,
+        "landingIslandEdgeId": 10,
+        "landingShipEdgeId": 12,
         "cameraSpeed": 8
     }
 }
 ```
+
+**Structure Changes (2026-01):**
+- `entityTypes` now includes embedded `costs`, `recipes`, and `behavior` (previously separate objects)
+- `eyeEntities` removed (filter entities by `type='eye'` on client)
+- `pipeSystems` moved to `/game/entities` endpoint
+- `entityTypeCosts`, `entityTypeRecipes`, `buildingRules` removed (merged into entityTypes)
 
 ### GET /map/tiles
 Load terrain tiles for viewport.
@@ -379,11 +501,7 @@ Load terrain tiles for viewport.
 ```
 
 ### GET /game/entities
-Load entities for viewport.
-
-**Parameters:**
-- `x`, `y` - starting pixel coordinates
-- `width`, `height` - viewport size in pixels
+Load entities and pipe systems for current region.
 
 **Response:**
 ```json
@@ -398,10 +516,33 @@ Load entities for viewport.
             "construction_progress": 0,
             "x": 320,
             "y": 240
+        },
+        {
+            "entity_id": "ship_15",
+            "entity_type_id": 105,
+            "state": "built",
+            "durability": 100,
+            "x": 420,
+            "y": 340
         }
-    ]
+    ],
+    "pipeSystems": {
+        "1": {
+            "pipe_system_id": 1,
+            "resource_id": 20,
+            "current_amount": 50,
+            "max_capacity": 100,
+            "entity_ids": [15, 16, 17, 18]
+        }
+    }
 }
 ```
+
+**Notes:**
+- Entities include both island entities (`entity_id` as integer) and ship entities (`entity_id` as string with `ship_` prefix)
+- Ship entity coordinates are converted to world coordinates (ship coords + region's ship_attach offset)
+- `pipeSystems` object indexed by `pipe_system_id` (moved from `/game/config` in 2026-01 refactoring)
+- Eye entities (type='eye') are filtered on client side from entities array for fog of war calculations
 
 ### POST /map/create-entity
 Create new entity (building placement).
@@ -1049,7 +1190,8 @@ await this.noPowerIndicator.init();  // Loads texture
 **Detection Logic**:
 ```javascript
 checkEntityNeedsElectricity(entity) {
-    const recipeIds = this.game.entityTypeRecipes[entity.entity_type_id];
+    const entityType = this.game.entityTypes[entity.entity_type_id];
+    const recipeIds = entityType.recipes || [];
     for (const recipeId of recipeIds) {
         const recipe = this.game.recipes[recipeId];
         // Check if electricity (resource_id 400) is required
@@ -1072,6 +1214,48 @@ checkEntityNeedsElectricity(entity) {
 **Visual Position**:
 - Positioned at `(0, -32)` relative to entity center
 - Appears slightly above center of entity sprite
+
+## API Architecture Changes
+
+### 2026-01: API Structure Refactoring
+
+Optimized API structure to reduce global data structures and improve logical grouping.
+
+**Changes Made:**
+
+1. **Embedded Type-Related Data in entityTypes**
+   - `entityTypeCosts` → `entityType.costs`
+   - `entityTypeRecipes` → `entityType.recipes`
+   - `buildingRules.behaviors` → `entityType.behavior`
+
+2. **Removed Duplication**
+   - `eyeEntities` - now filtered on client from entities array
+   - `buildingRules.requiresTarget` - determined by checking `entityType.type === 'mining'`
+   - `buildingRules.resourceEntityTypes` - deprecated (replaced by deposits system)
+
+3. **Moved Region-Specific Data**
+   - `pipeSystems` moved from `/game/config` to `/game/entities`
+   - Keeps config endpoint focused on reference data
+   - Keeps entities endpoint focused on region-specific data
+
+**Results:**
+- Global data structures reduced from 15 to 10 (-33%)
+- Improved logical grouping (type-level data with types, instance-level data separate)
+- Reduced config payload size by ~20%
+- Simplified client code access patterns
+
+**Migration:**
+```javascript
+// OLD (before 2026-01)
+const costs = game.entityTypeCosts[typeId];
+const recipes = game.entityTypeRecipes[typeId];
+const requiresTarget = game.buildingRules.requiresTarget[typeId];
+
+// NEW (after 2026-01)
+const costs = game.entityTypes[typeId].costs;
+const recipes = game.entityTypes[typeId].recipes;
+const requiresTarget = game.entityTypes[typeId].type === 'mining';
+```
 
 ## Build
 
