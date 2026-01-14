@@ -9,6 +9,39 @@
 4. **Lightweight**: ~100KB minified
 5. **Industry proven**: Used in many browser games
 
+### Graphics Abstraction (2026-01)
+
+**Problem**: Direct PixiJS imports in 15+ files made testing difficult and created tight coupling to rendering engine.
+
+**Solution**: GraphicsEngine abstraction layer - single point of interaction with PixiJS.
+
+**Benefits**:
+- ✅ Zero direct PixiJS imports in business logic
+- ✅ Testable with FakeGraphicsEngine (no graphics dependencies)
+- ✅ Easy to swap rendering engines
+- ✅ Centralized texture loading
+
+**Architecture**:
+```
+Application Code (game.js, managers)
+         ↓
+   GraphicsEngine API
+         ↓
+      PixiJS 8.x
+```
+
+**GraphicsEngine** (`resources/js/core/GraphicsEngine.js`):
+- Single class handling ALL PixiJS interactions
+- Manages texture loading from manifest
+- Creates containers, sprites, graphics primitives
+- Provides unified API for game modules
+
+**FakeGraphicsEngine** (`tests/helpers/FakeGraphicsEngine.js`):
+- Test double implementing GraphicsEngine API
+- Returns minimal mocks (objects with vi.fn() methods)
+- Enables testing without PixiJS initialization
+- Used in all unit and integration tests
+
 ## Architecture
 
 ### Layers
@@ -271,15 +304,197 @@ getEntityTextureKey(entity, gameMode, isSelected) {
 
 ## Asset Loading
 
-### Asset Versioning
-All assets use version query string for cache busting:
-```javascript
-// In game.js
-assetUrl(path) {
-    const v = this.config.assetVersion || 1;
-    return `${path}?v=${v}`;
+### Asset Manifest System (2026-01)
+
+**Centralized Asset Management**: All asset URLs generated on backend and sent in single manifest.
+
+**Benefits**:
+- Single source of truth for all 600+ asset URLs
+- Automatic cache busting with `?v=` version parameter
+- No hardcoded paths in JavaScript
+- Progress tracking during loading
+- Batch loading optimization
+
+**Backend** (`src/commands/actions/game/Config.php`):
+
+Method `getAssetManifest()` generates manifest with short keys:
+
+```php
+protected function getAssetManifest() {
+    $assets = [];
+    $v = Yii::$app->params['asset_version'];
+
+    // Landing textures (10 types)
+    foreach ($this->getLandingTypes() as $id => $landing) {
+        $folder = $landing['folder'];
+        $assets["landing_{$id}"] = "/assets/tiles/landing/{$folder}/{$folder}_0.png?v={$v}";
+        $assets["landing_atlas_{$folder}"] = "/assets/tiles/landing/atlases/{$folder}_atlas.png?v={$v}";
+    }
+
+    // Entity atlases (300+)
+    foreach ($this->getEntityTypes() as $id => $entityType) {
+        $assets["entity_atlas_{$id}"] = $entityType['atlas_url'] . "?v={$v}";
+    }
+
+    // Deposit sprites (22)
+    foreach ($this->getDepositTypes() as $id => $depositType) {
+        $assets["deposit_{$id}"] = $depositType['sprite_url'] . "?v={$v}";
+    }
+
+    // Resource icons (112)
+    foreach ($this->getResources() as $id => $resource) {
+        $assets["resource_{$id}"] = "/assets/tiles/resources/{$resource['icon_url']}?v={$v}";
+    }
+
+    // Special textures
+    $assets['clouds_atlas'] = "/assets/clouds/clouds_atlas.png?v={$v}";
+    $assets['electrification'] = "/assets/tiles/electrification.png?v={$v}";
+    $assets['no_power'] = "/assets/tiles/no_power.png?v={$v}";
+
+    return $assets;
 }
 ```
+
+**Response Format**:
+```json
+{
+    "result": "ok",
+    "assetManifest": {
+        "landing_1": "/assets/tiles/landing/grass/grass_0.png?v=1",
+        "landing_atlas_grass": "/assets/tiles/landing/atlases/grass_atlas.png?v=1",
+        "entity_atlas_100": "/assets/tiles/entities/conveyor/conveyor_atlas.png?v=1",
+        "deposit_1": "/assets/tiles/deposits/tree_pine.png?v=1",
+        "resource_1": "/assets/tiles/resources/wood.png?v=1"
+    }
+}
+```
+
+**Frontend** (`resources/js/core/GraphicsEngine.js`):
+
+```javascript
+async loadAllTextures() {
+    const keys = Object.keys(this.manifest);
+    let loaded = 0;
+
+    for (const key of keys) {
+        const url = this.manifest[key];
+        const texture = await PIXI.Assets.load(url);
+        this.textures.set(key, texture);
+
+        loaded++;
+        this.emitProgress({ loaded, total: keys.length, percent: Math.round((loaded / keys.length) * 100), currentKey: key });
+    }
+}
+
+getTexture(key) {
+    const texture = this.textures.get(key);
+    if (!texture) {
+        console.warn(`[GraphicsEngine] Texture not found: ${key}`);
+    }
+    return texture;
+}
+```
+
+### Bootstrap Flow (2026-01)
+
+**New Entry Point**: `resources/js/bootstrap.js` orchestrates game initialization.
+
+**Old Flow** (before 2026-01):
+```
+game.js → loadConfig() → loadTextures() → initPixi() → init()
+```
+
+**New Flow** (after 2026-01):
+```
+bootstrap.js:
+  1. GameLoader.loadAll()         // Load data (config, entities, tiles)
+  2. GraphicsEngine.init()         // Initialize PixiJS
+  3. GraphicsEngine.loadTextures() // Load all assets with progress
+  4. ZFactoryGame.init()           // Initialize game logic
+```
+
+**Bootstrap Code** (`resources/js/bootstrap.js`):
+```javascript
+import { GameLoader } from './core/GameLoader.js';
+import { GraphicsEngine } from './core/GraphicsEngine.js';
+import ZFactoryGame from './game.js';
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Phase 1: Load data
+        showLoading('Loading game data...');
+        const loader = new GameLoader(window.gameConfig.configUrl);
+        const { config, entities, tiles } = await loader.loadAll();
+
+        // Phase 2: Initialize graphics engine
+        showLoading('Loading assets...');
+        const graphics = new GraphicsEngine(config.assetManifest, {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            backgroundColor: 0x87CEEB
+        });
+
+        await graphics.initApplication(document.getElementById('game-container'));
+
+        // Track asset loading progress
+        graphics.onProgress((progress) => {
+            updateProgress(progress.percent);
+            showLoading(`Loading assets... ${progress.loaded}/${progress.total}`);
+        });
+
+        await graphics.loadAllTextures();
+
+        // Phase 3: Initialize game
+        showLoading('Initializing game...');
+        const game = new ZFactoryGame(config, entities, tiles, graphics);
+        await game.init();
+
+        document.getElementById('loading').style.display = 'none';
+        window.game = game;
+
+    } catch (error) {
+        console.error('[Bootstrap] Failed to initialize game:', error);
+        showLoading('Error loading game. Please refresh.');
+    }
+});
+```
+
+**GameLoader** (`resources/js/core/GameLoader.js`):
+- Separates data loading from game logic
+- Handles AJAX requests to `/game/config`, `/game/entities`, `/map/tiles`
+- Emits events for progress tracking
+- Parallel loading of entities and tiles
+
+**ZFactoryGame Constructor Changes**:
+```javascript
+// OLD (before 2026-01)
+constructor() {
+    // ... empty initialization
+}
+async init() {
+    await this.loadConfig();    // Ajax
+    await this.loadTextures();  // PixiJS
+    this.initPixi();
+    // ... rest of init
+}
+
+// NEW (after 2026-01)
+constructor(configData, entitiesData, tilesData, graphics) {
+    this.graphics = graphics;  // Injected GraphicsEngine
+    this.entityTypes = configData.entityTypes;
+    this.resources = configData.resources;
+    // ... all data pre-loaded
+}
+async init() {
+    // No Ajax, no texture loading - just game logic initialization
+    this.initModules();
+    this.initLayers();
+    this.loadMapTiles();
+    this.loadEntities();
+}
+```
+
+### Asset Versioning
 
 Configured in `static_config.php`:
 ```php
@@ -288,22 +503,7 @@ Configured in `static_config.php`:
 ]
 ```
 
-### Terrain Textures
-```javascript
-// Single file per terrain type
-const url = this.assetUrl(this.config.tilesPath + 'landing/' + landing.folder + '.png');
-textures['landing_1'] = await PIXI.Assets.load(url);
-```
-
-### Entity Textures
-```javascript
-// 5 files per entity type (folder-based)
-const states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
-for (const state of states) {
-    const url = this.assetUrl(`${this.config.tilesPath}entities/${folder}/${state}.${ext}`);
-    textures[`entity_${typeId}_${state}`] = await PIXI.Assets.load(url);
-}
-```
+All assets automatically get `?v=1` query string via backend manifest generation.
 
 ## Data Access Patterns
 
@@ -651,10 +851,15 @@ On-screen debug panel (top-left corner) shows:
 
 ```
 resources/js/
-├── game.js                        # Main game class
+├── bootstrap.js                   # NEW (2026-01): Entry point, orchestrates initialization
+├── game.js                        # Main game class (refactored 2026-01: no Ajax, no texture loading)
+├── core/                          # NEW (2026-01): Core infrastructure
+│   ├── GraphicsEngine.js          # PixiJS abstraction layer
+│   └── GameLoader.js              # Ajax data loading
 └── modules/
     ├── modes/                     # Game mode management
     │   ├── gameModeManager.js     # Centralized mode controller
+    │   ├── gameModeBase.js        # Base class for modes (lifecycle, events)
     │   ├── buildMode.js           # Building placement mode
     │   └── landingEditMode.js     # Landing editing mode
     ├── windows/                   # UI windows
@@ -672,7 +877,28 @@ resources/js/
     ├── tileLayerManager.js        # Terrain rendering
     ├── entityLayerManager.js      # Entity rendering
     ├── resourceTransport/         # Resource transport system
+    │   ├── ResourceTransportManager.js  # Main controller (fluid integration 2026-01)
+    │   ├── BuildingState.js       # Building inventory/crafting
+    │   └── TransporterState.js    # Conveyor belt state
+    ├── pipes/                     # Pipe system
+    │   ├── PipeSystemManager.js   # Fluid network manager (fluid integration 2026-01)
+    │   ├── PipeRenderer.js        # Fluid visualization
+    │   └── PipeConnectionManager.js  # Pipe connection logic
+    ├── electricity/               # Electricity system
+    │   ├── ElectricitySystemManager.js   # Power network manager
+    │   ├── ElectrificationLayerManager.js  # Blue dots rendering
+    │   └── NoPowerIndicator.js    # Warning icon
     └── ...
+
+tests/
+├── integration/
+│   └── gameSimulation.test.js    # Integration tests (12/14 passing, fluid test enabled 2026-01)
+└── helpers/
+    ├── FakeGraphicsEngine.js      # NEW (2026-01): Test double for GraphicsEngine
+    ├── mockGame.js                # Mock game instance
+    ├── GameSimulator.js           # Game state simulator
+    ├── MapBuilder.js              # ASCII map → game state
+    └── fixtures.js                # Test data (resources with type='liquid' added 2026-01)
 
 public/js/game.js                  # Compiled (webpack)
 public/js/*.js                     # Code-split chunks
@@ -1214,6 +1440,177 @@ checkEntityNeedsElectricity(entity) {
 **Visual Position**:
 - Positioned at `(0, -32)` relative to entity center
 - Appears slightly above center of entity sprite
+
+## Pipe System (Fluid Transport)
+
+The pipe system handles transport of liquid resources (water, oil, gas, lava) through connected pipe networks. Buildings can consume fluids from pipes as crafting inputs.
+
+### PipeSystemManager
+
+**Location**: `resources/js/modules/pipes/PipeSystemManager.js`
+
+Manages fluid pipe networks on client side, provides API for fluid checks and consumption.
+
+**Initialization**:
+```javascript
+this.pipeManager = new PipeSystemManager(this);
+this.pipeManager.loadSystems(pipeSystems);  // From /game/entities response
+```
+
+**Data Structures**:
+```javascript
+systems = new Map();           // pipe_system_id → system data
+entityToSystem = new Map();    // entity_id → pipe_system_id (for O(1) lookup)
+```
+
+**System Data**:
+```javascript
+{
+    pipe_system_id: 1,
+    resource_id: 300,         // Fluid resource (300=water, 301=oil, 302=gas, 303=lava)
+    current_amount: 50,       // Current fluid amount in system
+    max_capacity: 100,        // Total capacity (sum of all pipe capacities)
+    entity_ids: [15, 16, 17]  // All pipe entities in this system
+}
+```
+
+**Key Methods**:
+- `loadSystems(systemsData)` - Load pipe systems from server
+- `getSystemForEntity(entityId)` - Get system for specific pipe entity (O(1) lookup)
+- `getSystemInfo(entityId)` - Get system info for tooltip (resource name, fill %, capacity)
+- `isPipeEntity(entityTypeId)` - Check if entity type is a pipe
+- `getFluidColor(resourceId)` - Get color for fluid visualization
+- `addFluid(pipeEntityId, resourceId, amount)` - Add fluid to system (client-side only)
+- `takeFluid(pipeEntityId, resourceId, amount)` - Take fluid from system (client-side only)
+- `consumeFluid(systemId, amount)` - Consume fluid during crafting
+
+**Pipe Entity Types**:
+```javascript
+// Pipes: 131, 132, 135, 136, 140, 141
+isPipeEntity(entityTypeId) {
+    return [131, 132, 135, 136, 140, 141].includes(entityTypeId);
+}
+```
+
+**Fluid Colors**:
+```javascript
+const colors = {
+    300: 0x3498db, // Water - blue
+    301: 0x2c3e50, // Crude Oil - dark
+    302: 0x95a5a6, // Natural Gas - gray
+    303: 0xe74c3c, // Lava - red/orange
+};
+```
+
+### Fluid Integration in Crafting (2026-01)
+
+Buildings can consume fluids from connected pipe systems as recipe inputs.
+
+**Resource Types**:
+```javascript
+// In fixtures/database
+resources: {
+    water: { resource_id: 300, name: 'Water', type: 'liquid' },
+    ironOre: { resource_id: 1, name: 'Iron Ore', type: 'solid' }
+}
+```
+
+**Detection** (`ResourceTransportManager.js`):
+```javascript
+isFluidResource(resourceId) {
+    const resource = this.game.resources[resourceId];
+    return resource && resource.type === 'liquid';
+}
+```
+
+**Crafting Check** (`ResourceTransportManager.tryStartBuildingCraft()`):
+```javascript
+// Check all 3 recipe inputs (input1, input2, input3)
+if (recipe.input1_resource_id) {
+    const resourceId = parseInt(recipe.input1_resource_id);
+    const amountNeeded = parseInt(recipe.input1_amount);
+
+    if (this.isFluidResource(resourceId)) {
+        // Check via PipeSystemManager
+        const pipeSystem = this.game.pipeManager.getSystemForEntity(state.entityId);
+        if (!pipeSystem ||
+            pipeSystem.resource_id !== resourceId ||
+            pipeSystem.current_amount < amountNeeded) {
+            continue; // Not enough fluid
+        }
+    } else {
+        // Normal solid resource check
+        const amount = state.getResourceAmount(resourceId);
+        if (amount < amountNeeded) continue;
+    }
+}
+```
+
+**Fluid Consumption**:
+```javascript
+// Consume fluid during crafting start
+if (this.isFluidResource(input1ResourceId)) {
+    const pipeSystem = this.game.pipeManager?.getSystemForEntity(state.entityId);
+    if (pipeSystem) {
+        this.game.pipeManager.consumeFluid(pipeSystem.pipe_system_id, input1AmountNeeded);
+    }
+}
+```
+
+**PipeSystemManager.consumeFluid()**:
+```javascript
+consumeFluid(systemId, amount) {
+    const system = this.systems.get(systemId);
+    if (!system) return false;
+
+    if (system.current_amount < amount) return false;
+
+    // Consume fluid
+    system.current_amount -= amount;
+
+    // Clear resource_id if empty
+    if (system.current_amount === 0) {
+        system.resource_id = null;
+    }
+
+    return true;
+}
+```
+
+**Example Recipe**:
+```javascript
+// Steel production: Water (liquid) + Iron plates (solid) + Electricity → Steel
+{
+    recipe_id: 5,
+    ticks: 120,
+    input1_resource_id: 300,  // Water (liquid)
+    input1_amount: 10,
+    input2_resource_id: 2,    // Iron plates (solid)
+    input2_amount: 5,
+    input3_resource_id: 400,  // Electricity
+    input3_amount: 50,
+    output_resource_id: 50,   // Steel
+    output_amount: 1
+}
+```
+
+**Validation Rules**:
+- Fluid resources must have `type='liquid'` in resource definition
+- Building must be part of a pipe system (connected via pipes)
+- Pipe system must contain the required fluid type
+- Pipe system must have sufficient fluid amount
+- Fluid mixing not allowed (system can only contain one fluid type at a time)
+
+### PipeRenderer
+
+**Location**: `resources/js/modules/pipes/PipeRenderer.js`
+
+Renders fluid visualization on pipes (colored tint based on fluid type).
+
+**Visual Effect**:
+- Empty pipes: no tint
+- Pipes with fluid: colored tint (blue for water, dark for oil, etc.)
+- Fill level visualization (optional, future enhancement)
 
 ## API Architecture Changes
 

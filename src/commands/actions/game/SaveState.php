@@ -55,13 +55,14 @@ class SaveState extends JsonAction
     /**
      * Save entity resources (buildings, storage)
      * Only for entities without transport state (position IS NULL)
+     * NEW (2026-01): resources is now a dictionary {entity_id => [...]}
      */
     private function saveEntityResources(array $resources)
     {
         if (empty($resources)) return;
 
-        // Group by entity_id for efficient processing
-        $entityIds = array_unique(array_column($resources, 'entity_id'));
+        // Get all entity IDs from dictionary keys
+        $entityIds = array_keys($resources);
 
         // Delete existing non-transport resources for these entities
         EntityResource::deleteAll([
@@ -72,16 +73,18 @@ class SaveState extends JsonAction
 
         // Insert new resources
         $rows = [];
-        foreach ($resources as $r) {
-            if (($r['amount'] ?? 0) > 0) {
-                $rows[] = [
-                    $r['entity_id'],
-                    $r['resource_id'],
-                    $r['amount'],
-                    null,  // position_px
-                    null,  // from_direction
-                    null   // status
-                ];
+        foreach ($resources as $entityId => $resourceList) {
+            foreach ($resourceList as $r) {
+                if (($r['amount'] ?? 0) > 0) {
+                    $rows[] = [
+                        $entityId,  // From dict key
+                        $r['resource_id'],
+                        $r['amount'],
+                        null,  // position_px
+                        null,  // from_direction
+                        null   // status
+                    ];
+                }
             }
         }
 
@@ -96,22 +99,24 @@ class SaveState extends JsonAction
 
     /**
      * Save crafting states
+     * NEW (2026-01): states is now a dictionary {entity_id => {...}}
      */
     private function saveCraftingStates(array $states)
     {
         if (empty($states)) return;
 
-        $entityIds = array_column($states, 'entity_id');
+        // Get all entity IDs from dictionary keys
+        $entityIds = array_keys($states);
 
         // Delete existing states
         EntityCrafting::deleteAll(['entity_id' => $entityIds]);
 
         // Insert new states
         $rows = [];
-        foreach ($states as $s) {
+        foreach ($states as $entityId => $s) {
             if (!empty($s['recipe_id']) && ($s['ticks_remaining'] ?? 0) > 0) {
                 $rows[] = [
-                    $s['entity_id'],
+                    $entityId,  // From dict key
                     $s['recipe_id'],
                     $s['ticks_remaining']
                 ];
@@ -130,13 +135,14 @@ class SaveState extends JsonAction
     /**
      * Save transport states (conveyors and manipulators)
      * Stored in entity_resource with transport fields populated
+     * NEW (2026-01): states is now a dictionary {entity_id => {...}}
      */
     private function saveTransportStates(array $states)
     {
         if (empty($states)) return;
 
-        foreach ($states as $s) {
-            $entityId = $s['entity_id'];
+        foreach ($states as $entityId => $s) {
+            // NEW: entity_id is now the dict key
 
             // Find existing transport state (position_px IS NOT NULL)
             $existing = EntityResource::find()
@@ -153,7 +159,7 @@ class SaveState extends JsonAction
                 $existing->save(false);
             } else {
                 $model = new EntityResource();
-                $model->entity_id = $entityId;
+                $model->entity_id = $entityId;  // From dict key
                 $model->resource_id = $s['resource_id'] ?? null;
                 $model->amount = $s['amount'] ?? 0;
                 $model->position_px = $s['position_px'] ?? 0;

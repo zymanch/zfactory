@@ -54,34 +54,80 @@ export class ResourceTransportManager {
     }
 
     /**
-     * Load initial state from game config data
+     * Load initial state from entities data
+     * NEW (2026-01): Extract state from entity properties instead of separate arrays
      */
     loadInitialState() {
         const game = this.game;
 
-        // Split transport states into transporter, splitter, and manipulator
+        // Extract states from entity properties
+        const entityResourcesMap = {};
+        const craftingStatesArray = [];
         const transporterStates = [];
         const splitterStates = [];
         const manipulatorStates = [];
 
-        for (const ts of (game.initialTransportStates || [])) {
-            const entityId = ts.entity_id;
-            if (this.transporters.has(entityId)) {
-                transporterStates.push(ts);
-            } else if (this.splitters.has(entityId)) {
-                splitterStates.push(ts);
-            } else if (this.manipulators.has(entityId)) {
-                manipulatorStates.push(ts);
+        // Support both production (entitiesData) and tests (entities)
+        const entities = game.entitiesData || game.entities || [];
+
+        for (const entity of entities) {
+            const entityId = entity.entity_id;
+
+            // Extract resources if present
+            if (entity.resources && entity.resources.length > 0) {
+                entityResourcesMap[entityId] = entity.resources;
+            }
+
+            // Extract crafting state if present
+            if (entity.craftingState) {
+                craftingStatesArray.push({
+                    entity_id: entityId,
+                    ...entity.craftingState
+                });
+            }
+
+            // Extract transport state if present
+            if (entity.transportState) {
+                const ts = { entity_id: entityId, ...entity.transportState };
+
+                if (this.transporters.has(entityId)) {
+                    transporterStates.push(ts);
+                } else if (this.splitters.has(entityId)) {
+                    splitterStates.push(ts);
+                } else if (this.manipulators.has(entityId)) {
+                    manipulatorStates.push(ts);
+                }
             }
         }
 
+        // Backward compatibility: fallback to old format if new format is empty
+        const finalEntityResources = Object.keys(entityResourcesMap).length > 0
+            ? entityResourcesMap
+            : (game.initialEntityResources || []);
+
+        const finalCraftingStates = craftingStatesArray.length > 0
+            ? craftingStatesArray
+            : (game.initialCraftingStates || []);
+
+        const finalTransporterStates = transporterStates.length > 0
+            ? transporterStates
+            : (game.initialTransportStates || []).filter(ts => this.transporters.has(ts.entity_id));
+
+        const finalSplitterStates = splitterStates.length > 0
+            ? splitterStates
+            : (game.initialTransportStates || []).filter(ts => this.splitters.has(ts.entity_id));
+
+        const finalManipulatorStates = manipulatorStates.length > 0
+            ? manipulatorStates
+            : (game.initialTransportStates || []).filter(ts => this.manipulators.has(ts.entity_id));
+
         // Load using existing loadState method
         this.loadState({
-            entityResources: game.initialEntityResources || [],
-            craftingStates: game.initialCraftingStates || [],
-            transporterStates: transporterStates,
-            splitterStates: splitterStates,
-            manipulatorStates: manipulatorStates
+            entityResources: finalEntityResources,
+            craftingStates: finalCraftingStates,
+            transporterStates: finalTransporterStates,
+            splitterStates: finalSplitterStates,
+            manipulatorStates: finalManipulatorStates
         });
     }
 
@@ -1109,24 +1155,30 @@ export class ResourceTransportManager {
 
     /**
      * Get data for saving to server
+     * NEW (2026-01): Return dictionaries instead of arrays for entity states
      */
     getSaveData() {
         const data = {
-            entityResources: [],
-            craftingStates: [],
-            transporterStates: [],
-            splitterStates: [],
-            manipulatorStates: [],
-            electricitySystems: []
+            entityResources: {},      // Changed: dict instead of array
+            craftingStates: {},       // Changed: dict instead of array
+            transporterStates: {},    // Changed: dict instead of array
+            splitterStates: {},       // Changed: dict instead of array
+            manipulatorStates: {},    // Changed: dict instead of array
+            electricitySystems: []    // Unchanged: remains array
         };
 
         // Building resources and crafting
         for (const [entityId, state] of this.buildings) {
-            data.entityResources.push(...state.getResourceSaveData());
+            // Resources
+            const resources = state.getResourceSaveData();
+            if (resources.length > 0) {
+                data.entityResources[entityId] = resources;  // Dict
+            }
 
+            // Crafting
             const craftingData = state.getCraftingSaveData();
             if (craftingData) {
-                data.craftingStates.push(craftingData);
+                data.craftingStates[entityId] = craftingData;  // Dict
             }
         }
 
@@ -1134,7 +1186,7 @@ export class ResourceTransportManager {
         for (const [entityId, state] of this.transporters) {
             const saveData = state.getSaveData();
             if (saveData) {
-                data.transporterStates.push(saveData);
+                data.transporterStates[entityId] = saveData;  // Dict
             }
         }
 
@@ -1142,7 +1194,7 @@ export class ResourceTransportManager {
         for (const [entityId, state] of this.splitters) {
             const saveData = state.getSaveData();
             if (saveData) {
-                data.splitterStates.push(saveData);
+                data.splitterStates[entityId] = saveData;  // Dict
             }
         }
 
@@ -1150,11 +1202,11 @@ export class ResourceTransportManager {
         for (const [entityId, state] of this.manipulators) {
             const saveData = state.getSaveData();
             if (saveData) {
-                data.manipulatorStates.push(saveData);
+                data.manipulatorStates[entityId] = saveData;  // Dict
             }
         }
 
-        // Electricity systems
+        // Electricity systems (unchanged)
         if (this.game.electricityManager) {
             for (const [systemId, system] of this.game.electricityManager.systems) {
                 data.electricitySystems.push({
@@ -1196,12 +1248,24 @@ export class ResourceTransportManager {
 
     /**
      * Load state from server data
+     * NEW (2026-01): entityResources can be map or array (backward compatibility)
      */
     loadState(data) {
         // Load building resources
         if (data.entityResources) {
+            // Check if it's a map/object or array (backward compatibility)
+            const isMap = !Array.isArray(data.entityResources);
+
             for (const [entityId, state] of this.buildings) {
-                state.loadResources(data.entityResources);
+                let resources;
+                if (isMap) {
+                    // NEW: entityResources is a map {entity_id => [...]}
+                    resources = data.entityResources[entityId] || [];
+                } else {
+                    // OLD: entityResources is array [{entity_id: X, ...}]
+                    resources = data.entityResources.filter(er => er.entity_id === entityId);
+                }
+                state.loadResources(resources);  // Pass pre-filtered array
             }
         }
 

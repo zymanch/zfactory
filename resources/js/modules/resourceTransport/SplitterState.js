@@ -229,12 +229,13 @@ export class SplitterState {
 
     /**
      * Get data for saving
+     * NEW (2026-01): No entity_id - will be dict key
      */
     getSaveData() {
         if (!this.hasResource()) return null;
 
         return {
-            entity_id: this.entityId,
+            // No entity_id - will be dict key
             resource_id: this.resourceId,
             amount: this.resourceAmount,
             position_px: this.position_px,

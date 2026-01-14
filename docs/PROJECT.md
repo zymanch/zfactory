@@ -10,7 +10,8 @@ ZFactory is a browser-based automation game inspired by Factorio. The game featu
 - **Database**: MySQL/MariaDB
 - **Frontend**: Bootstrap 5, jQuery 3.7
 - **Build**: Webpack, Laravel Mix, SASS
-- **Game Engine**: PixiJS 8.x
+- **Game Engine**: PixiJS 8.x (abstracted via GraphicsEngine, 2026-01)
+- **Testing**: Vitest (integration tests with FakeGraphicsEngine)
 
 ## Tile System
 

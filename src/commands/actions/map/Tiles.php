@@ -60,6 +60,13 @@ class Tiles extends JsonAction
             }
         }
 
-        return $this->success(['tiles' => $tiles]);
+        // Convert to dictionary format {"x_y": landing_id} for optimized payload size
+        $tilesDict = [];
+        foreach ($tiles as $tile) {
+            $key = $tile['x'] . '_' . $tile['y'];
+            $tilesDict[$key] = (int)$tile['landing_id'];
+        }
+
+        return $this->success(['tiles' => $tilesDict]);
     }
 }

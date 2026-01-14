@@ -206,13 +206,13 @@ export class BuildingState {
 
     /**
      * Load resources from entity_resource data
+     * NEW (2026-01): entityResources is already pre-filtered by entity_id
      */
     loadResources(entityResources) {
         this.resources.clear();
         for (const er of entityResources) {
-            if (er.entity_id === this.entityId) {
-                this.resources.set(parseInt(er.resource_id), parseInt(er.amount));
-            }
+            // No filter needed - already pre-filtered by entity_id
+            this.resources.set(parseInt(er.resource_id), parseInt(er.amount));
         }
     }
 
@@ -228,13 +228,14 @@ export class BuildingState {
 
     /**
      * Get data for saving resources
+     * NEW (2026-01): No entity_id field - will be dict key on backend
      */
     getResourceSaveData() {
         const data = [];
         for (const [resourceId, amount] of this.resources) {
             if (amount > 0) {
                 data.push({
-                    entity_id: this.entityId,
+                    // No entity_id - will be dict key
                     resource_id: resourceId,
                     amount: amount
                 });
@@ -245,12 +246,13 @@ export class BuildingState {
 
     /**
      * Get data for saving crafting state
+     * NEW (2026-01): No entity_id field - will be dict key on backend
      */
     getCraftingSaveData() {
         if (!this.craftingRecipeId) return null;
 
         return {
-            entity_id: this.entityId,
+            // No entity_id - will be dict key
             recipe_id: this.craftingRecipeId,
             ticks_remaining: this.craftingTicksRemaining
         };

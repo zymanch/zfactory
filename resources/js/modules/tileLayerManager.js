@@ -22,36 +22,39 @@ export class TileLayerManager {
     /**
      * Store tile data from server
      * Auto-insert island_edge tiles under landings with no tile below
-     * @param {Array} tiles - Array of tile objects
+     * NEW (2026-01): tilesDict is now a dictionary {"x_y": landing_id} instead of array
+     * @param {Object} tilesDict - Dictionary of tiles {x_y => landing_id}
      */
-    storeTileData(tiles) {
-        // First pass: store all tiles
-        for (const tile of tiles) {
-            const key = tileKey(tile.x, tile.y);
-            this.tileDataMap.set(key, tile.landing_id);
+    storeTileData(tilesDict) {
+        // First pass: store all tiles (tilesDict is already in format {"x_y": landing_id})
+        for (const [key, landingId] of Object.entries(tilesDict)) {
+            this.tileDataMap.set(key, parseInt(landingId));
         }
 
         // Second pass: auto-insert island_edge or ship_edge under landings with empty space below
         const edgesToInsert = [];
-        for (const tile of tiles) {
+        for (const [key, landingId] of Object.entries(tilesDict)) {
             // Skip sky, island_edge and ship_edge themselves
-            if (tile.landing_id === LANDING_SKY_ID ||
-                tile.landing_id === LANDING_ISLAND_EDGE_ID ||
-                tile.landing_id === LANDING_SHIP_EDGE_ID) {
+            if (landingId === LANDING_SKY_ID ||
+                landingId === LANDING_ISLAND_EDGE_ID ||
+                landingId === LANDING_SHIP_EDGE_ID) {
                 continue;
             }
 
+            // Parse x,y from key
+            const [x, y] = key.split('_').map(Number);
+
             // Check if there's no tile below this one
-            const belowKey = tileKey(tile.x, tile.y + 1);
+            const belowKey = tileKey(x, y + 1);
             const belowLandingId = this.tileDataMap.get(belowKey);
 
             // If below is empty or sky, insert appropriate edge
             if (belowLandingId === undefined || belowLandingId === LANDING_SKY_ID) {
                 // Use ship_edge for ship landings (id >= 11), island_edge for island landings
-                const edgeType = tile.landing_id >= SHIP_LANDINGS_START_ID
+                const edgeType = landingId >= SHIP_LANDINGS_START_ID
                     ? LANDING_SHIP_EDGE_ID
                     : LANDING_ISLAND_EDGE_ID;
-                edgesToInsert.push({ x: tile.x, y: tile.y + 1, edgeType });
+                edgesToInsert.push({ x, y: y + 1, edgeType });
             }
         }
 
@@ -63,19 +66,22 @@ export class TileLayerManager {
 
         // Third pass: auto-insert sky to the left of landings with empty space on the left
         const skyTilesToInsert = [];
-        for (const tile of tiles) {
+        for (const [key, landingId] of Object.entries(tilesDict)) {
             // Skip sky itself
-            if (tile.landing_id === LANDING_SKY_ID) {
+            if (landingId === LANDING_SKY_ID) {
                 continue;
             }
 
+            // Parse x,y from key
+            const [x, y] = key.split('_').map(Number);
+
             // Check if there's no tile to the left of this one
-            const leftKey = tileKey(tile.x - 1, tile.y);
+            const leftKey = tileKey(x - 1, y);
             const leftLandingId = this.tileDataMap.get(leftKey);
 
             // If left is empty, insert sky
             if (leftLandingId === undefined) {
-                skyTilesToInsert.push({ x: tile.x - 1, y: tile.y });
+                skyTilesToInsert.push({ x: x - 1, y });
             }
         }
 

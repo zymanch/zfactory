@@ -161,50 +161,6 @@ class Config extends JsonAction
         return $entityTypeRecipes;
     }
 
-    protected function getEntityResources($currentRegionId)
-    {
-        return $this->castNumericFieldsArray(
-            EntityResource::find()
-                ->alias('er')
-                ->innerJoin('entity e', 'e.entity_id = er.entity_id')
-                ->where(['er.position_px' => null])
-                ->andWhere(['e.region_id' => $currentRegionId])
-                ->select(['er.entity_id', 'er.resource_id', 'er.amount'])
-                ->asArray()
-                ->all(),
-            ['entity_id', 'resource_id', 'amount']
-        );
-    }
-
-    protected function getCraftingStates($currentRegionId)
-    {
-        return $this->castNumericFieldsArray(
-            EntityCrafting::find()
-                ->alias('ec')
-                ->innerJoin('entity e', 'e.entity_id = ec.entity_id')
-                ->where(['e.region_id' => $currentRegionId])
-                ->select(['ec.entity_id', 'ec.recipe_id', 'ec.ticks_remaining'])
-                ->asArray()
-                ->all(),
-            ['entity_id', 'recipe_id', 'ticks_remaining']
-        );
-    }
-
-    protected function getTransportStates($currentRegionId)
-    {
-        return $this->castNumericFieldsArray(
-            EntityResource::find()
-                ->alias('er')
-                ->innerJoin('entity e', 'e.entity_id = er.entity_id')
-                ->where(['not', ['er.position_px' => null]])
-                ->andWhere(['e.region_id' => $currentRegionId])
-                ->select(['er.entity_id', 'er.resource_id', 'er.amount', 'er.position_px', 'er.from_direction', 'er.status'])
-                ->asArray()
-                ->all(),
-            ['entity_id', 'resource_id', 'amount', 'position_px']
-        );
-    }
-
     protected function getDeposits($currentRegionId)
     {
         return $this->castNumericFieldsArray(
@@ -414,9 +370,7 @@ class Config extends JsonAction
             // УБРАЛИ: entityTypeRecipes (теперь в entityTypes)
             // УБРАЛИ: entityTypeCosts (теперь в entityTypes)
             'userResources' => $this->getUserResources(),
-            'entityResources' => $this->getEntityResources($currentRegionId),
-            'craftingStates' => $this->getCraftingStates($currentRegionId),
-            'transportStates' => $this->getTransportStates($currentRegionId),
+            // REMOVED (2026-01): entityResources, craftingStates, transportStates moved to /game/entities
             // УБРАЛИ: pipeSystems (перемещены в /game/entities)
             // УБРАЛИ: buildingRules (теперь в entityTypes)
             'region' => $this->getRegion($currentRegionId),

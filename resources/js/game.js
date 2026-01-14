@@ -55,20 +55,19 @@ class ZFactoryGame {
 
         // Initial state from config
         this.userResources = configData.userResources || {};
-        this.initialEntityResources = configData.entityResources || [];
-        this.initialCraftingStates = configData.craftingStates || [];
-        this.initialTransportStates = configData.transportStates || [];
+        // REMOVED (2026-01): initialEntityResources, initialCraftingStates, initialTransportStates
+        // These are now properties of entities in entitiesData
         this.initialCameraPosition = configData.cameraPosition || { x: 0, y: 0, zoom: 1 };
         this.initialDeposits = configData.deposits || [];
         this.region = configData.region || null;
         this.buildPanelData = configData.buildPanel || [];
 
-        // Instance data from entities
+        // Instance data from entities - now includes state as properties
         this.entitiesData = entitiesData.entities || [];
         this.pipeSystems = entitiesData.pipeSystems || {};
 
-        // Map tiles
-        this.tilesData = tilesData.tiles || [];
+        // Map tiles - now a dictionary {"x_y": landing_id}
+        this.tilesData = tilesData.tiles || {};
 
         // Runtime state
         this.zoom = this.initialCameraPosition.zoom || 1;
