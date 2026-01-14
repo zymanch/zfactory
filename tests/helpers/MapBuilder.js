@@ -411,6 +411,27 @@ export class MapBuilder {
                     requiresTarget: false
                 }
             };
+        } else if (entityTypeId === 250) {
+            // Mining drill
+            return {
+                entity_type_id: entityTypeId,
+                type: 'mining',  // Critical: must be 'mining' for BuildingState
+                name: typeName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                folder: typeName,
+                max_durability: 100,
+                width: 2,
+                height: 2,
+                power: config.power || 100,
+                costs: {},
+                recipes: recipeIds,  // Recipes with no inputs or deposit inputs
+                behavior: {
+                    behaviorClass: 'MiningBehavior',
+                    checksFog: true,
+                    checksLanding: true,
+                    checksCollision: true,
+                    requiresTarget: false
+                }
+            };
         } else {
             // Buildings (furnace, assembler, etc.)
             return {

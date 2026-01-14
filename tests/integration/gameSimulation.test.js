@@ -230,8 +230,8 @@ const testCases = [
     },
 
     {
-        name: '[SKIP] Production chain - Mine, transport, smelt',
-        skip: true,  // TODO: Needs mining + manipulator + furnace support
+        name: 'Production chain - Mine, transport, smelt',
+        skip: false,  // Mining drill works via recipes!
         map: [
             '1234##',
             '######',
@@ -239,19 +239,36 @@ const testCases = [
         legend: {
             '1': {
                 type: 'mining_drill',
-                resources: [{ id: 1, amount: 2 }] // Starts with 2 iron ore
+                power: 100,
+                resources: [{ id: 1, amount: 1 }], // Starts with 1 iron ore
+                recipes: [
+                    {
+                        // Mining recipe: no inputs, produces iron ore
+                        output: { resource: 'iron_ore', amount: 1 },
+                        ticks: 30,
+                        name: 'Mine Iron Ore'
+                    }
+                ]
             },
             '2': { type: 'manipulator_right' },
             '3': { type: 'conveyor_right' },
             '4': {
                 type: 'furnace',
-                recipe: 'iron_smelting'
+                power: 100,
+                recipes: [
+                    {
+                        input: { resource: 'iron_ore', amount: 1 },
+                        output: { resource: 'iron_plate', amount: 1 },
+                        ticks: 30,
+                        name: 'Iron Smelting'
+                    }
+                ]
             }
         },
-        ticks: 90,
+        ticks: 2400,  // Full cycle: mine (900) + manipulator (180) + conveyor (90) + manip (180) + craft (900)
         expectedState: {
             entityResources: {
-                4: { 2: 1 } // Should have at least 1 iron plate
+                4: { 2: 2 } // Furnace should have 2 iron plates (2 cycles completed)
             }
         }
     },
@@ -352,6 +369,43 @@ const testCases = [
                 6: { 5: 1 },  // Entity 6: resource 5 (from entity 8, symbol '5')
                 7: { 4: 1 },  // Entity 7: resource 4 (from entity 5, symbol '4')
                 8: { 3: 1 }   // Entity 8: resource 3 (from entity 3)
+            }
+        }
+    },
+
+    {
+        name: 'Multi-resource crafting - Iron Gear from 2 inputs',
+        skip: false,  // Test multi-input recipes
+        map: [
+            'A#',
+        ],
+        legend: {
+            // Assembler with both inputs, starts crafting immediately
+            'A': {
+                type: 'assembler',
+                power: 100,
+                recipes: [
+                    {
+                        inputs: [
+                            { resource: 'iron_plate', amount: 1 },
+                            { resource: 'copper_plate', amount: 1 }
+                        ],
+                        output: { resource: 'iron_gear', amount: 1 },
+                        ticks: 30,
+                        name: 'Iron Gear Wheel'
+                    }
+                ],
+                recipe: 0,  // Start crafting (inputs already consumed)
+                resources: []  // Empty (inputs consumed when crafting started)
+            }
+        },
+        ticks: 900,  // 30 logic ticks * 30 game ticks
+        expectedState: {
+            entityResources: {
+                1: { 11: 1 }  // Assembler should have 1 iron gear (output)
+            },
+            craftingStates: {
+                1: null  // Should not be crafting anymore
             }
         }
     },
