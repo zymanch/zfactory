@@ -620,19 +620,390 @@ describe('Production Rate Calculator', () => {
 });
 ```
 
+## Game Simulation Tests (Data Provider Pattern)
+
+### 🎯 Overview
+
+**Main test file**: `tests/integration/gameSimulation.test.js`
+
+Integration tests using **ASCII maps** to define game scenarios. This is the PRIMARY way to test complete game systems (conveyors, crafting, electricity, pipes).
+
+### 📝 Test Case Structure
+
+Each test case defines:
+1. **name** - Test description
+2. **map** - ASCII map (`#` = empty, symbols = entities)
+3. **legend** - Symbol to entity configuration mapping
+4. **recipes** - Optional embedded recipes (overrides defaults if needed)
+5. **ticks** - Number of game ticks to simulate
+6. **expectedState** - Expected state after simulation
+
+### 🛠️ Helper Classes
+
+#### MapBuilder
+Converts ASCII maps to game entities:
+```javascript
+import { MapBuilder } from '../helpers/MapBuilder.js';
+
+const state = MapBuilder.build(
+  ['###1##', '#122##', '#3345#'],
+  {
+    '1': { type: 'conveyor_down', resources: [{ id: 1, amount: 1 }] },
+    '2': { type: 'conveyor_left' },
+    '3': { type: 'conveyor_right' },
+    '4': { type: 'manipulator_right' },
+    '5': { type: 'furnace', recipe: 'iron_smelting' }
+  },
+  {
+    iron_smelting: {
+      inputs: [{ id: 1, amount: 1 }],
+      outputs: [{ id: 2, amount: 1 }],
+      ticks: 30
+    }
+  }
+);
+```
+
+#### GameSimulator
+Runs game ticks without rendering:
+```javascript
+import {
+    createGameInstance,
+    initializeManagers,
+    runSimulation,
+    assertEntityResources,
+    getEntityResources
+} from '../helpers/GameSimulator.js';
+
+// Create game
+const game = createGameInstance(initialState);
+
+// Initialize managers
+await initializeManagers(game);
+
+// Run simulation
+const finalState = runSimulation(game, 60);
+
+// Assert state
+assertEntityResources(finalState, 2, { 1: 1 }); // Entity 2 should have 1 iron ore
+```
+
+### 📋 Adding New Test Cases
+
+**Step 1: Add test case to testCases array** in `tests/integration/gameSimulation.test.js`:
+
+```javascript
+const testCases = [
+    // ... existing tests ...
+
+    {
+        name: 'Your test description',
+        map: [
+            '123#',
+            '####',
+        ],
+        legend: {
+            '1': {
+                type: 'conveyor_right',
+                resources: [{ id: 1, amount: 1 }] // Iron ore
+            },
+            '2': {
+                type: 'manipulator_right',
+                power: 10
+            },
+            '3': {
+                type: 'furnace',
+                recipe: 'iron_smelting'
+            }
+        },
+        ticks: 60,
+        expectedState: {
+            entityResources: {
+                3: { 2: 1 } // Furnace (entity 3) should have 1 iron plate (resource 2)
+            },
+            craftingStates: {
+                3: null // Should not be crafting anymore
+            }
+        }
+    }
+];
+```
+
+**Step 2: Run test**:
+```bash
+npm test gameSimulation
+```
+
+### 🗺️ Map Syntax
+
+**Empty cells**: `#` or space
+**Entities**: Any alphanumeric character (0-9, A-Z, a-z)
+
+**Example:**
+```javascript
+map: [
+    '###1##',  // Row 0: Entity 1 at x=3
+    '#122##',  // Row 1: Entity 2 at x=1, two entity 2s at x=2,3
+    '#3345#',  // Row 2: Entity 3 at x=1, two 3s, 4 at x=4, 5 at x=5
+]
+```
+
+Each entity is placed at `(x * 64, y * 64)` pixels (64 = grid size).
+
+### 🏗️ Legend Configuration
+
+**Basic entity**:
+```javascript
+'1': { type: 'conveyor_right' }
+```
+
+**Entity with initial resources**:
+```javascript
+'1': {
+    type: 'conveyor_right',
+    resources: [
+        { id: 1, amount: 1 },  // Iron ore
+        { id: 3, amount: 2 }   // Copper ore
+    ]
+}
+```
+
+**Building with recipe**:
+```javascript
+'F': {
+    type: 'furnace',
+    power: 100,
+    recipes: [1], // Available recipe IDs
+    recipe: 'iron_smelting' // Currently crafting
+}
+```
+
+**Entity with custom state**:
+```javascript
+'B': {
+    type: 'power_pole',
+    state: 'blueprint',
+    durability: 50,
+    construction_progress: 30
+}
+```
+
+### 📦 Available Entity Types
+
+**Conveyors** (100-130):
+- `conveyor`, `conveyor_right`, `conveyor_down`, `conveyor_left`, `conveyor_up`
+- `conveyor_dual`, `conveyor_dual_right`, `conveyor_dual_down`, `conveyor_dual_left`, `conveyor_dual_up`
+
+**Pipes** (131-141):
+- `pipe`, `pipe_right`, `pipe_down`, `pipe_left`, `pipe_up`
+
+**Manipulators** (700-703):
+- `manipulator`, `manipulator_right`, `manipulator_down`, `manipulator_left`, `manipulator_up`
+
+**Splitters** (800-811):
+- `splitter`, `splitter_right`, `splitter_down`, `splitter_left`, `splitter_up`
+
+**Buildings**:
+- `furnace`, `small_furnace` (101)
+- `assembler` (105)
+- `mining_drill` (102)
+
+**Electricity** (300-310):
+- `power_pole`, `power_pole_small` (300)
+- `power_pole_medium` (301)
+- `solar_panel` (305)
+- `accumulator` (306)
+
+### 🧪 Assertion Helpers
+
+**Assert entity has specific resources**:
+```javascript
+assertEntityResources(finalState, entityId, { resourceId: amount });
+
+// Example:
+assertEntityResources(finalState, 2, { 1: 1, 3: 2 });
+// Entity 2 should have 1 iron ore and 2 copper ore
+```
+
+**Assert entity is crafting**:
+```javascript
+assertEntityCrafting(finalState, entityId, recipeId);
+assertEntityCrafting(finalState, entityId, null); // Not crafting
+
+// Example:
+assertEntityCrafting(finalState, 5, 1); // Crafting recipe 1
+assertEntityCrafting(finalState, 5, null); // Not crafting
+```
+
+**Get entity resources as object**:
+```javascript
+const resources = getEntityResources(finalState, entityId);
+expect(resources[1]).toBe(1);
+expect(Object.keys(resources).length).toBe(2);
+```
+
+**Assert total resources**:
+```javascript
+expectedState: {
+    totalResources: { 1: 3 } // Total 3 iron ore across all entities
+}
+```
+
+### 📊 Custom Recipes
+
+If test needs custom recipes (different from default):
+
+```javascript
+{
+    name: 'Fast smelting test',
+    map: [...],
+    legend: {...},
+    recipes: {
+        fast_iron_smelting: {
+            recipe_id: 10,
+            name: 'Fast Iron Smelting',
+            inputs: [{ resource_id: 1, amount: 1 }],
+            outputs: [{ resource_id: 2, amount: 2 }], // 2x output
+            ticks: 15 // 2x faster
+        }
+    },
+    ticks: 30,
+    expectedState: {...}
+}
+```
+
+Then use `recipe: 'fast_iron_smelting'` in legend.
+
+### 🐛 Debugging Tests
+
+**Enable tick logging**:
+```javascript
+const finalState = runSimulation(game, ticks, {
+    logTicks: true // Logs every 10 ticks
+});
+```
+
+**Print game state**:
+```javascript
+import { printGameState } from '../helpers/GameSimulator.js';
+
+printGameState(finalState, game);
+// Prints all entities, resources, crafting states
+```
+
+**Custom tick callback**:
+```javascript
+const finalState = runSimulation(game, ticks, {
+    tickCallback: (tick, game) => {
+        if (tick === 30) {
+            console.log('At tick 30:', game.entityData);
+        }
+    }
+});
+```
+
+### ✅ Test Examples
+
+**Simple transport**:
+```javascript
+{
+    name: 'Iron ore moves from conveyor 1 to conveyor 2',
+    map: ['12#'],
+    legend: {
+        '1': { type: 'conveyor_right', resources: [{ id: 1, amount: 1 }] },
+        '2': { type: 'conveyor_right' }
+    },
+    ticks: 30,
+    expectedState: {
+        entityResources: { 2: { 1: 1 } }
+    }
+}
+```
+
+**Production chain**:
+```javascript
+{
+    name: 'Mine, transport, smelt - complete production',
+    map: [
+        '1234##',
+        '######'
+    ],
+    legend: {
+        '1': { type: 'mining_drill', resources: [{ id: 1, amount: 2 }] },
+        '2': { type: 'manipulator_right' },
+        '3': { type: 'conveyor_right' },
+        '4': { type: 'furnace', recipe: 'iron_smelting' }
+    },
+    ticks: 90,
+    expectedState: {
+        entityResources: { 4: { 2: 1 } } // Iron plate in furnace
+    }
+}
+```
+
+**Splitter distribution**:
+```javascript
+{
+    name: 'Splitter distributes 2 items to 2 outputs',
+    map: [
+        '#2#',
+        '1S3',
+        '#4#'
+    ],
+    legend: {
+        '1': { type: 'conveyor_right', resources: [{ id: 1, amount: 2 }] },
+        'S': { type: 'splitter_right' },
+        '2': { type: 'conveyor_down' },
+        '3': { type: 'conveyor_right' },
+        '4': { type: 'conveyor_down' }
+    },
+    ticks: 60,
+    expectedState: {
+        entityResources: {
+            2: { 1: 1 },
+            3: { 1: 1 }
+        }
+    }
+}
+```
+
+### 🎓 Best Practices
+
+1. **Keep maps small** - 3-5 entities per test for clarity
+2. **Test one behavior** - Each test should verify one game mechanic
+3. **Use descriptive names** - Explain what the test proves
+4. **Set realistic ticks** - Usually 30-90 ticks for most scenarios
+5. **Verify end state** - Check exact resources, not just "has resources"
+6. **Add comments** - Explain complex maps or expected behaviors
+7. **Test edge cases** - Empty belts, full storages, no power, etc.
+
+### 🔄 Workflow for Adding Tests
+
+1. **Identify scenario** - What game behavior to test?
+2. **Draw map on paper** - Visualize entity layout
+3. **Define legend** - What each symbol represents
+4. **Calculate ticks** - How many ticks for items to move/craft?
+5. **Add test case** - Insert into testCases array
+6. **Run test** - `npm test gameSimulation`
+7. **Debug if fails** - Use `logTicks: true` and `printGameState()`
+8. **Verify coverage** - Does it test what you intended?
+
 ## Integration Points
 
 ### Entity Architect
 - Tests for entity placement validation
 - Tests for entity behavior execution
+- Use gameSimulation.test.js for entity interaction tests
 
 ### Recipe Balancer
 - Tests for production rate calculations
 - Tests for resource flow simulations
+- Use gameSimulation.test.js for recipe chain tests
 
 ### Game Mechanic
 - Tests for mechanic system logic
 - Tests for network detection algorithms
+- Use gameSimulation.test.js for complete mechanic workflows
 
 ### PixiJS Renderer
 - Mock PIXI for unit tests

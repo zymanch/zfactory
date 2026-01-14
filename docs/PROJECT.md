@@ -972,6 +972,19 @@ php yii migrate
 # Generate AR models
 composer run ar
 
+# === Testing ===
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage
+npm run test:coverage
+
 # === Landing sprite generation ===
 # Generate AI sprites (requires WebUI running)
 php yii landing/generate-ai all      # All landings
