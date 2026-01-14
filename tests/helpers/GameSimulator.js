@@ -22,10 +22,11 @@ export function createGameInstance(initialState) {
         recipes: initialState.recipes
     });
 
-    // Convert entities array to Map (entity_id => entity)
+    // Convert entities array to Map (entity_${id} => entity)
+    // Using string keys like 'entity_3' to match game format
     game.entityData = new Map();
     for (const entity of initialState.entities) {
-        game.entityData.set(entity.entity_id, entity);
+        game.entityData.set(`entity_${entity.entity_id}`, entity);
     }
 
     // Store initial states for managers

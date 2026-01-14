@@ -157,7 +157,11 @@ export class ResourceTransportManager {
             const targetEntityId = this.spatialIndex.getAt(targetPos.x, targetPos.y);
 
             if (targetEntityId) {
-                state.targetEntityId = targetEntityId;
+                // Only set target if it's NOT a manipulator
+                // Manipulators pick from transporters (sourceEntityId), not receive from them (targetEntityId)
+                if (!this.manipulators.has(targetEntityId)) {
+                    state.targetEntityId = targetEntityId;
+                }
             }
         }
 

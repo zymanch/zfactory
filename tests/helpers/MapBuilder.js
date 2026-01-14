@@ -84,8 +84,14 @@ export class MapBuilder {
                 state.entities.push(entity);
 
                 // Add entity type if not exists
+                // Store resolved recipe IDs for this symbol
+                let symbolRecipeIds = null;
                 if (!state.entityTypes[entity.entity_type_id]) {
-                    state.entityTypes[entity.entity_type_id] = this.getEntityType(config);
+                    const entityTypeData = this.getEntityType(config, state);
+                    state.entityTypes[entity.entity_type_id] = entityTypeData;
+                    symbolRecipeIds = entityTypeData.recipes;
+                } else {
+                    symbolRecipeIds = state.entityTypes[entity.entity_type_id].recipes;
                 }
 
                 // Add entity resources if specified
@@ -118,10 +124,23 @@ export class MapBuilder {
                 }
 
                 // Add crafting state if recipe specified
-                if (config.recipe) {
-                    // Handle both string names ('iron_smelting') and numeric IDs (1)
+                if (config.recipe !== undefined && config.recipe !== null) {
                     let recipeId = config.recipe;
-                    if (typeof recipeId === 'string') {
+
+                    // Handle inline recipe object
+                    if (typeof recipeId === 'object') {
+                        recipeId = this.addInlineRecipe(recipeId, state);
+                    }
+                    // Handle numeric index (0 = first recipe in entity's recipes array)
+                    else if (typeof recipeId === 'number' && recipeId < 100 && symbolRecipeIds) {
+                        if (recipeId < symbolRecipeIds.length) {
+                            recipeId = symbolRecipeIds[recipeId];
+                        } else {
+                            throw new Error(`Recipe index ${recipeId} out of bounds (only ${symbolRecipeIds.length} recipes) for entity at (${x}, ${y})`);
+                        }
+                    }
+                    // Handle string names ('iron_smelting')
+                    else if (typeof recipeId === 'string') {
                         recipeId = state.recipes[config.recipe];
                         if (typeof recipeId !== 'number') {
                             throw new Error(`Recipe "${config.recipe}" not found for entity at (${x}, ${y})`);
@@ -246,11 +265,27 @@ export class MapBuilder {
      * Get entity type definition
      *
      * @param {Object} config - Entity configuration
+     * @param {Object} state - Game state (for adding inline recipes)
      * @returns {Object} Entity type data
      */
-    static getEntityType(config) {
+    static getEntityType(config, state) {
         const typeName = config.type;
         const entityTypeId = this.getEntityTypeId(typeName);
+
+        // Process inline recipes (convert to IDs)
+        let recipeIds = [];
+        if (config.recipes) {
+            for (const recipeConfig of config.recipes) {
+                if (typeof recipeConfig === 'number') {
+                    // Already an ID
+                    recipeIds.push(recipeConfig);
+                } else if (typeof recipeConfig === 'object') {
+                    // Inline recipe - convert to game format and add to state
+                    const recipeId = this.addInlineRecipe(recipeConfig, state);
+                    recipeIds.push(recipeId);
+                }
+            }
+        }
 
         // Define entity types based on ID ranges
         if (entityTypeId >= 100 && entityTypeId <= 130) {
@@ -303,15 +338,21 @@ export class MapBuilder {
             };
         } else if (entityTypeId >= 700 && entityTypeId <= 703) {
             // Manipulators
+            // Extract orientation from type name (e.g., 'manipulator_right' -> 'right')
+            const orientation = typeName.includes('_')
+                ? typeName.split('_').pop()
+                : 'right';
+
             return {
                 entity_type_id: entityTypeId,
                 type: 'manipulator',
                 name: typeName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
                 folder: typeName,
+                orientation: orientation,  // Critical for ManipulatorState
                 max_durability: 100,
                 width: 1,
                 height: 1,
-                power: 10,
+                power: 100,  // Standard speed: power=100 for full swing in 30 frames
                 costs: {},
                 recipes: [],
                 behavior: {
@@ -324,11 +365,17 @@ export class MapBuilder {
             };
         } else if (entityTypeId >= 800 && entityTypeId <= 811) {
             // Splitters
+            // Extract orientation from type name (e.g., 'splitter_right' -> 'right')
+            const orientation = typeName.includes('_')
+                ? typeName.split('_').pop()
+                : 'right';
+
             return {
                 entity_type_id: entityTypeId,
                 type: 'splitter',
                 name: typeName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
                 folder: typeName,
+                orientation: orientation,  // Critical for SplitterState
                 max_durability: 100,
                 width: 1,
                 height: 1,
@@ -376,7 +423,7 @@ export class MapBuilder {
                 height: 2,
                 power: config.power || 100,
                 costs: {},
-                recipes: config.recipes || [],
+                recipes: recipeIds,
                 behavior: {
                     behaviorClass: 'CraftingBehavior',
                     checksFog: true,
@@ -386,6 +433,87 @@ export class MapBuilder {
                 }
             };
         }
+    }
+
+    /**
+     * Add inline recipe to state
+     *
+     * @param {Object} recipeConfig - Inline recipe config
+     * @param {Object} state - Game state
+     * @returns {number} Recipe ID
+     *
+     * @example
+     * recipeConfig = {
+     *   input: { resource: 'iron_ore', amount: 1 },
+     *   output: { resource: 'iron_plate', amount: 1 },
+     *   ticks: 30,
+     *   name: 'Iron Smelting'  // optional
+     * }
+     * // OR multiple inputs:
+     * recipeConfig = {
+     *   inputs: [
+     *     { resource: 'iron_ore', amount: 2 },
+     *     { resource: 'copper_ore', amount: 1 }
+     *   ],
+     *   output: { resource: 'steel', amount: 1 },
+     *   ticks: 60
+     * }
+     */
+    static addInlineRecipe(recipeConfig, state) {
+        // Generate new recipe ID (starting from 1000 to avoid conflicts)
+        const recipeId = 1000 + Object.keys(state.recipes).filter(k => parseInt(k) >= 1000).length;
+
+        // Resolve resource names to IDs
+        const resolveResource = (resourceName) => {
+            // If already a number, return as-is
+            if (typeof resourceName === 'number') return resourceName;
+
+            // Look up by name
+            for (const [id, resource] of Object.entries(state.resources)) {
+                if (resource.name.toLowerCase().replace(/ /g, '_') === resourceName.toLowerCase().replace(/ /g, '_')) {
+                    return parseInt(id);
+                }
+            }
+            throw new Error(`Resource "${resourceName}" not found in resources`);
+        };
+
+        // Handle both single input and multiple inputs
+        let inputs = [];
+        if (recipeConfig.input) {
+            inputs = [recipeConfig.input];
+        } else if (recipeConfig.inputs) {
+            inputs = recipeConfig.inputs;
+        }
+
+        // Convert to game format
+        const recipe = {
+            recipe_id: recipeId,
+            name: recipeConfig.name || `Recipe ${recipeId}`,
+            ticks: recipeConfig.ticks || 30
+        };
+
+        // Add inputs
+        if (inputs[0]) {
+            recipe.input1_resource_id = resolveResource(inputs[0].resource);
+            recipe.input1_amount = inputs[0].amount;
+        }
+        if (inputs[1]) {
+            recipe.input2_resource_id = resolveResource(inputs[1].resource);
+            recipe.input2_amount = inputs[1].amount;
+        }
+        if (inputs[2]) {
+            recipe.input3_resource_id = resolveResource(inputs[2].resource);
+            recipe.input3_amount = inputs[2].amount;
+        }
+
+        // Add output
+        recipe.output_resource_id = resolveResource(recipeConfig.output.resource);
+        recipe.output_amount = recipeConfig.output.amount;
+
+        // Add to state
+        state.recipes[recipeId] = recipe;
+
+        return recipeId;
     }
 
     /**

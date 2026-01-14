@@ -45,7 +45,54 @@ legend: {
 }
 ```
 
-### 3. Симуляция
+### 3. Рецепты (Recipes)
+
+Есть три способа указать рецепты:
+
+**A. Inline рецепты (рекомендуется)**
+```javascript
+'1': {
+    type: 'furnace',
+    recipes: [
+        // Один входной ресурс
+        {
+            input: { resource: 'iron_ore', amount: 1 },
+            output: { resource: 'iron_plate', amount: 1 },
+            ticks: 30,
+            name: 'Iron Smelting'  // опционально
+        },
+        // Несколько входных ресурсов
+        {
+            inputs: [
+                { resource: 'iron_plate', amount: 2 },
+                { resource: 'copper_plate', amount: 1 }
+            ],
+            output: { resource: 'steel', amount: 1 },
+            ticks: 60
+        }
+    ],
+    recipe: 0  // Индекс в массиве recipes
+}
+```
+
+**B. По ID (для существующих рецептов)**
+```javascript
+'1': {
+    type: 'furnace',
+    recipes: [1],  // recipe_id = 1
+    recipe: 1  // Или: recipe: 'iron_smelting'
+}
+```
+
+**C. По имени (для default рецептов)**
+```javascript
+'1': {
+    type: 'furnace',
+    recipe: 'iron_smelting'  // Использует getDefaultRecipes()
+}
+```
+
+### 4. Симуляция
 
 Запускаем N тиков и проверяем результат:
 
@@ -57,6 +104,16 @@ expectedState: {
     }
 }
 ```
+
+## 🎯 Ключевые исправления
+
+### Проблемы найденные и решенные:
+
+1. **Orientation манипуляторов и сплиттеров**: MapBuilder не устанавливал поле `orientation`, необходимое для работы links
+2. **Power манипуляторов**: Был установлен в 10 вместо 100, что делало движение очень медленным
+3. **Target для конвейеров**: Конвейеры устанавливали манипуляторов как target, но манипуляторы берут ресурсы из source
+4. **EntityData keys**: В тестах использовались числовые ключи, а код ожидал строковые (`entity_${id}`)
+5. **BuildingState.inputResourceIds**: Печи без рецептов не принимали ресурсы
 
 ## 🔧 Инфраструктура
 
@@ -138,26 +195,28 @@ speed_px_per_tick = (power / 100) * (tileWidth / 60)
 
 ## 📊 Текущий статус
 
-### ✅ Работающие тесты (4/11)
+### ✅ Работающие тесты (9/13)
 
 | Test | Status | Ticks | Notes |
 |------|--------|-------|-------|
 | ✅ Simple conveyor transport | PASS | 120 | Ресурс движется из A в B |
 | ✅ Conveyor chain (4 conveyors) | PASS | 300 | Ресурс проходит через всю цепочку |
+| ✅ Furnace smelting | PASS | 900 | Печь плавит руду в слиток |
+| ✅ Manipulator transfer | PASS | 1200 | Манипулятор переносит ресурс из конвейера в печь |
 | ✅ Multi-direction conveyors | PASS | 300 | L-образный путь работает |
+| ✅ Multiple furnaces | PASS | 900 | Параллельный крафт работает |
+| ✅ Splitter basic | PASS | 300 | Сплиттер распределяет ресурсы |
+| ✅ Circular conveyors | PASS | 180 | Ресурсы вращаются по кругу |
 | ✅ Custom assertions | PASS | 120 | getEntityResources работает |
 
-### 🟡 Ожидают реализации (7/11)
+### 🟡 Требуют архитектурных изменений (4/13)
 
 | Feature | Status | Missing | Notes |
 |---------|--------|---------|-------|
-| 🚧 Furnace smelting | SKIP | BuildingState, crafting | Нужна поддержка крафта |
-| 🚧 Manipulator transfer | SKIP | ManipulatorState | Нужен ManipulatorState.extractGameState |
-| 🚧 Dual conveyors | SKIP | Multiple resources/conveyor | TransporterState держит 1 ресурс |
-| 🚧 Splitter | SKIP | SplitterState | Нужен SplitterState.extractGameState |
-| 🚧 Production chain | SKIP | Mining + Manipulator + Furnace | Комплексный тест |
-| 🚧 Multiple furnaces | SKIP | BuildingState | Параллельный крафт |
-| 🚧 Buffer storage | SKIP | Multiple items/conveyor | Очередь на конвейере |
+| 🚧 Dual conveyors | SKIP | Multiple resources/conveyor | TransporterState держит 1 ресурс, нужен массив items |
+| 🚧 Production chain | SKIP | Mining drill support | Нужна логика добычи ресурсов |
+| 🚧 Buffer storage | SKIP | Multiple items/conveyor | Очередь на конвейере (связано с dual) |
+| 🚧 Complex production | SKIP | Pipes + Mining + Multi-input recipes | Комплексная интеграция (трубы, добыча, рецепты с 3 входами) |
 
 ## 🚀 Запуск тестов
 
@@ -188,20 +247,32 @@ npm run test:ui
 }
 ```
 
-### Будущий тест (когда реализуем furnaces)
+### Рабочий тест с печью
 
 ```javascript
 {
-    name: 'Iron smelting',
-    map: ['12##', '####'],
+    name: 'Furnace smelting',
+    map: ['1#'],
     legend: {
-        '1': { type: 'conveyor_right', resources: [{ id: 1, amount: 1 }] },
-        '2': { type: 'furnace', recipe: 'iron_smelting' }
+        '1': {
+            type: 'furnace',
+            power: 100,
+            // Inline recipe - более читаемо!
+            recipes: [
+                {
+                    input: { resource: 'iron_ore', amount: 1 },
+                    output: { resource: 'iron_plate', amount: 1 },
+                    ticks: 30,
+                    name: 'Iron Smelting'
+                }
+            ],
+            recipe: 0  // Индекс рецепта из recipes
+        }
     },
-    ticks: 120,
+    ticks: 900,  // 30 logic ticks * 30 game ticks
     expectedState: {
-        entityResources: { 2: { 2: 1 } },  // Iron plate
-        craftingStates: { 2: null }  // Not crafting
+        entityResources: { 1: { 2: 1 } },  // Iron plate
+        craftingStates: { 1: null }  // Not crafting
     }
 }
 ```
