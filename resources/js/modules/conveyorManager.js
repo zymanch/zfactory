@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js';
-
 /**
  * ConveyorManager - Handles conveyor belt animations and connections
  *
@@ -35,6 +33,14 @@ export class ConveyorManager {
         this.ANIMATION_FRAMES = 8;
         this.FRAME_DURATION = 100; // milliseconds
         this.FRAME_RATE = 8; // game ticks per frame update
+
+        // Map internal orientation names to manifest keys
+        this.orientationMapping = {
+            'conveyor': 'right',
+            'conveyor_up': 'up',
+            'conveyor_down': 'down',
+            'conveyor_left': 'left'
+        };
     }
 
     /**
@@ -50,15 +56,16 @@ export class ConveyorManager {
             this.atlases[orientation] = {};
 
             for (const state of states) {
-                const url = this.game.assetUrl(
-                    `${this.game.config.tilesPath}entities/conveyor/${orientation}/${state}_atlas.png`
-                );
+                // Map internal orientation to manifest key
+                const manifestOrientation = this.orientationMapping[orientation];
+                const textureKey = `conveyor_${state}_${manifestOrientation}`;
 
-                try {
-                    this.atlases[orientation][state] = await PIXI.Assets.load(url);
-                    console.log(`Loaded: ${orientation}/${state}_atlas.png`);
-                } catch (e) {
-                    console.error(`Failed to load conveyor atlas: ${url}`, e);
+                const texture = this.game.graphics.getTexture(textureKey);
+                if (texture) {
+                    this.atlases[orientation][state] = texture;
+                    console.log(`Loaded: ${textureKey}`);
+                } else {
+                    console.warn(`Texture not found: ${textureKey}`);
                 }
             }
         }
@@ -220,10 +227,14 @@ export class ConveyorManager {
         const x = variant * this.TILE_WIDTH;
         const y = frameIndex * this.TILE_HEIGHT;
 
-        return new PIXI.Texture({
-            source: atlas.source,
-            frame: new PIXI.Rectangle(x, y, this.TILE_WIDTH, this.TILE_HEIGHT)
-        });
+        // Map internal orientation to manifest key for createTextureFromAtlas
+        const manifestOrientation = this.orientationMapping[orientation];
+        const atlasKey = `conveyor_${state}_${manifestOrientation}`;
+
+        return this.game.graphics.createTextureFromAtlas(
+            atlasKey,
+            this.game.graphics.createRectangle(x, y, this.TILE_WIDTH, this.TILE_HEIGHT)
+        );
     }
 
     /**

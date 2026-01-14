@@ -33,50 +33,64 @@ import { getCSRFToken } from './modules/utils.js';
 
 /**
  * ZFactory Game Engine
- * Browser automation game with PixiJS rendering
+ * Browser automation game with graphics abstraction
+ *
+ * NEW ARCHITECTURE:
+ * - All data loaded via GameLoader (no Ajax in game)
+ * - All graphics via GraphicsEngine (no direct PixiJS)
+ * - Clean separation: data → graphics → logic
  */
 class ZFactoryGame {
-    constructor(configUrl) {
-        this.configUrl = configUrl;
-        this.config = {};
+    constructor(configData, entitiesData, tilesData, graphics) {
+        // Injected dependencies
+        this.graphics = graphics;
 
-        this.zoom = 1;
-        this.textures = {};
-        this.landingTypes = {};
-        this.entityTypes = {};
-        this.depositTypes = {};
-        this.resources = {};
-        this.recipes = {};
-        this.userResources = {};
+        // Reference data from config
+        this.landingTypes = configData.landing || {};
+        this.entityTypes = configData.entityTypes || {};
+        this.depositTypes = configData.depositTypes || {};
+        this.resources = configData.resources || {};
+        this.recipes = configData.recipes || {};
+        this.config = configData.config || {};
 
-        // Entity management
+        // Initial state from config
+        this.userResources = configData.userResources || {};
+        this.initialEntityResources = configData.entityResources || [];
+        this.initialCraftingStates = configData.craftingStates || [];
+        this.initialTransportStates = configData.transportStates || [];
+        this.initialCameraPosition = configData.cameraPosition || { x: 0, y: 0, zoom: 1 };
+        this.initialDeposits = configData.deposits || [];
+        this.region = configData.region || null;
+        this.buildPanelData = configData.buildPanel || [];
+
+        // Instance data from entities
+        this.entitiesData = entitiesData.entities || [];
+        this.pipeSystems = entitiesData.pipeSystems || {};
+
+        // Map tiles
+        this.tilesData = tilesData.tiles || [];
+
+        // Runtime state
+        this.zoom = this.initialCameraPosition.zoom || 1;
         this.loadedEntities = new Map();
         this.entityData = new Map();
         this.hoveredEntity = null;
-
-        // State flags
         this.needsReload = false;
         this.lastReloadTime = 0;
-        this.tilesLoaded = false;
-        this.depositsLoaded = false;
-        this.entitiesLoaded = false;
-
-        // FPS tracking
         this.lastFpsTime = 0;
         this.frameCount = 0;
 
-        // Modules (initialized after config load)
+        // Modules (initialized in initModules())
         this.camera = null;
         this.input = null;
-
-        // UI modules
         this.buildPanel = null;
         this.resourcePanel = null;
         this.cameraInfo = null;
         this.controlsHint = null;
-
         this.buildingWindow = null;
         this.buildMode = null;
+        this.normalMode = null;
+        this.deleteMode = null;
         this.fogOfWar = null;
         this.tileManager = null;
         this.depositManager = null;
@@ -95,30 +109,47 @@ class ZFactoryGame {
         this.electricityManager = null;
         this.electrificationLayer = null;
         this.noPowerIndicator = null;
+        this.constructionManager = null;
+
+        // Game data structure (for managers)
+        this.gameData = {
+            landings: this.landingTypes,
+            entityTypes: this.entityTypes,
+            region: this.region
+        };
+
+        // Legacy compatibility - managers may access these
+        // TODO: Remove after all managers migrated to GraphicsEngine
+        this.textures = {};  // Will be removed after migration
+        this.app = graphics ? graphics.app : null;
     }
 
     /**
      * Initialize game
+     * Data and textures are already loaded by bootstrap
      */
     async init() {
-        console.log('[Game] 1/9 Loading config...');
-        await this.loadConfig();
-        console.log('[Game] 2/9 Initializing modules...');
+        console.log('[Game] 1/7 Initializing modules...');
         this.initModules();
-        console.log('[Game] 3/9 Initializing PIXI...');
-        await this.initPixi();
-        console.log('[Game] 4/9 Initializing layers...');
+
+        console.log('[Game] 2/7 Initializing layers...');
         this.initLayers();
-        console.log('[Game] 5/9 Initializing camera...');
+
+        console.log('[Game] 3/7 Initializing camera...');
         this.initCamera();
-        console.log('[Game] 6/9 Loading textures...');
-        await this.loadTextures();
-        console.log('[Game] 7/9 Post-init modules...');
+
+        console.log('[Game] 4/7 Post-init modules...');
         await this.initModulesPost();
-        console.log('[Game] 8/9 Loading viewport...');
-        await this.loadViewport();
-        console.log('[Game] 9/9 Starting game loop...');
+
+        console.log('[Game] 5/7 Loading map tiles...');
+        this.loadMapTiles();
+
+        console.log('[Game] 6/7 Loading entities...');
+        this.loadEntities();
+
+        console.log('[Game] 7/7 Starting game loop...');
         this.startGameLoop();
+
         console.log('[Game] Init complete!');
     }
 
@@ -192,22 +223,16 @@ class ZFactoryGame {
      * Initialize render layers
      */
     initLayers() {
-        this.worldContainer = new PIXI.Container();
-        this.worldContainer.sortableChildren = true;  // Enable z-index sorting for all layers
-
-        this.landingLayer = new PIXI.Container();
-        this.entityLayer = new PIXI.Container();
+        // Create containers via GraphicsEngine (no direct PIXI usage)
+        this.worldContainer = this.graphics.createContainer({ sortableChildren: true });
+        this.landingLayer = this.graphics.createContainer({ zIndex: 1, sortableChildren: true });
+        this.entityLayer = this.graphics.createContainer({ zIndex: 2, eventMode: 'static', sortableChildren: true });
 
         this.worldContainer.addChild(this.landingLayer);
         this.worldContainer.addChild(this.entityLayer);
-        this.app.stage.addChild(this.worldContainer);
 
-        this.landingLayer.sortableChildren = true;
-        this.landingLayer.zIndex = 1;
-
-        this.entityLayer.sortableChildren = true;
-        this.entityLayer.eventMode = 'static';
-        this.entityLayer.zIndex = 2;
+        const stage = this.graphics.getStage();
+        stage.addChild(this.worldContainer);
 
         // depositLayer will be added by depositManager.init() with z-index 1.6
     }
@@ -501,47 +526,21 @@ class ZFactoryGame {
     }
 
     /**
-     * Load map tiles and entities for current viewport
+     * Update viewport-dependent rendering (electrification, fog, visibility)
+     * Called when camera moves or eye entity is deleted
      */
-    async loadViewport() {
-        const { tileWidth, tileHeight } = this.config;
-
-        if (!this.tilesLoaded) {
-            await this.loadMapTiles();
-            this.tilesLoaded = true;
-
-            // Recalculate fog of war visibility after map is loaded
-            // (tileDataMap must be populated before fog calculation)
-            this.fogOfWar.recalculateVisibility();
-        }
-
-        // Load deposits after tiles (deposits need to be above landing layer)
-        if (!this.depositsLoaded) {
-            this.depositManager.loadDeposits(this.initialDeposits);
-            this.depositsLoaded = true;
-        }
-
-        if (!this.entitiesLoaded && this.config.entitiesUrl) {
-            await this.loadAllEntities();
-            this.entitiesLoaded = true;
-
-            // Initialize resource transport after entities are loaded
-            this.resourceTransport.init();
-
-            // Initialize resource renderer (visual layer for resources on conveyors/manipulators)
-            await this.resourceRenderer.init();
-        }
-
-        // Render electrification layer when viewport changes (or on initial load)
-        if (this.electrificationLayer && this.entitiesLoaded) {
+    updateViewport() {
+        // Render electrification layer when viewport changes
+        if (this.electrificationLayer) {
             this.electrificationLayer.render();
         }
 
         const viewport = this.calculateViewport();
 
-        // Sky tiles removed - using solid background color + cloud system
+        // Update entity visibility based on viewport
         this.updateEntityVisibility();
 
+        // Re-render fog of war
         if (this.fogOfWar) {
             this.fogOfWar.renderFog(viewport.startX, viewport.startY, viewport.width, viewport.height);
         }
@@ -563,39 +562,41 @@ class ZFactoryGame {
     }
 
     /**
-     * Load all map tiles from server
+     * Load map tiles (data already loaded by GameLoader)
      */
-    async loadMapTiles() {
-        const response = await fetch(this.config.mapUrl);
-        const data = await response.json();
-
-        if (data.result === 'ok') {
-            this.tileManager.storeTileData(data.tiles);
-            this.tileManager.renderTiles(data.tiles);
+    loadMapTiles() {
+        if (this.tilesData && this.tilesData.length > 0) {
+            this.tileManager.storeTileData(this.tilesData);
+            this.tileManager.renderTiles(this.tilesData);
+            console.log(`[Game] Loaded ${this.tilesData.length} tiles`);
         }
     }
 
     /**
-     * Load all entities from server
+     * Load entities (data already loaded by GameLoader)
      */
-    async loadAllEntities() {
-        const response = await fetch(this.config.entitiesUrl);
-        const data = await response.json();
-
-        if (data.result === 'ok') {
-            // Store pipeSystems and initialize pipe system manager
-            if (data.pipeSystems) {
-                this.pipeSystemManager.loadSystems(data.pipeSystems);
-            }
-
-            // Filter eye entities from entities (entity type with type='eye')
-            this.initialEyeEntities = data.entities.filter(e => {
-                const type = this.entityTypes[e.entity_type_id];
-                return type && type.type === 'eye';
-            });
-
-            this.renderEntities(data.entities);
+    loadEntities() {
+        // Load pipe systems
+        if (this.pipeSystems && Object.keys(this.pipeSystems).length > 0) {
+            this.pipeSystemManager.loadSystems(this.pipeSystems);
         }
+
+        // Filter eye entities (entities with type='eye')
+        this.initialEyeEntities = this.entitiesData.filter(e => {
+            const type = this.entityTypes[e.entity_type_id];
+            return type && type.type === 'eye';
+        });
+
+        // Render all entities
+        this.renderEntities(this.entitiesData);
+
+        // Initialize resource transport after entities are loaded
+        this.resourceTransport.init();
+
+        // Initialize resource renderer (visual layer for resources on conveyors/manipulators)
+        this.resourceRenderer.init();
+
+        console.log(`[Game] Loaded ${this.entitiesData.length} entities, ${Object.keys(this.pipeSystems).length} pipe systems`);
     }
 
     /**
@@ -876,7 +877,7 @@ class ZFactoryGame {
                     const entityType = this.entityTypes[entity.entity_type_id];
                     if (entityType && entityType.type === 'eye') {
                         this.fogOfWar.removeEyeEntity(entity.entity_id);
-                        this.loadViewport();
+                        this.updateViewport();
                     }
                 }
 
@@ -913,7 +914,7 @@ class ZFactoryGame {
 
             const now = performance.now();
             if (this.needsReload && now - this.lastReloadTime > VIEWPORT_RELOAD_INTERVAL) {
-                this.loadViewport();
+                this.updateViewport();
                 this.needsReload = false;
                 this.lastReloadTime = now;
             }

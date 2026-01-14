@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js';
-
 /**
  * Renders pipes with fluid visualization
  */
@@ -12,28 +10,27 @@ export class PipeRenderer {
     /**
      * Create pipe container with sprite + fluid visualization
      * @param {Object} entity - Entity data
-     * @param {PIXI.Texture} texture - Pipe texture
+     * @param {Texture} texture - Pipe texture
      * @param {boolean} isVisible - Visibility flag
-     * @returns {PIXI.Container}
+     * @returns {Container}
      */
     createPipeContainer(entity, texture, isVisible) {
-        const container = new PIXI.Container();
-
-        // Set position and z-index
         const { tileWidth, tileHeight } = this.game.config;
         const pixelX = parseInt(entity.x) * tileWidth;
         const pixelY = parseInt(entity.y) * tileHeight;
 
-        container.x = pixelX;
-        container.y = pixelY;
-        container.zIndex = pixelY;
-        container.visible = isVisible;
-        container.eventMode = isVisible ? 'static' : 'none';
-        container.cursor = isVisible ? 'pointer' : 'default';
+        const container = this.game.graphics.createContainer({
+            x: pixelX,
+            y: pixelY,
+            zIndex: pixelY,
+            visible: isVisible,
+            eventMode: isVisible ? 'static' : 'none',
+            cursor: isVisible ? 'pointer' : 'default'
+        });
         container.entityKey = `entity_${entity.entity_id}`;
 
         // Add main pipe sprite
-        const pipeSprite = new PIXI.Sprite(texture);
+        const pipeSprite = this.game.graphics.createSprite(texture);
         container.addChild(pipeSprite);
 
         // Add fluid sprite (empty or resource icon)
@@ -54,13 +51,13 @@ export class PipeRenderer {
     /**
      * Create fluid visualization (empty black square or resource icon)
      * @param {Object} entity
-     * @returns {PIXI.Graphics|PIXI.Sprite}
+     * @returns {Graphics|Sprite}
      */
     createFluidSprite(entity) {
         // Safety check for pipeSystemManager
         if (!this.pipeSystemManager) {
             // Fallback: just show empty black square
-            const graphics = new PIXI.Graphics();
+            const graphics = this.game.graphics.createGraphics();
             graphics.beginFill(0x000000, 1.0);
             graphics.drawRect(27, 27, 10, 10);
             graphics.endFill();
@@ -68,24 +65,25 @@ export class PipeRenderer {
         }
 
         const system = this.pipeSystemManager.getSystemForEntity(entity.entity_id);
-        const v = this.game.config.assetVersion || 1;
 
         if (system && system.resource_id && system.current_amount > 0) {
-            // Has fluid - show resource icon
-            const resource = this.game.resources[String(system.resource_id)];
-            if (resource && resource.icon_url) {
-                const iconUrl = `/assets/tiles/resources/${resource.icon_url}?v=${v}`;
-                const sprite = new PIXI.Sprite(PIXI.Texture.from(iconUrl));
-                sprite.x = 27;
-                sprite.y = 27;
-                sprite.width = 10;
-                sprite.height = 10;
+            // Has fluid - show resource icon from loaded textures
+            const textureKey = `resource_${system.resource_id}`;
+            const texture = this.game.graphics.getTexture(textureKey);
+
+            if (texture) {
+                const sprite = this.game.graphics.createSprite(texture, {
+                    x: 27,
+                    y: 27,
+                    width: 10,
+                    height: 10
+                });
                 return sprite;
             }
         }
 
         // Empty pipe - draw black square using Graphics
-        const graphics = new PIXI.Graphics();
+        const graphics = this.game.graphics.createGraphics();
         graphics.beginFill(0x000000, 1.0);
         graphics.drawRect(27, 27, 10, 10);
         graphics.endFill();
@@ -95,10 +93,10 @@ export class PipeRenderer {
     /**
      * Create fluid visualization graphics (colored square in transparent window)
      * @param {number} resourceId
-     * @returns {PIXI.Graphics}
+     * @returns {Graphics}
      */
     createFluidGraphics(resourceId) {
-        const graphics = new PIXI.Graphics();
+        const graphics = this.game.graphics.createGraphics();
 
         // Get color from pipeSystemManager if available, otherwise default
         const color = this.pipeSystemManager
@@ -117,7 +115,7 @@ export class PipeRenderer {
 
     /**
      * Update existing pipe entity with new fluid state
-     * @param {PIXI.Container} container
+     * @param {Container} container
      * @param {Object} entity
      */
     updateFluidVisualization(container, entity) {
@@ -126,8 +124,8 @@ export class PipeRenderer {
             return;
         }
 
-        // Remove old fluid graphics
-        const oldFluid = container.children.find(child => child instanceof PIXI.Graphics);
+        // Remove old fluid graphics (child[1], as pipe sprite is child[0])
+        const oldFluid = container.children.find(child => child.clear !== undefined);
         if (oldFluid) {
             container.removeChild(oldFluid);
         }

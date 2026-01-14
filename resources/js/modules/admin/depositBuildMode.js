@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js';
 import { getCSRFToken } from '../utils.js';
 import { GameModeBase } from '../modes/gameModeBase.js';
 
@@ -63,8 +62,9 @@ export class DepositBuildMode extends GameModeBase {
             return;
         }
 
-        this.previewSprite = new PIXI.Sprite(texture);
-        this.previewSprite.alpha = 0.5;
+        this.previewSprite = this.game.graphics.createSprite(texture, {
+            alpha: 0.5
+        });
         this.previewSprite.tint = 0x00ff00; // Green by default
 
         // Add to deposit layer

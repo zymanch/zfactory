@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js';
-
 /**
  * Manages "no power" indicators on buildings without electricity
  * Shows warning sprite on entities that need electricity but don't have it
@@ -18,9 +16,8 @@ export class NoPowerIndicator {
      * Initialize manager
      */
     async init() {
-        // Load no_power texture
-        const texturePath = this.game.config.tilesPath + 'no_power.png?v=' + this.game.config.assetVersion;
-        this.texture = await PIXI.Assets.load(texturePath);
+        // Get no_power texture (already loaded)
+        this.texture = this.game.graphics.getTexture('no_power');
 
         console.log('[NoPowerIndicator] Initialized');
     }
@@ -40,7 +37,10 @@ export class NoPowerIndicator {
         // Reuse sprite from pool or create new one
         let sprite = this.spritePool.pop();
         if (!sprite) {
-            sprite = new PIXI.Sprite(this.texture);
+            sprite = this.game.graphics.createSprite(this.texture, {
+                x: 0,
+                y: -32
+            });
             sprite.anchor.set(0.5, 0.5);
         }
 

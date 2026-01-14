@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js';
-
 export class CloudManager {
     constructor(game) {
         this.game = game;
@@ -10,38 +8,30 @@ export class CloudManager {
     }
 
     async init() {
-        this.cloudLayer = new PIXI.Container();
+        this.cloudLayer = this.game.graphics.createContainer();
         // Add to stage directly (not worldContainer) to avoid double transformation
-        this.game.app.stage.addChildAt(this.cloudLayer, 0);
-        await this.loadCloudTextures();
+        this.game.graphics.getStage().addChildAt(this.cloudLayer, 0);
+        this.loadCloudTextures();
         this.generateClouds();
     }
 
-    async loadCloudTextures() {
-        // Load cloud atlas (5x5 grid, 1280x720px)
-        const atlasUrl = this.game.assetUrl(`/assets/clouds/clouds_atlas.png`);
-        try {
-            const atlasTexture = await PIXI.Assets.load(atlasUrl);
+    loadCloudTextures() {
+        // Extract 25 cloud textures from atlas (5 cols x 5 rows, 1280x720px)
+        const cloudWidth = 256;  // 1280 / 5
+        const cloudHeight = 144; // 720 / 5
 
-            // Extract 25 cloud textures from atlas (5 cols x 5 rows)
-            const cloudWidth = 256;  // 1280 / 5
-            const cloudHeight = 144; // 720 / 5
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                const x = col * cloudWidth;
+                const y = row * cloudHeight;
 
-            for (let row = 0; row < 5; row++) {
-                for (let col = 0; col < 5; col++) {
-                    const x = col * cloudWidth;
-                    const y = row * cloudHeight;
+                const texture = this.game.graphics.createTextureFromAtlas(
+                    'clouds_atlas',
+                    this.game.graphics.createRectangle(x, y, cloudWidth, cloudHeight)
+                );
 
-                    const texture = new PIXI.Texture({
-                        source: atlasTexture.source,
-                        frame: new PIXI.Rectangle(x, y, cloudWidth, cloudHeight)
-                    });
-
-                    this.cloudTextures.push(texture);
-                }
+                this.cloudTextures.push(texture);
             }
-        } catch (e) {
-            console.warn('Failed to load cloud atlas:', atlasUrl, e);
         }
     }
 
@@ -57,9 +47,10 @@ export class CloudManager {
         const cellHeight = mapHeight / rows;
 
         for (let i = 0; i < cloudCount; i++) {
-            const texture = this.cloudTextures[Math.floor(Math.random() * this.cloudTextures.length)];
-            const width = texture.width;
-            const height = texture.height;
+            const textureIndex = Math.floor(Math.random() * this.cloudTextures.length);
+            const texture = this.cloudTextures[textureIndex];
+            const width = 256;  // Base cloud width
+            const height = 144; // Base cloud height
 
             // Place clouds in grid cells with random offset
             const cellX = i % cols;
@@ -70,9 +61,8 @@ export class CloudManager {
             const x = cellX * cellWidth + padding + Math.random() * (cellWidth - padding * 2 - width);
             const y = cellY * cellHeight + padding + Math.random() * (cellHeight - padding * 2 - height);
 
-            const sprite = new PIXI.Sprite(texture);
-            sprite.x = x;
-            sprite.y = y;
+            // Create sprite using texture object directly
+            const sprite = this.game.graphics.createSprite(texture, { x, y });
             sprite.scale.set(5); // Make clouds 5x larger
 
             const speed = (Math.random() * 10 + 10) / 60; // 10-20 px/sec

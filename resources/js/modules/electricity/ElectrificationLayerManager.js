@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js';
-
 /**
  * Manages electrification layer - blue dots on powered tiles
  * Renders sparse blue glowing dots on tiles within power radius
@@ -7,8 +5,7 @@ import * as PIXI from 'pixi.js';
 export class ElectrificationLayerManager {
     constructor(game) {
         this.game = game;
-        this.layer = new PIXI.Container();
-        this.layer.zIndex = 1.5; // Between landing (1) and entities (2)
+        this.layer = this.game.graphics.createContainer({ zIndex: 1.5 }); // Between landing (1) and entities (2)
         this.sprites = new Map(); // tileKey => sprite
 
         // Sprite pool for performance
@@ -20,9 +17,8 @@ export class ElectrificationLayerManager {
      * Initialize manager
      */
     async init() {
-        // Load electrification texture
-        const texturePath = this.game.config.tilesPath + 'electrification.png?v=' + this.game.config.assetVersion;
-        this.texture = await PIXI.Assets.load(texturePath);
+        // Get electrification texture (already loaded)
+        this.texture = this.game.graphics.getTexture('electrification');
 
         // Add layer to world container (same as deposits)
         if (this.game.worldContainer) {
@@ -34,14 +30,17 @@ export class ElectrificationLayerManager {
      * Create electrification sprite for tile
      * @param {number} tileX
      * @param {number} tileY
-     * @returns {PIXI.Sprite}
+     * @returns {Sprite}
      */
     createElectrificationSprite(tileX, tileY) {
         // Reuse sprite from pool if available
         let sprite = this.spritePool.pop();
 
         if (!sprite) {
-            sprite = new PIXI.Sprite(this.texture);
+            sprite = this.game.graphics.createSprite(this.texture, {
+                x: 0,
+                y: 0
+            });
             sprite.anchor.set(0.5, 0.5);
         }
 
@@ -54,7 +53,7 @@ export class ElectrificationLayerManager {
 
     /**
      * Return sprite to pool
-     * @param {PIXI.Sprite} sprite
+     * @param {Sprite} sprite
      */
     returnToPool(sprite) {
         sprite.visible = false;

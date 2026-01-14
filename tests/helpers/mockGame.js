@@ -6,6 +6,7 @@
  */
 
 import { vi } from 'vitest';
+import { FakeGraphicsEngine } from './FakeGraphicsEngine.js';
 
 /**
  * Creates a mock Game object with common properties and methods
@@ -44,7 +45,10 @@ export function createMockGame(overrides = {}) {
             }))
         },
 
-        // PixiJS app mock
+        // GraphicsEngine (replaces direct PixiJS usage)
+        graphics: null,  // Set below
+
+        // PixiJS app mock (kept for backward compatibility during migration)
         app: {
             stage: {
                 addChild: vi.fn(),
@@ -87,6 +91,11 @@ export function createMockGame(overrides = {}) {
         // Apply overrides
         ...overrides
     };
+
+    // Initialize GraphicsEngine if not provided
+    if (!mockGame.graphics) {
+        mockGame.graphics = new FakeGraphicsEngine({});
+    }
 
     return mockGame;
 }

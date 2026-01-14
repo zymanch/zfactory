@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js';
 import { tileKey, parseTileKey } from './utils.js';
 import { Z_INDEX, FOG_COLOR, FOG_FULL_ALPHA, FOG_EDGE_ALPHA } from './constants.js';
 
@@ -21,9 +20,10 @@ export class FogOfWar {
      * Initialize fog layer
      */
     init() {
-        this.fogLayer = new PIXI.Container();
-        this.fogLayer.sortableChildren = false;
-        this.fogLayer.zIndex = Z_INDEX.FOG;
+        this.fogLayer = this.game.graphics.createContainer({
+            sortableChildren: false,
+            zIndex: Z_INDEX.FOG
+        });
         this.game.worldContainer.addChild(this.fogLayer);
 
         this.loadInitialEyeEntities();
@@ -223,7 +223,7 @@ export class FogOfWar {
         const { tileWidth, tileHeight } = this.game.config;
         const alpha = isEdge ? FOG_EDGE_ALPHA : FOG_FULL_ALPHA;
 
-        const fog = new PIXI.Graphics();
+        const fog = this.game.graphics.createGraphics();
         fog.rect(0, 0, tileWidth, tileHeight);
         fog.fill({ color: FOG_COLOR, alpha });
         fog.x = tileX * tileWidth;

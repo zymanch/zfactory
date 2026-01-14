@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js';
-
 /**
  * Manages deposit layer rendering (trees, rocks, ores)
  * Deposits are separate from entities - simplified rendering (only normal.png)
@@ -8,11 +6,13 @@ export class DepositLayerManager {
     constructor(game) {
         this.game = game;
         this.deposits = {}; // depositId -> deposit data
-        this.sprites = {}; // depositId -> PIXI.Sprite
+        this.sprites = {}; // depositId -> sprite
 
         // Create deposit layer container (z-index between landing and entity)
-        this.depositLayer = new PIXI.Container();
-        this.depositLayer.zIndex = 1.6; // Above electrification layer (1.5)
+        this.depositLayer = this.game.graphics.createContainer({
+            zIndex: 1.6, // Above electrification layer (1.5)
+            sortableChildren: true
+        });
         this.depositLayer.name = 'depositLayer';
     }
 
@@ -52,7 +52,7 @@ export class DepositLayerManager {
     }
 
     /**
-     * Create PIXI sprite for deposit
+     * Create sprite for deposit
      */
     createDepositSprite(deposit) {
         const depositType = this.game.depositTypes[deposit.deposit_type_id];
@@ -61,28 +61,25 @@ export class DepositLayerManager {
             return null;
         }
 
-        const textureName = `deposit_${deposit.deposit_type_id}_normal`;
-        const texture = this.game.textures[textureName];
+        const textureName = `deposit_${deposit.deposit_type_id}`;
+        const texture = this.game.graphics.getTexture(textureName);
 
         if (!texture) {
             console.warn(`Texture not found: ${textureName}`);
             return null;
         }
 
-        const sprite = new PIXI.Sprite(texture);
-
-        // Position (deposits use tile coordinates)
-        sprite.x = deposit.x * this.game.config.tileWidth;
-        sprite.y = deposit.y * this.game.config.tileHeight;
+        const sprite = this.game.graphics.createSprite(texture, {
+            x: deposit.x * this.game.config.tileWidth,
+            y: deposit.y * this.game.config.tileHeight,
+            eventMode: 'static',
+            cursor: 'pointer'
+        });
 
         // Store deposit data
         sprite.depositId = deposit.deposit_id;
         sprite.depositData = deposit;
         sprite.depositType = depositType;
-
-        // Enable interaction for tooltips
-        sprite.eventMode = 'static';
-        sprite.cursor = 'pointer';
 
         // Add event listeners for tooltip (same pattern as entities)
         sprite.on('pointerover', (e) => this.game.onDepositHover(sprite, true, e));
@@ -164,7 +161,7 @@ export class DepositLayerManager {
      * Get sprite at screen position (for hover/click detection)
      */
     getSpriteAt(screenX, screenY) {
-        const point = new PIXI.Point(screenX, screenY);
+        const point = { x: screenX, y: screenY };
 
         // Check from top to bottom (highest zIndex first)
         const sortedSprites = Object.values(this.sprites).sort((a, b) => b.zIndex - a.zIndex);

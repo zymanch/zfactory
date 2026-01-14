@@ -336,6 +336,68 @@ class Config extends JsonAction
         return $result;
     }
 
+    /**
+     * Get asset manifest - ALL asset URLs with short keys
+     * This centralizes all asset paths in backend (no hardcoded paths in JS)
+     */
+    protected function getAssetManifest()
+    {
+        $assets = [];
+        $v = Yii::$app->params['asset_version'];
+
+        // Landing textures (10) + atlases (10)
+        $landingTypes = $this->getLandingTypes();
+        foreach ($landingTypes as $id => $landing) {
+            $folder = $landing['folder'];
+            $assets["landing_{$id}"] = "/assets/tiles/landing/{$folder}/{$folder}_0.png?v={$v}";
+            $assets["landing_atlas_{$folder}"] = "/assets/tiles/landing/atlases/{$folder}_atlas.png?v={$v}";
+        }
+
+        // Entity atlases (300+)
+        $entityTypes = $this->getEntityTypes();
+        foreach ($entityTypes as $id => $entityType) {
+            $assets["entity_atlas_{$id}"] = $entityType['atlas_url'] . "?v={$v}";
+        }
+
+        // Deposit sprites (22)
+        $depositTypes = $this->getDepositTypes();
+        foreach ($depositTypes as $id => $depositType) {
+            $assets["deposit_{$id}"] = $depositType['sprite_url'] . "?v={$v}";
+        }
+
+        // Resource icons (112)
+        $resources = $this->getResources();
+        foreach ($resources as $id => $resource) {
+            $assets["resource_{$id}"] = "/assets/tiles/resources/{$resource['icon_url']}?v={$v}";
+        }
+
+        // Conveyor atlases (20: 5 states × 4 orientations)
+        $states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
+        $orientations = ['right', 'down', 'left', 'up'];
+        foreach ($states as $state) {
+            foreach ($orientations as $orient) {
+                $key = "conveyor_{$state}_{$orient}";
+                $assets[$key] = "/assets/tiles/entities/conveyor/{$orient}/{$state}_atlas.png?v={$v}";
+            }
+        }
+
+        // Pipe atlases (16: 4 states × 4 pipe types)
+        $pipeStates = ['empty', 'water', 'oil', 'gas'];
+        $pipeFolders = ['pipe', 'pipe_to_ground', 'pump', 'storage_tank'];
+        foreach ($pipeFolders as $folder) {
+            foreach ($pipeStates as $state) {
+                $key = "pipe_{$folder}_{$state}";
+                $assets[$key] = "/assets/tiles/entities/pipe/{$folder}/pipe_atlas_{$state}.png?v={$v}";
+            }
+        }
+
+        // Special textures
+        $assets['clouds_atlas'] = "/assets/clouds/clouds_atlas.png?v={$v}";
+        $assets['electrification'] = "/assets/tiles/electrification.png?v={$v}";
+        $assets['no_power'] = "/assets/tiles/no_power.png?v={$v}";
+
+        return $assets;
+    }
 
     public function run()
     {
@@ -361,6 +423,7 @@ class Config extends JsonAction
             'buildPanel' => $this->getBuildPanel(),
             'cameraPosition' => $this->getCameraPosition(),
             'config' => $this->getConfig($currentRegionId),
+            'assetManifest' => $this->getAssetManifest(),  // NEW: All asset URLs
         ]);
     }
 }

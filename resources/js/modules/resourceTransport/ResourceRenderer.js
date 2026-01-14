@@ -1,13 +1,11 @@
-import * as PIXI from 'pixi.js';
-
 /**
  * ResourceRenderer - Renders resources on conveyors and manipulators
  */
 export class ResourceRenderer {
     constructor(game) {
         this.game = game;
-        this.resourceTextures = new Map();  // resource_id -> PIXI.Texture
-        this.resourceSprites = new Map();   // entity_id -> PIXI.Sprite
+        this.resourceTextures = new Map();  // resource_id -> Texture
+        this.resourceSprites = new Map();   // entity_id -> Sprite
         this.container = null;
         this.initialized = false;
     }
@@ -16,36 +14,33 @@ export class ResourceRenderer {
      * Initialize the renderer
      */
     async init() {
-        this.container = new PIXI.Container();
-        this.container.sortableChildren = true;
-        this.container.visible = true;
-        this.container.alpha = 1.0;
-        this.container.zIndex = 3;  // Above entity layer (entityLayer.zIndex = 2)
+        this.container = this.game.graphics.createContainer({
+            sortableChildren: true,
+            visible: true,
+            alpha: 1.0,
+            zIndex: 3  // Above entity layer (entityLayer.zIndex = 2)
+        });
 
         // Insert after entity layer
         const entityLayerIndex = this.game.worldContainer.getChildIndex(this.game.entityLayer);
         this.game.worldContainer.addChildAt(this.container, entityLayerIndex + 1);
 
-        await this.loadResourceTextures();
+        this.loadResourceTextures();
         this.initialized = true;
     }
 
     /**
-     * Load resource icon textures
+     * Load resource icon textures (already loaded in manifest)
      */
-    async loadResourceTextures() {
-        const v = this.game.config.assetVersion || 1;
-
+    loadResourceTextures() {
         for (const resourceId in this.game.resources) {
             const resource = this.game.resources[resourceId];
             if (!resource.icon_url) continue;
 
-            const url = `/assets/tiles/resources/${resource.icon_url}?v=${v}`;
-            try {
-                const texture = await PIXI.Assets.load(url);
+            const textureKey = `resource_${resourceId}`;
+            const texture = this.game.graphics.getTexture(textureKey);
+            if (texture) {
                 this.resourceTextures.set(parseInt(resourceId), texture);
-            } catch (e) {
-                // Silently skip missing textures
             }
         }
     }
@@ -96,9 +91,10 @@ export class ResourceRenderer {
 
         let sprite = this.resourceSprites.get(entityId);
         if (!sprite) {
-            sprite = new PIXI.Sprite(texture);
-            sprite.anchor.set(0.5, 0.5);
-            sprite.scale.set(0.75, 0.75);  // Slightly smaller than tile (64 * 0.75 = 48px)
+            sprite = this.game.graphics.createSprite(texture, {
+                anchor: { x: 0.5, y: 0.5 },
+                scale: { x: 0.75, y: 0.75 }  // Slightly smaller than tile (64 * 0.75 = 48px)
+            });
             this.container.addChild(sprite);
             this.resourceSprites.set(entityId, sprite);
         } else if (sprite.texture !== texture) {
@@ -171,9 +167,10 @@ export class ResourceRenderer {
 
         let sprite = this.resourceSprites.get(entityId);
         if (!sprite) {
-            sprite = new PIXI.Sprite(texture);
-            sprite.anchor.set(0.5, 0.5);
-            sprite.scale.set(1, 1);  // Full size resource icon
+            sprite = this.game.graphics.createSprite(texture, {
+                anchor: { x: 0.5, y: 0.5 },
+                scale: { x: 1, y: 1 }  // Full size resource icon
+            });
             this.container.addChild(sprite);
             this.resourceSprites.set(entityId, sprite);
         } else if (sprite.texture !== texture) {

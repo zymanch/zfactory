@@ -7,6 +7,8 @@ import * as PIXI from 'pixi.js';
  * - 16 connection variants based on 4-bit mask (right, down, left, up)
  * - Auto-updates connections when pipes are placed/removed
  * - No animations (pipes are static, unlike conveyors)
+ *
+ * NOTE: Uses PIXI.Assets.load for dynamic atlas loading - not yet in manifest
  */
 export class PipeConnectionManager {
     constructor(game) {
@@ -203,11 +205,11 @@ export class PipeConnectionManager {
         }
 
         // Extract texture from atlas
-        const rect = new PIXI.Rectangle(variant * 64, 0, 64, 64);
-        return new PIXI.Texture({
-            source: atlas.source,
-            frame: rect
-        });
+        const rect = this.game.graphics.createRectangle(variant * 64, 0, 64, 64);
+        return this.game.graphics.createTextureFromAtlas(
+            atlas,  // Pass texture directly since it's dynamically loaded
+            rect
+        );
     }
 
     /**

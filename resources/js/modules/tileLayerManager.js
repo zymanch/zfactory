@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js';
 import { tileKey } from './utils.js';
 import { Z_INDEX, LANDING_SKY_ID, LANDING_ISLAND_EDGE_ID, LANDING_SHIP_EDGE_ID, SHIP_LANDINGS_START_ID } from './constants.js';
 
@@ -137,7 +136,7 @@ export class TileLayerManager {
 
                     // DEBUG: Show landing_id on tile (only if debug enabled)
                     if (this.game.config.debug) {
-                        const text = new PIXI.Text(landingId.toString(), {
+                        const text = this.game.graphics.createText(landingId.toString(), {
                             fontFamily: 'Arial',
                             fontSize: 12,
                             fill: 0xff0000,
@@ -158,7 +157,7 @@ export class TileLayerManager {
         if (this.game.config.debug) {
             const region = this.game.gameData.region;
             if (region && region.ship_attach_x !== null && region.ship_attach_y !== null) {
-                const shipText = new PIXI.Text('Ship', {
+                const shipText = this.game.graphics.createText('Ship', {
                     fontFamily: 'Arial',
                     fontSize: 16,
                     fill: 0xff0000,
@@ -182,7 +181,7 @@ export class TileLayerManager {
      * @param {number} landingId - Current tile landing ID
      * @param {number} tileX - Tile X position
      * @param {number} tileY - Tile Y position
-     * @returns {PIXI.Sprite|null}
+     * @returns {Sprite|null}
      */
     createTileWithTransitions(landingId, tileX, tileY) {
         const landing = this.game.gameData.landings[landingId];
@@ -213,19 +212,19 @@ export class TileLayerManager {
         const { tileWidth, tileHeight } = this.game.config;
         const inset = 0.5;
 
-        const rect = new PIXI.Rectangle(
+        const rect = this.game.graphics.createRectangle(
             coords.col * tileWidth + inset,
             coords.row * tileHeight + inset,
             tileWidth - inset * 2,
             tileHeight - inset * 2
         );
 
-        const texture = new PIXI.Texture({
-            source: atlas.source,
-            frame: rect
-        });
+        const texture = this.game.graphics.createTextureFromAtlas(atlasName, rect);
 
-        const sprite = new PIXI.Sprite(texture);
+        const sprite = this.game.graphics.createSprite(texture, {
+            x: tileX * tileWidth,
+            y: 0
+        });
         sprite.x = tileX * tileWidth;
         sprite.y = tileY * tileHeight;
         sprite.width = tileWidth;
@@ -244,7 +243,7 @@ export class TileLayerManager {
      * @param {number} height - Viewport height in tiles
      */
     renderSkyTiles(startX, startY, width, height) {
-        const baseTexture = this.game.textures['landing_' + LANDING_SKY_ID];
+        const baseTexture = this.game.graphics.getTexture('landing_' + LANDING_SKY_ID);
         if (!baseTexture) return;
 
         const { tileWidth, tileHeight } = this.game.config;
@@ -269,17 +268,19 @@ export class TileLayerManager {
                     rightLandingId !== LANDING_ISLAND_EDGE_ID) {
                     // Use transition texture: sky with landing on right
                     const transitionKey = `transition_${LANDING_SKY_ID}_${rightLandingId}_r`;
-                    if (this.game.textures[transitionKey]) {
-                        texture = this.game.textures[transitionKey];
+                    const transitionTexture = this.game.graphics.getTexture(transitionKey);
+                    if (transitionTexture) {
+                        texture = transitionTexture;
                     }
                 }
 
-                const sprite = new PIXI.Sprite(texture);
-                sprite.x = x * tileWidth;
-                sprite.y = y * tileHeight;
-                sprite.width = tileWidth;
-                sprite.height = tileHeight;
-                sprite.zIndex = Z_INDEX.SKY;
+                const sprite = this.game.graphics.createSprite(texture, {
+                    x: x * tileWidth,
+                    y: y * tileHeight,
+                    width: tileWidth,
+                    height: tileHeight,
+                    zIndex: Z_INDEX.SKY
+                });
 
                 this.game.landingLayer.addChild(sprite);
                 this.skyTiles.set(key, sprite);
@@ -296,19 +297,20 @@ export class TileLayerManager {
      * @param {number} tileX - Tile X position
      * @param {number} tileY - Tile Y position
      * @param {number} zIndex - Z-index for layering
-     * @returns {PIXI.Sprite|null}
+     * @returns {Sprite|null}
      */
     createTileSprite(landingId, tileX, tileY, zIndex) {
-        const texture = this.game.textures['landing_' + landingId];
+        const texture = this.game.graphics.getTexture('landing_' + landingId);
         if (!texture) return null;
 
         const { tileWidth, tileHeight } = this.game.config;
-        const sprite = new PIXI.Sprite(texture);
-        sprite.x = tileX * tileWidth;
-        sprite.y = tileY * tileHeight;
-        sprite.width = tileWidth;
-        sprite.height = tileHeight;
-        sprite.zIndex = zIndex;
+        const sprite = this.game.graphics.createSprite(texture, {
+            x: tileX * tileWidth,
+            y: tileY * tileHeight,
+            width: tileWidth,
+            height: tileHeight,
+            zIndex: zIndex
+        });
 
         return sprite;
     }

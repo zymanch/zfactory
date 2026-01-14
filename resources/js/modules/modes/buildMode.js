@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js';
 import { tileKey, tileToWorld, getCSRFToken } from '../utils.js';
 import { BUILD_VALID_COLOR, BUILD_INVALID_COLOR, BUILD_VALID_ALPHA, BUILD_INVALID_ALPHA, PREVIEW_Z_OFFSET } from '../constants.js';
 import EntityBehaviorFactory from '../entityBehaviors.js';
@@ -166,16 +165,18 @@ export class BuildMode extends GameModeBase {
         const entityType = this.game.entityTypes[this.entityTypeId];
         if (!entityType) return;
 
-        const texture = this.game.textures[`entity_${this.entityTypeId}_blueprint`];
+        const textureKey = `entity_${this.entityTypeId}_blueprint`;
+        const texture = this.game.graphics.getTexture(textureKey);
         if (!texture) return;
 
-        this.previewSprite = new PIXI.Sprite(texture);
-        this.previewSprite.alpha = BUILD_VALID_ALPHA;
-        this.previewSprite.visible = false;
+        this.previewSprite = this.game.graphics.createSprite(texture, {
+            alpha: BUILD_VALID_ALPHA,
+            visible: false
+        });
         this.game.entityLayer.addChild(this.previewSprite);
 
         // Create error text
-        this.errorText = new PIXI.Text('', {
+        this.errorText = this.game.graphics.createText('', {
             fontSize: 14,
             fill: 0xFF0000,
             fontWeight: 'bold',
@@ -837,14 +838,15 @@ export class BuildMode extends GameModeBase {
             // Use pre-validated status if available (from flood-fill), otherwise check placement
             const canPlace = tile.preValidated !== undefined ? tile.valid : this.checkPlacement(tile.x, tile.y);
 
-            const sprite = new PIXI.Sprite(texture);
             const pos = tileToWorld(tile.x, tile.y, tileWidth, tileHeight);
 
-            sprite.x = pos.x;
-            sprite.y = pos.y;
-            sprite.zIndex = pos.y + PREVIEW_Z_OFFSET;
+            const sprite = this.game.graphics.createSprite(texture, {
+                x: pos.x,
+                y: pos.y,
+                zIndex: pos.y + PREVIEW_Z_OFFSET,
+                alpha: canPlace ? BUILD_VALID_ALPHA : BUILD_INVALID_ALPHA
+            });
             sprite.tint = canPlace ? BUILD_VALID_COLOR : BUILD_INVALID_COLOR;
-            sprite.alpha = canPlace ? BUILD_VALID_ALPHA : BUILD_INVALID_ALPHA;
 
             this.game.entityLayer.addChild(sprite);
 
