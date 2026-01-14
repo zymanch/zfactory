@@ -746,6 +746,16 @@ export class ResourceTransportManager {
     }
 
     /**
+     * Check if resource is a fluid (type='liquid')
+     * @param {number} resourceId
+     * @returns {boolean}
+     */
+    isFluidResource(resourceId) {
+        const resource = this.game.resources[resourceId];
+        return resource && resource.type === 'liquid';
+    }
+
+    /**
      * Try to start building craft
      */
     tryStartBuildingCraft(state) {
@@ -761,8 +771,20 @@ export class ResourceTransportManager {
 
                 // Skip check if input amount is 0 (not consumed, like sunlight)
                 if (input1AmountNeeded > 0) {
-                    const input1Amount = state.getResourceAmount(input1ResourceId);
-                    if (input1Amount < input1AmountNeeded) continue;
+                    // Check if this is a fluid resource
+                    if (this.isFluidResource(input1ResourceId)) {
+                        // Check fluid availability via PipeSystemManager
+                        const pipeSystem = this.game.pipeManager?.getSystemForEntity(state.entityId);
+                        if (!pipeSystem || pipeSystem.resource_id !== input1ResourceId ||
+                            pipeSystem.current_amount < input1AmountNeeded) {
+                            console.log(`[Craft Check] Entity ${state.entityId} lacks fluid ${input1ResourceId}: needs ${input1AmountNeeded}, has ${pipeSystem?.current_amount || 0}`);
+                            continue;
+                        }
+                    } else {
+                        // Normal solid resource check
+                        const input1Amount = state.getResourceAmount(input1ResourceId);
+                        if (input1Amount < input1AmountNeeded) continue;
+                    }
                 }
             }
 
@@ -772,8 +794,20 @@ export class ResourceTransportManager {
 
                 // Skip check if input amount is 0
                 if (input2AmountNeeded > 0) {
-                    const input2Amount = state.getResourceAmount(input2ResourceId);
-                    if (input2Amount < input2AmountNeeded) continue;
+                    // Check if this is a fluid resource
+                    if (this.isFluidResource(input2ResourceId)) {
+                        // Check fluid availability via PipeSystemManager
+                        const pipeSystem = this.game.pipeManager?.getSystemForEntity(state.entityId);
+                        if (!pipeSystem || pipeSystem.resource_id !== input2ResourceId ||
+                            pipeSystem.current_amount < input2AmountNeeded) {
+                            console.log(`[Craft Check] Entity ${state.entityId} lacks fluid ${input2ResourceId}: needs ${input2AmountNeeded}, has ${pipeSystem?.current_amount || 0}`);
+                            continue;
+                        }
+                    } else {
+                        // Normal solid resource check
+                        const input2Amount = state.getResourceAmount(input2ResourceId);
+                        if (input2Amount < input2AmountNeeded) continue;
+                    }
                 }
             }
 
@@ -789,9 +823,20 @@ export class ResourceTransportManager {
                         continue;
                     }
                 } else if (input3Amount > 0) {
-                    // Normal resource check (amount > 0 means it's consumed)
-                    const resourceAmount = state.getResourceAmount(input3ResourceId);
-                    if (resourceAmount < input3Amount) continue;
+                    // Check if this is a fluid resource
+                    if (this.isFluidResource(input3ResourceId)) {
+                        // Check fluid availability via PipeSystemManager
+                        const pipeSystem = this.game.pipeManager?.getSystemForEntity(state.entityId);
+                        if (!pipeSystem || pipeSystem.resource_id !== input3ResourceId ||
+                            pipeSystem.current_amount < input3Amount) {
+                            console.log(`[Craft Check] Entity ${state.entityId} lacks fluid ${input3ResourceId}: needs ${input3Amount}, has ${pipeSystem?.current_amount || 0}`);
+                            continue;
+                        }
+                    } else {
+                        // Normal solid resource check
+                        const resourceAmount = state.getResourceAmount(input3ResourceId);
+                        if (resourceAmount < input3Amount) continue;
+                    }
                 }
             }
 
@@ -805,14 +850,32 @@ export class ResourceTransportManager {
                 const input1ResourceId = parseInt(recipe.input1_resource_id);
                 const input1AmountNeeded = parseInt(recipe.input1_amount);
                 if (input1AmountNeeded > 0) {
-                    state.removeResource(input1ResourceId, input1AmountNeeded);
+                    // If fluid - consume from pipe system
+                    if (this.isFluidResource(input1ResourceId)) {
+                        const pipeSystem = this.game.pipeManager?.getSystemForEntity(state.entityId);
+                        if (pipeSystem) {
+                            this.game.pipeManager.consumeFluid(pipeSystem.pipe_system_id, input1AmountNeeded);
+                            console.log(`[Fluid Consume] Entity ${state.entityId} consumed ${input1AmountNeeded} of fluid ${input1ResourceId} from pipe system`);
+                        }
+                    } else {
+                        state.removeResource(input1ResourceId, input1AmountNeeded);
+                    }
                 }
             }
             if (recipe.input2_resource_id) {
                 const input2ResourceId = parseInt(recipe.input2_resource_id);
                 const input2AmountNeeded = parseInt(recipe.input2_amount || 1);
                 if (input2AmountNeeded > 0) {
-                    state.removeResource(input2ResourceId, input2AmountNeeded);
+                    // If fluid - consume from pipe system
+                    if (this.isFluidResource(input2ResourceId)) {
+                        const pipeSystem = this.game.pipeManager?.getSystemForEntity(state.entityId);
+                        if (pipeSystem) {
+                            this.game.pipeManager.consumeFluid(pipeSystem.pipe_system_id, input2AmountNeeded);
+                            console.log(`[Fluid Consume] Entity ${state.entityId} consumed ${input2AmountNeeded} of fluid ${input2ResourceId} from pipe system`);
+                        }
+                    } else {
+                        state.removeResource(input2ResourceId, input2AmountNeeded);
+                    }
                 }
             }
             if (recipe.input3_resource_id) {
@@ -820,7 +883,16 @@ export class ResourceTransportManager {
                 const input3AmountNeeded = parseInt(recipe.input3_amount || 1);
                 // Don't consume electricity from building - it's consumed from system
                 if (input3ResourceId !== 400 && input3AmountNeeded > 0) {
-                    state.removeResource(input3ResourceId, input3AmountNeeded);
+                    // If fluid - consume from pipe system
+                    if (this.isFluidResource(input3ResourceId)) {
+                        const pipeSystem = this.game.pipeManager?.getSystemForEntity(state.entityId);
+                        if (pipeSystem) {
+                            this.game.pipeManager.consumeFluid(pipeSystem.pipe_system_id, input3AmountNeeded);
+                            console.log(`[Fluid Consume] Entity ${state.entityId} consumed ${input3AmountNeeded} of fluid ${input3ResourceId} from pipe system`);
+                        }
+                    } else {
+                        state.removeResource(input3ResourceId, input3AmountNeeded);
+                    }
                 }
             }
 

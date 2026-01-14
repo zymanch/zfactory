@@ -113,12 +113,12 @@ export const entityTypeFixtures = {
  * Resource Fixtures
  */
 export const resourceFixtures = {
-    ironOre: { resource_id: 1, name: 'Iron Ore', icon: 'iron_ore.png' },
-    ironPlate: { resource_id: 2, name: 'Iron Plate', icon: 'iron_plate.png' },
-    copperOre: { resource_id: 3, name: 'Copper Ore', icon: 'copper_ore.png' },
-    copperPlate: { resource_id: 4, name: 'Copper Plate', icon: 'copper_plate.png' },
-    stone: { resource_id: 5, name: 'Stone', icon: 'stone.png' },
-    water: { resource_id: 20, name: 'Water', icon: 'water.png' }
+    ironOre: { resource_id: 1, name: 'Iron Ore', icon: 'iron_ore.png', type: 'solid' },
+    ironPlate: { resource_id: 2, name: 'Iron Plate', icon: 'iron_plate.png', type: 'solid' },
+    copperOre: { resource_id: 3, name: 'Copper Ore', icon: 'copper_ore.png', type: 'solid' },
+    copperPlate: { resource_id: 4, name: 'Copper Plate', icon: 'copper_plate.png', type: 'solid' },
+    stone: { resource_id: 5, name: 'Stone', icon: 'stone.png', type: 'solid' },
+    water: { resource_id: 20, name: 'Water', icon: 'water.png', type: 'liquid' }
 };
 
 /**

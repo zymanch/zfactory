@@ -411,8 +411,8 @@ const testCases = [
     },
 
     {
-        name: '[SKIP] Complex production - Liquid + Electricity + Solid resources',
-        skip: true,  // TODO: Needs PipeSystemManager, ElectricityManager, ManipulatorState
+        name: 'Complex production - Liquid + Electricity + Solid resources',
+        skip: false,  // Fluid integration implemented!
         map: [
             '####P##',
             'W~~~F##',

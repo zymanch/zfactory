@@ -164,4 +164,39 @@ export class PipeSystemManager {
 
         return actualAmount;
     }
+
+    /**
+     * Consume fluid from pipe system by system ID
+     * Used by crafting system to consume fluids during production
+     * @param {number} systemId - Pipe system ID
+     * @param {number} amount - Amount to consume
+     * @returns {boolean} - Success
+     */
+    consumeFluid(systemId, amount) {
+        const system = this.systems.get(systemId);
+        if (!system) {
+            console.warn(`[PipeSystemManager] No system found with ID ${systemId}`);
+            return false;
+        }
+
+        if (system.current_amount < amount) {
+            console.warn(`[PipeSystemManager] Not enough fluid: has ${system.current_amount}, needs ${amount}`);
+            return false;
+        }
+
+        // Consume fluid
+        system.current_amount -= amount;
+
+        // Clear resource_id if empty
+        if (system.current_amount === 0) {
+            system.resource_id = null;
+        }
+
+        console.log(`[PipeSystemManager] Consumed ${amount} fluid from system ${systemId} (remaining: ${system.current_amount}/${system.max_capacity})`);
+
+        // TODO: Send update to server
+        // this.game.sendPipeSystemUpdate(systemId);
+
+        return true;
+    }
 }
