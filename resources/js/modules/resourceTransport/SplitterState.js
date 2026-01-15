@@ -219,17 +219,20 @@ export class SplitterState {
 
     /**
      * Load state from saved data
+     * NEW (2026-01): last_output_direction now stored in entity_resource
      */
     loadFromSaved(data) {
         this.resourceId = data.resource_id;
         this.resourceAmount = data.amount || 1;
         this.position_px = parseInt(data.position_px) || 0;
+        // NEW: Read from entity_resource.last_output_direction
         this.lastOutputDirection = data.last_output_direction || 'right';
     }
 
     /**
      * Get data for saving
      * NEW (2026-01): No entity_id - will be dict key
+     * NEW (2026-01): last_output_direction saved to entity_resource
      */
     getSaveData() {
         if (!this.hasResource()) return null;
@@ -239,6 +242,7 @@ export class SplitterState {
             resource_id: this.resourceId,
             amount: this.resourceAmount,
             position_px: this.position_px,
+            // NEW: Save to entity_resource.last_output_direction
             last_output_direction: this.lastOutputDirection
         };
     }

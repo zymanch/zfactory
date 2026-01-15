@@ -13,7 +13,6 @@ use models\Deposit;
 use models\DepositType;
 use models\Region;
 use services\BuildingRules;
-use bl\pipes\PipeSystemManager;
 use Yii;
 
 /**
@@ -358,11 +357,6 @@ class CreateEntity extends JsonAction
                         throw new \Exception('Failed to remove deposit');
                     }
                 }
-            }
-
-            // Recalculate pipe systems if pipe entity was created (only for island, not ship)
-            if (!$isShipPlacement && in_array($entityTypeId, [131, 132, 135, 136, 140, 141])) {
-                PipeSystemManager::recalculateSystems($currentRegionId);
             }
 
             // Recalculate electricity systems if electricity entity was created (only for island, not ship)

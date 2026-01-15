@@ -24,6 +24,10 @@ namespace models\base;
  * @property string $animation_fps
  * @property string $description
  * @property integer $construction_ticks
+ * @property string $storage_type
+ * @property integer $storage_resource_count
+ * @property integer $storage_per_resource
+ * @property string $resource_types
  *
  * @property \models\Landing $convertsToLanding
  * @property \models\EntityTypeCost[] $entityTypeCosts
@@ -51,8 +55,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         return [
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::FOLDER], 'required'],
-            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::CENTER_POSITION_PX, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS], 'integer'],
-            [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION], 'string'],
+            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::CENTER_POSITION_PX, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS, BaseEntityTypePeer::STORAGE_RESOURCE_COUNT, BaseEntityTypePeer::STORAGE_PER_RESOURCE], 'integer'],
+            [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION, BaseEntityTypePeer::STORAGE_TYPE, BaseEntityTypePeer::RESOURCE_TYPES], 'string'],
             [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
             [[BaseEntityTypePeer::FOLDER, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
@@ -84,6 +88,10 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::ANIMATION_FPS => 'Animation Fps',
             BaseEntityTypePeer::DESCRIPTION => 'Description',
             BaseEntityTypePeer::CONSTRUCTION_TICKS => 'Construction Ticks',
+            BaseEntityTypePeer::STORAGE_TYPE => 'Storage Type',
+            BaseEntityTypePeer::STORAGE_RESOURCE_COUNT => 'Storage Resource Count',
+            BaseEntityTypePeer::STORAGE_PER_RESOURCE => 'Storage Per Resource',
+            BaseEntityTypePeer::RESOURCE_TYPES => 'Resource Types',
         ];
     }
     /**
@@ -169,6 +177,10 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'animation_fps' => BaseEntityTypePeer::ANIMATION_FPS,
             'description' => BaseEntityTypePeer::DESCRIPTION,
             'construction_ticks' => BaseEntityTypePeer::CONSTRUCTION_TICKS,
+            'storage_type' => BaseEntityTypePeer::STORAGE_TYPE,
+            'storage_resource_count' => BaseEntityTypePeer::STORAGE_RESOURCE_COUNT,
+            'storage_per_resource' => BaseEntityTypePeer::STORAGE_PER_RESOURCE,
+            'resource_types' => BaseEntityTypePeer::RESOURCE_TYPES,
         ];
     }
     

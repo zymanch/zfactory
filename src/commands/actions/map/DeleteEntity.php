@@ -7,7 +7,6 @@ use models\Entity;
 use models\ShipEntity;
 use models\EntityType;
 use models\EntityTypeCost;
-use bl\pipes\PipeSystemManager;
 use Yii;
 
 /**
@@ -80,11 +79,6 @@ class DeleteEntity extends JsonAction
             // Delete entity (cascades to delete related data: EntityResource for island, nothing for ship yet)
             if (!$entity->delete()) {
                 throw new \Exception('Failed to delete ' . $modelName . ': ' . json_encode($entity->errors));
-            }
-
-            // Recalculate pipe systems if pipe entity was deleted (only for island, not ship)
-            if (!$isShipEntity && $regionId && in_array($entityTypeId, [131, 132, 135, 136, 140, 141])) {
-                PipeSystemManager::recalculateSystems($regionId);
             }
 
             // Recalculate electricity systems if electricity entity was deleted (only for island, not ship)

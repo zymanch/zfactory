@@ -466,4 +466,296 @@ class PipeController extends Controller
         return $result;
     }
 
+    /**
+     * Generate pipe inlet sprite variants
+     * Creates atlas with 4 directions × 5 states = 20 sprites
+     * Output: public/assets/tiles/pipe_inlets/inlet_atlas.png (1280×64)
+     *
+     * Usage: php yii pipe/generate-inlet-variants
+     */
+    public function actionGenerateInletVariants()
+    {
+        $sourceFile = dirname(__DIR__, 2) . '/public/assets/tiles/entities/pipe/pipe/normal.png';
+        $outputDir = dirname(__DIR__, 2) . '/public/assets/tiles/pipe_inlets';
+        $atlasFile = $outputDir . '/inlet_atlas.png';
+
+        if (!file_exists($sourceFile)) {
+            $this->stderr("Source file not found: $sourceFile\n");
+            return 1;
+        }
+
+        // Create output directory
+        if (!is_dir($outputDir)) {
+            mkdir($outputDir, 0755, true);
+        }
+
+        $this->stdout("→ Generating pipe inlet sprites...\n");
+        $this->stdout("  Source: $sourceFile\n");
+        $this->stdout("  Output: $atlasFile\n\n");
+
+        // Load horizontal pipe PNG
+        $baseImage = imagecreatefrompng($sourceFile);
+        if (!$baseImage) {
+            $this->stderr("Failed to load source image\n");
+            return 1;
+        }
+
+        $width = imagesx($baseImage);
+        $height = imagesy($baseImage);
+
+        $this->stdout("  Original size: {$width}×{$height}\n");
+
+        // Crop 15px from right edge (inlet piece)
+        $inletWidth = 15;
+        $inlet = imagecreatetruecolor($inletWidth, $height);
+        imagealphablending($inlet, false);
+        imagesavealpha($inlet, true);
+
+        // Copy rightmost 15px
+        imagecopy($inlet, $baseImage, 0, 0, $width - $inletWidth, 0, $inletWidth, $height);
+
+        $this->stdout("  Inlet piece: {$inletWidth}×{$height}\n");
+
+        // Add rounded corners (4px radius)
+        $inlet = $this->addRoundedCornersGD($inlet, 4);
+
+        // Generate 4 rotations
+        $rotations = [
+            'right' => 0,    // Original (pointing right)
+            'down' => 90,    // Rotate 90° (pointing down)
+            'left' => 180,   // Rotate 180° (pointing left)
+            'top' => 270,    // Rotate 270° (pointing up)
+        ];
+
+        $sprites = [];
+        $transparent = imagecolorallocatealpha($inlet, 0, 0, 0, 127);
+
+        foreach ($rotations as $direction => $angle) {
+            if ($angle > 0) {
+                $rotated = imagerotate($inlet, -$angle, $transparent); // GD rotates counter-clockwise
+                imagealphablending($rotated, false);
+                imagesavealpha($rotated, true);
+                $sprites[$direction] = $rotated;
+            } else {
+                $sprites[$direction] = $inlet; // Use original for 0°
+            }
+        }
+
+        $this->stdout("  Created 4 directional variants\n");
+
+        // Generate 5 states for each direction
+        $states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
+        $stateSprites = [];
+
+        foreach ($states as $state) {
+            foreach (['top', 'right', 'down', 'left'] as $direction) {
+                $sprite = $this->cloneImage($sprites[$direction]);
+
+                // Apply state-specific effects
+                switch ($state) {
+                    case 'damaged':
+                        // Darken (70% brightness)
+                        $this->adjustBrightness($sprite, 0.7);
+                        break;
+                    case 'blueprint':
+                        // Blue tint with transparency
+                        $this->applyBlueprint($sprite);
+                        break;
+                    case 'normal_selected':
+                        // Slight brightness increase (120%)
+                        $this->adjustBrightness($sprite, 1.2);
+                        break;
+                    case 'damaged_selected':
+                        // Damaged + selected (85% brightness)
+                        $this->adjustBrightness($sprite, 0.85);
+                        break;
+                }
+
+                // Resize to 64×64
+                $resized = imagecreatetruecolor(64, 64);
+                imagealphablending($resized, false);
+                imagesavealpha($resized, true);
+                imagecopyresampled($resized, $sprite, 0, 0, 0, 0, 64, 64, imagesx($sprite), imagesy($sprite));
+
+                $stateSprites["{$state}_{$direction}"] = $resized;
+                imagedestroy($sprite);
+            }
+        }
+
+        $this->stdout("  Created " . count($stateSprites) . " state variants\n");
+
+        // Create atlas: 20 sprites in a row (1280×64)
+        $atlasWidth = 64 * 20;
+        $atlasHeight = 64;
+
+        $atlas = imagecreatetruecolor($atlasWidth, $atlasHeight);
+        imagealphablending($atlas, false);
+        $transparentAtlas = imagecolorallocatealpha($atlas, 0, 0, 0, 127);
+        imagefill($atlas, 0, 0, $transparentAtlas);
+        imagesavealpha($atlas, true);
+
+        $x = 0;
+        $order = [];
+        foreach ($states as $state) {
+            foreach (['top', 'right', 'down', 'left'] as $direction) {
+                $key = "{$state}_{$direction}";
+                $sprite = $stateSprites[$key];
+
+                // Copy sprite to atlas
+                imagecopy($atlas, $sprite, $x, 0, 0, 0, 64, 64);
+
+                $order[] = $key;
+                $x += 64;
+            }
+        }
+
+        // Save atlas
+        imagepng($atlas, $atlasFile);
+
+        $this->stdout("  ✓ Atlas created: {$atlasWidth}×{$atlasHeight}\n");
+        $this->stdout("  ✓ Saved: $atlasFile\n\n");
+
+        // Output sprite order for reference
+        $this->stdout("Sprite order in atlas (left to right):\n");
+        foreach ($order as $i => $key) {
+            $this->stdout("  [{$i}] $key\n");
+        }
+
+        $this->stdout("\n✓ Pipe inlet sprites generated successfully!\n");
+
+        // Cleanup
+        imagedestroy($baseImage);
+        imagedestroy($inlet);
+        foreach ($sprites as $dir => $sprite) {
+            if ($dir !== 'right') { // Don't destroy original inlet
+                imagedestroy($sprite);
+            }
+        }
+        foreach ($stateSprites as $sprite) {
+            imagedestroy($sprite);
+        }
+        imagedestroy($atlas);
+
+        return 0;
+    }
+
+    /**
+     * Add rounded corners to GD image
+     */
+    private function addRoundedCornersGD($image, $radius)
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        // Create mask
+        $mask = imagecreatetruecolor($width, $height);
+        $black = imagecolorallocate($mask, 0, 0, 0);
+        $white = imagecolorallocate($mask, 255, 255, 255);
+        imagefill($mask, 0, 0, $black);
+
+        // Draw rounded rectangle
+        imagefilledrectangle($mask, $radius, 0, $width - $radius - 1, $height - 1, $white);
+        imagefilledrectangle($mask, 0, $radius, $width - 1, $height - $radius - 1, $white);
+
+        // Draw corner arcs
+        imagefilledellipse($mask, $radius, $radius, $radius * 2, $radius * 2, $white);
+        imagefilledellipse($mask, $width - $radius - 1, $radius, $radius * 2, $radius * 2, $white);
+        imagefilledellipse($mask, $radius, $height - $radius - 1, $radius * 2, $radius * 2, $white);
+        imagefilledellipse($mask, $width - $radius - 1, $height - $radius - 1, $radius * 2, $radius * 2, $white);
+
+        // Apply mask: set alpha to 127 for black pixels
+        for ($x = 0; $x < $width; $x++) {
+            for ($y = 0; $y < $height; $y++) {
+                $maskColor = imagecolorat($mask, $x, $y) & 0xFF;
+                if ($maskColor < 128) {
+                    $transparent = imagecolorallocatealpha($image, 0, 0, 0, 127);
+                    imagesetpixel($image, $x, $y, $transparent);
+                }
+            }
+        }
+
+        imagedestroy($mask);
+        return $image;
+    }
+
+    /**
+     * Clone GD image
+     */
+    private function cloneImage($image)
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        $clone = imagecreatetruecolor($width, $height);
+        imagealphablending($clone, false);
+        imagesavealpha($clone, true);
+        imagecopy($clone, $image, 0, 0, 0, 0, $width, $height);
+
+        return $clone;
+    }
+
+    /**
+     * Adjust image brightness
+     */
+    private function adjustBrightness($image, $factor)
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        for ($x = 0; $x < $width; $x++) {
+            for ($y = 0; $y < $height; $y++) {
+                $color = imagecolorat($image, $x, $y);
+                $alpha = ($color >> 24) & 0xFF;
+
+                // Skip fully transparent
+                if ($alpha == 127) continue;
+
+                $r = (($color >> 16) & 0xFF) * $factor;
+                $g = (($color >> 8) & 0xFF) * $factor;
+                $b = ($color & 0xFF) * $factor;
+
+                $r = min(255, max(0, $r));
+                $g = min(255, max(0, $g));
+                $b = min(255, max(0, $b));
+
+                $newColor = imagecolorallocatealpha($image, $r, $g, $b, $alpha);
+                imagesetpixel($image, $x, $y, $newColor);
+            }
+        }
+    }
+
+    /**
+     * Apply blueprint effect (blue tint + transparency)
+     */
+    private function applyBlueprint($image)
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        for ($x = 0; $x < $width; $x++) {
+            for ($y = 0; $y < $height; $y++) {
+                $color = imagecolorat($image, $x, $y);
+                $alpha = ($color >> 24) & 0xFF;
+
+                // Skip fully transparent
+                if ($alpha == 127) continue;
+
+                // Blue tint (increase blue, reduce red/green)
+                $r = (($color >> 16) & 0xFF) * 0.3;
+                $g = (($color >> 8) & 0xFF) * 0.5;
+                $b = ($color & 0xFF) * 1.5;
+
+                $r = min(255, max(0, $r));
+                $g = min(255, max(0, $g));
+                $b = min(255, max(0, $b));
+
+                // Increase transparency (60% opacity = alpha 50)
+                $newAlpha = min(127, $alpha + 50);
+
+                $newColor = imagecolorallocatealpha($image, $r, $g, $b, $newAlpha);
+                imagesetpixel($image, $x, $y, $newColor);
+            }
+        }
+    }
+
 }

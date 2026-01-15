@@ -136,15 +136,18 @@ export class ConveyorManager {
     }
 
     /**
-     * Check if entity is a conveyor of any orientation
+     * Check if entity is an animated conveyor (not underground)
      */
     isConveyor(entity) {
         if (!entity) return false;
 
         const entityType = this.game.entityTypes[entity.entity_type_id];
-        if (!entityType) return false;
+        if (!entityType || entityType.type !== 'conveyor') return false;
 
-        return entityType.type === 'conveyor';
+        // Only animated conveyors (basic, dual, fast)
+        // Exclude underground belts (they are static entities)
+        const folder = entityType.folder;
+        return folder && !folder.includes('underground');
     }
 
     /**

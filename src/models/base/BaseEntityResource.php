@@ -14,6 +14,7 @@ namespace models\base;
  * @property string $status
  * @property integer $position_px
  * @property string $from_direction
+ * @property string $last_output_direction
  *
  * @property \models\Entity $entity
  * @property \models\Resource $resource
@@ -36,7 +37,7 @@ class BaseEntityResource extends \yii\db\ActiveRecord
         return [
             [[BaseEntityResourcePeer::ENTITY_ID, BaseEntityResourcePeer::RESOURCE_ID], 'required'],
             [[BaseEntityResourcePeer::ENTITY_ID, BaseEntityResourcePeer::RESOURCE_ID, BaseEntityResourcePeer::AMOUNT, BaseEntityResourcePeer::POSITION_PX], 'integer'],
-            [[BaseEntityResourcePeer::STATUS, BaseEntityResourcePeer::FROM_DIRECTION], 'string'],
+            [[BaseEntityResourcePeer::STATUS, BaseEntityResourcePeer::FROM_DIRECTION, BaseEntityResourcePeer::LAST_OUTPUT_DIRECTION], 'string'],
             [[BaseEntityResourcePeer::ENTITY_ID, BaseEntityResourcePeer::RESOURCE_ID], 'unique', 'targetAttribute' => [BaseEntityResourcePeer::ENTITY_ID, BaseEntityResourcePeer::RESOURCE_ID]],
             [[BaseEntityResourcePeer::ENTITY_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseEntity::className(), 'targetAttribute' => [BaseEntityResourcePeer::ENTITY_ID => BaseEntityPeer::ENTITY_ID]],
             [[BaseEntityResourcePeer::RESOURCE_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseResource::className(), 'targetAttribute' => [BaseEntityResourcePeer::RESOURCE_ID => BaseResourcePeer::RESOURCE_ID]],
@@ -56,6 +57,7 @@ class BaseEntityResource extends \yii\db\ActiveRecord
             BaseEntityResourcePeer::STATUS => 'Status',
             BaseEntityResourcePeer::POSITION_PX => 'Position Px',
             BaseEntityResourcePeer::FROM_DIRECTION => 'From Direction',
+            BaseEntityResourcePeer::LAST_OUTPUT_DIRECTION => 'Last Output Direction',
         ];
     }
     /**
@@ -95,6 +97,7 @@ class BaseEntityResource extends \yii\db\ActiveRecord
             'status' => BaseEntityResourcePeer::STATUS,
             'position_px' => BaseEntityResourcePeer::POSITION_PX,
             'from_direction' => BaseEntityResourcePeer::FROM_DIRECTION,
+            'last_output_direction' => BaseEntityResourcePeer::LAST_OUTPUT_DIRECTION,
         ];
     }
     

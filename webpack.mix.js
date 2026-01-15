@@ -2,7 +2,7 @@ let mix = require('laravel-mix');
 const path = require('path');
 
 mix
-    .js('resources/js/game.js', 'public/js')
+    .js('resources/js/bootstrap.js', 'public/js/game.js')  // NEW (2026-01): bootstrap.js is entry point, outputs as game.js
     .js('resources/js/application.js', 'public/js')
     .js('resources/js/regions.js', 'public/js')
     .js('resources/js/admin.js', 'public/js')

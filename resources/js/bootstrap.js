@@ -1,6 +1,7 @@
 import { GameLoader } from './core/GameLoader.js';
 import { GraphicsEngine } from './core/GraphicsEngine.js';
 import ZFactoryGame from './game.js';
+import { ErrorModal } from './modules/windows/ErrorModal.js';
 
 /**
  * Bootstrap - Game initialization entry point
@@ -35,8 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const { config, entities, tiles } = await loader.loadAll();
         console.log('[Bootstrap] Data loaded:', {
-            entities: entities.entities?.length || 0,
-            tiles: tiles.tiles?.length || 0,
+            entities: Array.isArray(entities) ? entities.length : 0,
+            tiles: typeof tiles === 'object' ? Object.keys(tiles).length : 0,
             assetManifest: Object.keys(config.assetManifest || {}).length
         });
 
@@ -64,8 +65,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Phase 4: Initialize game
         showLoading('Initializing game...');
-        const game = new ZFactoryGame(config, entities, tiles, graphics);
+        // Wrap entities and tiles in expected format
+        const entitiesData = Array.isArray(entities) ? entities : [];
+        const tilesData = { tiles: tiles };
+
+        console.log('[Bootstrap] Creating game instance with:', {
+            entitiesCount: entitiesData.length,
+            tilesCount: Object.keys(tilesData.tiles).length,
+            configKeys: Object.keys(config)
+        });
+
+        const game = new ZFactoryGame(config, entitiesData, tilesData, graphics);
+
+        console.log('[Bootstrap] Game instance created, calling init()...');
         await game.init();
+        console.log('[Bootstrap] Game init completed');
 
         // Done - hide loading screen
         console.log('[Bootstrap] Initialization complete!');
@@ -79,7 +93,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error('[Bootstrap] Failed to initialize game:', error);
-        showLoading('Error loading game. Please refresh the page.');
+
+        // Hide loading screen
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) {
+            loadingEl.style.display = 'none';
+        }
+
+        // Build detailed error message
+        let errorMessage = error.message || 'Unknown error';
+        let errorDetails = '';
+
+        // Add suggestion for common errors
+        if (error.message && error.message.includes('You may need to log in')) {
+            errorDetails = 'Please refresh the page and log in.';
+        } else if (error.message && error.message.includes('Failed to load')) {
+            errorDetails = 'Check your network connection and try refreshing the page.';
+        } else {
+            errorDetails = 'Please check browser console (F12) for details and refresh the page.';
+        }
+
+        // Show error in modal dialog
+        ErrorModal.show('Failed to Initialize Game', errorMessage, errorDetails);
 
         // Show error details in console
         if (error.stack) {

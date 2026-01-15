@@ -187,10 +187,25 @@ Defines types of entities that can be placed on the map.
 | icon_url             | VARCHAR(256) NULL                                                                 | 64x64 icon for UI panels              |
 | power                | INT UNSIGNED DEFAULT 1                                                            | Visibility radius for eye type        |
 | parent_entity_type_id| INT UNSIGNED NULL                                                                 | Parent entity for orientation variants|
-| orientation          | ENUM('none','up','right','down','left') DEFAULT 'none'                            | Entity orientation/direction          |
+| orientation          | ENUM('none','up','right','down','left','horizontal','vertical') DEFAULT 'none'    | Entity orientation/direction (NEW 2026-01: horizontal/vertical for pipes) |
+| resource_types       | SET('raw','liquid','crafted','deposit','energy') NULL                             | Accepted resource types (NEW 2026-01) |
 | storage_type          | ENUM('none', 'unlimited', 'limited') DEFAULT 'none'                              | Storage capacity type                 |
 | storage_resource_count| INT UNSIGNED NULL                                                                 | Total max resources                   |
 | storage_per_resource  | INT UNSIGNED NULL                                                                 | Max per resource type                 |
+
+**NEW (2026-01): Resource Types System**
+- `resource_types` SET defines which resource types an entity can handle
+- Values: 'raw' (solid resources), 'liquid' (fluids), 'crafted' (processed), 'deposit' (ores), 'energy' (electricity)
+- Examples:
+  - Conveyors: 'raw,crafted' (no liquids)
+  - Pipes: 'liquid' only
+  - Buildings: 'raw,crafted,liquid' (all except energy)
+  - Mining: 'deposit,raw'
+  - Electricity: 'energy'
+
+**NEW (2026-01): Horizontal/Vertical Orientation**
+- Pipes can now have 'horizontal' (131) or 'vertical' (132) orientation
+- Replaces parent_entity_type_id system for simple horizontal/vertical variants
 
 **Entity Type Categories:**
 - `building` — производственные здания (furnace, assembler) - стандартные правила постройки
@@ -361,14 +376,14 @@ Defines types of resources in the game (ores, ingots, crafted items).
 | resource_id | INT UNSIGNED AUTO_INC                  | Primary key                          |
 | name        | VARCHAR(128)                           | Display name                         |
 | icon_url    | VARCHAR(256)                           | Path to 16x16 icon (resources folder)|
-| type        | ENUM('raw','liquid','crafted','deposit','energy')| Resource category                   |
+| type        | ENUM('raw','liquid','crafted','deposit','energy')| Resource category (NEW 2026-01: energy) |
 
 **Resource Types:**
 - `raw` — сырые ресурсы (руды, дерево, уголь)
-- `liquid` — жидкие ресурсы (топливо, масла)
+- `liquid` — жидкие ресурсы (вода, нефть, газ, лава) - транспортируются через pipes
 - `crafted` — обработанные ресурсы (слитки, пластины, компоненты)
 - `deposit` — абстрактные залежи внутри resource entities (не перемещаются)
-- `energy` — энергетические ресурсы (электричество, солнечный свет)
+- `energy` — **NEW (2026-01)** энергетические ресурсы (электричество)
 
 **Resources:**
 | ID  | Name          | Type    | Description              |
@@ -427,8 +442,14 @@ Links entities to their contained resources and transport state.
 | position_px       | INT NULL             | Resource position in pixels (centered)   |
 | from_direction    | ENUM('up','down','left','right') NULL | Entry direction for conveyors |
 | status            | ENUM NULL            | Transport status (empty, carrying, etc.) |
+| last_output_direction | ENUM('left','right') NULL | **NEW (2026-01)** Splitter round-robin state |
 
 **Unique constraint:** (entity_id, resource_id) — одна entity может иметь только одну запись для каждого ресурса.
+
+**NEW (2026-01): Splitter State**
+- `last_output_direction`: Stores the last output direction used by splitter (for round-robin distribution)
+- Replaces the deprecated `splitter_state` table
+- Only used for splitter entities (entity_type_id 133-134)
 
 **Использование:**
 

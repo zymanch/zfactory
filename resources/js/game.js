@@ -24,6 +24,7 @@ import { ConstructionManager } from './modules/constructionManager.js';
 import { DepositLayerManager } from './modules/depositLayerManager.js';
 import { PipeSystemManager } from './modules/pipes/PipeSystemManager.js';
 import { PipeRenderer } from './modules/pipes/PipeRenderer.js';
+import { PipeInletRenderer } from './modules/rendering/PipeInletRenderer.js';
 import { PipeConnectionManager } from './modules/pipes/PipeConnectionManager.js';
 import { ElectricitySystemManager } from './modules/electricity/ElectricitySystemManager.js';
 import { ElectrificationLayerManager } from './modules/electricity/ElectrificationLayerManager.js';
@@ -63,8 +64,8 @@ class ZFactoryGame {
         this.buildPanelData = configData.buildPanel || [];
 
         // Instance data from entities - now includes state as properties
-        this.entitiesData = entitiesData.entities || [];
-        this.pipeSystems = entitiesData.pipeSystems || {};
+        // NEW (2026-01): entitiesData can be either {entities: []} or just []
+        this.entitiesData = Array.isArray(entitiesData) ? entitiesData : (entitiesData.entities || []);
 
         // Map tiles - now a dictionary {"x_y": landing_id}
         this.tilesData = tilesData.tiles || {};
@@ -104,6 +105,7 @@ class ZFactoryGame {
         this.technologyWindow = null;
         this.pipeSystemManager = null;
         this.pipeRenderer = null;
+        this.pipeInletRenderer = null;
         this.pipeConnectionManager = null;
         this.electricityManager = null;
         this.electrificationLayer = null;
@@ -128,25 +130,31 @@ class ZFactoryGame {
      * Data and textures are already loaded by bootstrap
      */
     async init() {
-        console.log('[Game] 1/7 Initializing modules...');
+        console.log('[Game] 1/8 Initializing modules...');
         this.initModules();
 
-        console.log('[Game] 2/7 Initializing layers...');
+        console.log('[Game] 2/8 Initializing layers...');
         this.initLayers();
 
-        console.log('[Game] 3/7 Initializing camera...');
+        console.log('[Game] 3/8 Initializing camera...');
         this.initCamera();
 
-        console.log('[Game] 4/7 Post-init modules...');
+        console.log('[Game] 4/8 Post-init modules...');
         await this.initModulesPost();
 
-        console.log('[Game] 5/7 Loading map tiles...');
+        console.log('[Game] 5/8 Preparing entity textures...');
+        this.prepareEntityTextures();
+
+        console.log('[Game] 5.5/8 Preparing special textures...');
+        await this.prepareSpecialTextures();
+
+        console.log('[Game] 6/8 Loading map tiles...');
         this.loadMapTiles();
 
-        console.log('[Game] 6/7 Loading entities...');
+        console.log('[Game] 7/8 Loading entities...');
         this.loadEntities();
 
-        console.log('[Game] 7/7 Starting game loop...');
+        console.log('[Game] 8/8 Starting game loop...');
         this.startGameLoop();
 
         console.log('[Game] Init complete!');
@@ -187,6 +195,7 @@ class ZFactoryGame {
         this.constructionManager = new ConstructionManager(this);
         this.pipeSystemManager = new PipeSystemManager(this);
         this.pipeRenderer = new PipeRenderer(this);
+        this.pipeInletRenderer = new PipeInletRenderer(this);
         this.pipeConnectionManager = new PipeConnectionManager(this);
         this.electricityManager = new ElectricitySystemManager(this);
         this.electrificationLayer = new ElectrificationLayerManager(this);
@@ -229,6 +238,10 @@ class ZFactoryGame {
 
         this.worldContainer.addChild(this.landingLayer);
         this.worldContainer.addChild(this.entityLayer);
+
+        // Add pipe inlet renderer layer (above entities)
+        this.worldContainer.addChild(this.pipeInletRenderer.container);
+        this.pipeInletRenderer.container.zIndex = 3;
 
         const stage = this.graphics.getStage();
         stage.addChild(this.worldContainer);
@@ -355,129 +368,85 @@ class ZFactoryGame {
     }
 
     /**
-     * Load texture assets
+     * Prepare entity textures from atlases loaded by GraphicsEngine
+     * Slices each entity atlas into textures for different states
      */
-    async loadTextures() {
-        await this.loadLandingTextures();
-        await this.loadTransitionTextures();
-        await this.loadEntityTextures();
-        await this.loadDepositTextures();
-        await this.conveyorManager.loadAtlases();
-        await this.pipeConnectionManager.loadVariantTextures();
-    }
-
-    /**
-     * Load terrain textures
-     */
-    async loadLandingTextures() {
-        for (const landingId in this.landingTypes) {
-            const landing = this.landingTypes[landingId];
-            const url = this.assetUrl(this.config.tilesPath + 'landing/' + landing.folder + '/' + landing.folder + '_0.png');
-            try {
-                this.textures['landing_' + landingId] = await PIXI.Assets.load(url);
-            } catch (e) {
-                console.warn('Failed to load landing texture:', url);
-            }
-        }
-    }
-
-    /**
-     * Load texture atlases for all landing types
-     */
-    async loadTransitionTextures() {
-        const landings = Object.values(this.landingTypes);
-
-        for (const landing of landings) {
-            const atlasUrl = this.assetUrl(`${this.config.tilesPath}landing/atlases/${landing.folder}_atlas.png`);
-
-            try {
-                const texture = await PIXI.Assets.load(atlasUrl);
-                this.tileManager.landingAtlases[landing.folder + '_atlas'] = texture;
-                console.log('Loaded atlas:', landing.folder + '_atlas');
-            } catch (e) {
-                console.error('Failed to load atlas:', atlasUrl, e);
-            }
+    prepareEntityTextures() {
+        if (!this.entityTypes) {
+            console.error('[Game] entityTypes is undefined in prepareEntityTextures');
+            return;
         }
 
-        console.log('All atlases loaded.');
-    }
-
-    /**
-     * Load deposit textures (only normal.png for each deposit type)
-     */
-    async loadDepositTextures() {
-        for (const depositTypeId in this.depositTypes) {
-            const depositType = this.depositTypes[depositTypeId];
-
-            // Only load normal.png for deposits (URL from backend)
-            const normalUrl = this.assetUrl(depositType.sprite_url);
-
-            try {
-                const texture = await PIXI.Assets.load(normalUrl);
-                this.textures[`deposit_${depositTypeId}_normal`] = texture;
-            } catch (e) {
-                console.warn('Failed to load deposit texture:', normalUrl, e);
-            }
+        if (!this.graphics) {
+            console.error('[Game] graphics is undefined in prepareEntityTextures');
+            return;
         }
-    }
 
-    /**
-     * Load entity textures from atlases (PNG only, no SVG)
-     */
-    async loadEntityTextures() {
         const { tileWidth, tileHeight } = this.config;
 
         for (const typeId in this.entityTypes) {
             const entityType = this.entityTypes[typeId];
+
+            if (!entityType) {
+                console.warn(`[Game] Entity type ${typeId} is undefined`);
+                continue;
+            }
             const width = entityType.width || 1;
             const height = entityType.height || 1;
 
             const pixelWidth = width * tileWidth;
             const pixelHeight = height * tileHeight;
 
-            // Load atlas.png (URL from backend)
-            const atlasUrl = this.assetUrl(entityType.atlas_url);
+            // Get atlas texture from GraphicsEngine (already loaded)
+            const atlasKey = `entity_atlas_${typeId}`;
+            const atlasTexture = this.graphics.getTexture(atlasKey);
 
-            try {
-                const atlasTexture = await PIXI.Assets.load(atlasUrl);
+            if (!atlasTexture) {
+                console.warn(`[Game] Entity atlas not found: ${atlasKey}`);
+                continue;
+            }
 
-                // Create textures for each state from atlas
-                // Atlas row 1: [normal][damaged][blueprint][normal_selected][damaged_selected][deleting][crafting]
-                // Atlas row 2: [construction_10][construction_20]...[construction_90]
+            // Create textures for each state from atlas
+            // Atlas row 1: [normal][damaged][blueprint][normal_selected][damaged_selected][deleting][crafting]
+            // Atlas row 2: [construction_10][construction_20]...[construction_90]
 
-                // Load all 7 sprites from row 1
-                let xOffset = 0;
-                for (const state of SPRITE_STATES) {
-                    const textureKey = `entity_${typeId}_${state}`;
+            // Load all 7 sprites from row 1
+            let xOffset = 0;
+            for (const state of SPRITE_STATES) {
+                const textureKey = `entity_${typeId}_${state}`;
 
-                    // Create texture from atlas region
-                    const rect = new PIXI.Rectangle(xOffset, 0, pixelWidth, pixelHeight);
-                    this.textures[textureKey] = new PIXI.Texture({
-                        source: atlasTexture.source,
-                        frame: rect
-                    });
+                // Create texture from atlas region using GraphicsEngine
+                const rect = this.graphics.createRectangle(xOffset, 0, pixelWidth, pixelHeight);
+                this.textures[textureKey] = this.graphics.createTextureFromAtlas(atlasKey, rect);
 
-                    xOffset += pixelWidth;
-                }
+                xOffset += pixelWidth;
+            }
 
-                // Load 9 construction frames from row 2
-                xOffset = 0;
-                const yOffset = pixelHeight; // Second row
-                for (const progress of CONSTRUCTION_FRAMES) {
-                    const textureKey = `entity_${typeId}_construction_${progress}`;
+            // Load 9 construction frames from row 2
+            xOffset = 0;
+            const yOffset = pixelHeight; // Second row
+            for (const progress of CONSTRUCTION_FRAMES) {
+                const textureKey = `entity_${typeId}_construction_${progress}`;
 
-                    const rect = new PIXI.Rectangle(xOffset, yOffset, pixelWidth, pixelHeight);
-                    this.textures[textureKey] = new PIXI.Texture({
-                        source: atlasTexture.source,
-                        frame: rect
-                    });
+                const rect = this.graphics.createRectangle(xOffset, yOffset, pixelWidth, pixelHeight);
+                this.textures[textureKey] = this.graphics.createTextureFromAtlas(atlasKey, rect);
 
-                    xOffset += pixelWidth;
-                }
-            } catch (e) {
-                console.warn('Failed to load entity atlas:', atlasUrl, e);
+                xOffset += pixelWidth;
             }
         }
+
+        console.log(`[Game] Prepared textures for ${Object.keys(this.entityTypes).length} entity types`);
+    }
+
+    /**
+     * Prepare special textures (conveyors, pipes) that need atlas organization
+     */
+    async prepareSpecialTextures() {
+        // Conveyors: organize textures by orientation and state
+        await this.conveyorManager.loadAtlases();
+
+        // Pipes: load variant atlases (separate from entity atlases)
+        await this.pipeConnectionManager.loadVariantTextures();
     }
 
     /**
@@ -564,10 +533,12 @@ class ZFactoryGame {
      * Load map tiles (data already loaded by GameLoader)
      */
     loadMapTiles() {
-        if (this.tilesData && this.tilesData.length > 0) {
+        // tilesData is an object (dictionary), not an array
+        const tilesCount = Object.keys(this.tilesData).length;
+        if (this.tilesData && tilesCount > 0) {
             this.tileManager.storeTileData(this.tilesData);
             this.tileManager.renderTiles(this.tilesData);
-            console.log(`[Game] Loaded ${this.tilesData.length} tiles`);
+            console.log(`[Game] Loaded ${tilesCount} tiles`);
         }
     }
 
@@ -575,10 +546,8 @@ class ZFactoryGame {
      * Load entities (data already loaded by GameLoader)
      */
     loadEntities() {
-        // Load pipe systems
-        if (this.pipeSystems && Object.keys(this.pipeSystems).length > 0) {
-            this.pipeSystemManager.loadSystems(this.pipeSystems);
-        }
+        // Calculate pipe systems locally (NEW: BFS instead of server loading)
+        this.pipeSystemManager.calculateSystems();
 
         // Filter eye entities (entities with type='eye')
         this.initialEyeEntities = this.entitiesData.filter(e => {
@@ -595,7 +564,7 @@ class ZFactoryGame {
         // Initialize resource renderer (visual layer for resources on conveyors/manipulators)
         this.resourceRenderer.init();
 
-        console.log(`[Game] Loaded ${this.entitiesData.length} entities, ${Object.keys(this.pipeSystems).length} pipe systems`);
+        console.log(`[Game] Loaded ${this.entitiesData.length} entities`);
     }
 
     /**
@@ -615,8 +584,11 @@ class ZFactoryGame {
             // Check if this is a pipe entity with connection variants
             const isPipeEntity = this.pipeConnectionManager.isPipe(entity);
 
-            // Handle conveyors separately (but exclude pipes)
-            if (entityType && entityType.type === 'conveyor' && !isPipeEntity) {
+            // Check if this is an animated conveyor (not underground)
+            const isAnimatedConveyor = this.conveyorManager.isConveyor(entity);
+
+            // Handle animated conveyors separately (but exclude pipes and underground)
+            if (isAnimatedConveyor && !isPipeEntity) {
                 const texture = this.conveyorManager.getConveyorTexture(entity, false, 0);
                 if (texture) {
                     const sprite = this.createEntitySprite(entity, texture, isVisible);
@@ -722,9 +694,12 @@ class ZFactoryGame {
         // Get hover sprite type based on current game mode
         const hoverSpriteType = this.gameModeManager.getHoverSpriteType();
 
+        // Check if this is an animated conveyor
+        const isAnimatedConveyor = this.conveyorManager.isConveyor(entity);
+
         if (isHovering && hoverSpriteType) {
-            // Handle conveyors separately (but exclude pipes)
-            if (entityType && entityType.type === 'conveyor' && !isPipeEntity) {
+            // Handle animated conveyors separately (but exclude pipes and underground)
+            if (isAnimatedConveyor && !isPipeEntity) {
                 this.conveyorManager.updateConveyorTexture(entity.entity_id, true);
             } else if (isPipeEntity) {
                 // Handle pipes - switch to selected texture
@@ -749,7 +724,7 @@ class ZFactoryGame {
             }
         } else {
             // Reset to normal texture
-            if (entityType && entityType.type === 'conveyor' && !isPipeEntity) {
+            if (isAnimatedConveyor && !isPipeEntity) {
                 this.conveyorManager.updateConveyorTexture(entity.entity_id, false);
             } else if (isPipeEntity) {
                 // Handle pipes - reset to normal texture
@@ -947,6 +922,11 @@ class ZFactoryGame {
                 this.noPowerIndicator.update();
             }
 
+            // Update pipe inlet sprites
+            if (this.pipeInletRenderer) {
+                this.pipeInletRenderer.update();
+            }
+
             this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);
             this.updateFPS(now);
         } catch (error) {
@@ -987,13 +967,9 @@ class ZFactoryGame {
 
 }
 
-// Initialize game when DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof window.gameConfig !== 'undefined' && window.gameConfig.configUrl) {
-        const game = new ZFactoryGame(window.gameConfig.configUrl);
-        game.init().catch(console.error);
-        window.game = game;
-    }
-});
+// REMOVED (2026-01-15): Game initialization moved to bootstrap.js
+// Old code tried to create Game with single parameter (configUrl),
+// but constructor now expects 4 parameters: (configData, entitiesData, tilesData, graphics)
+// Bootstrap.js handles proper initialization with GameLoader and GraphicsEngine
 
 export default ZFactoryGame;

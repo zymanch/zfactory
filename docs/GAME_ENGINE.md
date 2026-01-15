@@ -454,7 +454,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error('[Bootstrap] Failed to initialize game:', error);
-        showLoading('Error loading game. Please refresh.');
+
+        // NEW (2026-01-15): User-friendly error messages with suggestions
+        let errorMessage = 'Error loading game: ' + (error.message || 'Unknown error');
+        if (error.message && error.message.includes('You may need to log in')) {
+            errorMessage += '\n\nPlease refresh the page and log in.';
+        }
+        showLoading(errorMessage);
     }
 });
 ```
@@ -462,6 +468,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 **GameLoader** (`resources/js/core/GameLoader.js`):
 - Separates data loading from game logic
 - Handles AJAX requests to `/game/config`, `/game/entities`, `/map/tiles`
+- **NEW (2026-01-15)**: Comprehensive validation of API responses:
+  - Checks HTTP status codes (redirects = authentication required)
+  - Validates Content-Type (detects HTML responses indicating login redirect)
+  - Validates response structure (checks for required fields)
+  - Shows user-friendly error messages (e.g., "You may need to log in")
 - Emits events for progress tracking
 - Parallel loading of entities and tiles
 
@@ -554,14 +565,41 @@ const eyeEntities = game.entities.filter(e => {
 });
 ```
 
-### Pipe Systems
-Pipe systems are loaded with entities (region-specific data):
+### Pipe Systems (NEW 2026-01: Client-Side BFS)
+
+**BREAKING CHANGE:** Pipe systems are no longer loaded from server. They are calculated locally using BFS algorithm.
 
 ```javascript
+// Calculate pipe systems (called on game init and when pipes change)
+game.pipeSystemManager.calculateSystems();
+
 // Get pipe system for specific entity
 const system = game.pipeSystemManager.getSystemForEntity(entityId);
-// Example: {pipe_system_id: 1, resource_id: 20, current_amount: 50, max_capacity: 100, entity_ids: [15, 16, 17, 18]}
+// Example: {pipe_system_id: 1, resource_id: 300, current_amount: 50, max_capacity: 300, entity_ids: [15, 16, 17]}
 ```
+
+**BFS Algorithm:**
+- Finds all connected pipes in 4 directions (up, down, left, right)
+- Uses SpatialIndex for neighbor lookup with manual fallback
+- Creates local system IDs (incrementing counter, not from database)
+- Calculates capacity from sum of all pipe powers
+
+**Priority Distribution:**
+Fluids distribute with priority: Tanks → Buildings → Mining
+```javascript
+// When fluid is added to system, distribute to entities
+game.pipeSystemManager.addFluid(pipeId, resourceId, amount);
+// Tanks (135,136,140,141) fill first
+// Then buildings (type='building')
+// Finally mining (type='mining')
+```
+
+**Pipe Inlet Sprites (NEW 2026-01):**
+Visual representation of pipe connections to buildings:
+- 15px inlet sprites at entity edges
+- 4 directions × 5 states = 20 sprites in atlas
+- Rendered by `PipeInletRenderer.js`
+- Atlas: `/assets/tiles/pipe_inlets/inlet_atlas.png` (1280×64)
 
 ## API Endpoints
 
@@ -680,7 +718,7 @@ Load game configuration with all reference data. Called once on init.
 **Structure Changes (2026-01):**
 - `entityTypes` now includes embedded `costs`, `recipes`, and `behavior` (previously separate objects)
 - `eyeEntities` removed (filter entities by `type='eye'` on client)
-- `pipeSystems` moved to `/game/entities` endpoint
+- **`pipeSystems` removed** - calculated client-side using BFS (no longer in API)
 - `entityTypeCosts`, `entityTypeRecipes`, `buildingRules` removed (merged into entityTypes)
 
 ### GET /map/tiles
@@ -701,7 +739,7 @@ Load terrain tiles for viewport.
 ```
 
 ### GET /game/entities
-Load entities and pipe systems for current region.
+Load entities for current region.
 
 **Response:**
 ```json
@@ -715,7 +753,14 @@ Load entities and pipe systems for current region.
             "durability": 100,
             "construction_progress": 0,
             "x": 320,
-            "y": 240
+            "y": 240,
+            "resources": [
+                {"resource_id": 2, "amount": 10}
+            ],
+            "craftingState": {
+                "recipe_id": 3,
+                "ticks_remaining": 30
+            }
         },
         {
             "entity_id": "ship_15",
@@ -725,22 +770,15 @@ Load entities and pipe systems for current region.
             "x": 420,
             "y": 340
         }
-    ],
-    "pipeSystems": {
-        "1": {
-            "pipe_system_id": 1,
-            "resource_id": 20,
-            "current_amount": 50,
-            "max_capacity": 100,
-            "entity_ids": [15, 16, 17, 18]
-        }
-    }
+    ]
 }
 ```
 
 **Notes:**
+- **NEW (2026-01):** `pipeSystems` removed - calculated client-side using BFS
 - Entities include both island entities (`entity_id` as integer) and ship entities (`entity_id` as string with `ship_` prefix)
 - Ship entity coordinates are converted to world coordinates (ship coords + region's ship_attach offset)
+- **NEW (2026-01):** Entity state properties embedded in entities (resources, craftingState, transportState)
 - `pipeSystems` object indexed by `pipe_system_id` (moved from `/game/config` in 2026-01 refactoring)
 - Eye entities (type='eye') are filtered on client side from entities array for fog of war calculations
 

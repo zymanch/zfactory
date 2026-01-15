@@ -21,5 +21,9 @@ class BaseEntityTypePeer  {
     const ANIMATION_FPS = "animation_fps";
     const DESCRIPTION = "description";
     const CONSTRUCTION_TICKS = "construction_ticks";
+    const STORAGE_TYPE = "storage_type";
+    const STORAGE_RESOURCE_COUNT = "storage_resource_count";
+    const STORAGE_PER_RESOURCE = "storage_per_resource";
+    const RESOURCE_TYPES = "resource_types";
 
 }

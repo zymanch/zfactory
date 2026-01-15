@@ -17,8 +17,10 @@ $this->registerJs("
     };
 ", \yii\web\View::POS_HEAD);
 
-// Register compiled game JS
-$this->registerJsFile('/js/game.js', ['position' => \yii\web\View::POS_END]);
+// Register compiled game JS with cache busting
+$gameJsPath = Yii::getAlias('@webroot/js/game.js');
+$timestamp = file_exists($gameJsPath) ? filemtime($gameJsPath) : time();
+$this->registerJsFile('/js/game.js?v=' . $timestamp, ['position' => \yii\web\View::POS_END]);
 
 ?>
 

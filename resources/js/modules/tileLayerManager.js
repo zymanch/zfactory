@@ -15,7 +15,6 @@ export class TileLayerManager {
         this.skyTiles = new Map();         // Sky tiles for empty spaces
         this.islandEdgeTiles = new Map();  // Island edge tiles (auto-generated)
         this.tileDataMap = new Map();      // Map of x_y -> landing_id
-        this.landingAtlases = {};          // Texture atlases for landings
         this.atlasPadding = 0;             // Padding between sprites in atlas
     }
 
@@ -193,11 +192,12 @@ export class TileLayerManager {
         const landing = this.game.gameData.landings[landingId];
         if (!landing) return null;
 
-        const atlasName = landing.folder + '_atlas';
-        const atlas = this.landingAtlases[atlasName];
+        // Get atlas texture from GraphicsEngine (loaded via assetManifest)
+        const atlasKey = `landing_atlas_${landing.folder}`;
+        const atlas = this.game.graphics.getTexture(atlasKey);
 
         if (!atlas) {
-            console.warn('Atlas not loaded:', atlasName);
+            console.warn('Atlas not loaded:', atlasKey);
             return null;
         }
 
@@ -225,7 +225,7 @@ export class TileLayerManager {
             tileHeight - inset * 2
         );
 
-        const texture = this.game.graphics.createTextureFromAtlas(atlasName, rect);
+        const texture = this.game.graphics.createTextureFromAtlas(atlasKey, rect);
 
         const sprite = this.game.graphics.createSprite(texture, {
             x: tileX * tileWidth,

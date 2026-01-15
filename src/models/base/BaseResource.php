@@ -43,7 +43,7 @@ class BaseResource extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseResourcePeer::NAME, BaseResourcePeer::ICON_URL, BaseResourcePeer::TYPE], 'required'],
+            [[BaseResourcePeer::NAME, BaseResourcePeer::ICON_URL], 'required'],
             [[BaseResourcePeer::TYPE], 'string'],
             [[BaseResourcePeer::MAX_STACK], 'integer'],
             [[BaseResourcePeer::NAME], 'string', 'max' => 128],

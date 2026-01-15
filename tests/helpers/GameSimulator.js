@@ -69,14 +69,13 @@ export async function initializeManagers(game) {
     game.resourceTransport = resourceTransport;
     game.electricityManager = electricityManager;
     game.pipeManager = pipeManager;
+    game.pipeSystemManager = pipeManager; // Alias for compatibility
 
     // Initialize resource transport
     resourceTransport.init();
 
-    // Load pipe systems
-    if (game.initialPipeSystems && Object.keys(game.initialPipeSystems).length > 0) {
-        pipeManager.loadSystems(game.initialPipeSystems);
-    }
+    // Calculate pipe systems locally (NEW: BFS instead of loading from server)
+    pipeManager.calculateSystems();
 
     return {
         resourceTransport,

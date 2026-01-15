@@ -11,5 +11,6 @@ class BaseEntityResourcePeer  {
     const STATUS = "status";
     const POSITION_PX = "position_px";
     const FROM_DIRECTION = "from_direction";
+    const LAST_OUTPUT_DIRECTION = "last_output_direction";
 
 }

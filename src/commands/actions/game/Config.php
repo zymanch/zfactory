@@ -333,19 +333,18 @@ class Config extends JsonAction
         foreach ($states as $state) {
             foreach ($orientations as $orient) {
                 $key = "conveyor_{$state}_{$orient}";
-                $assets[$key] = "/assets/tiles/entities/conveyor/{$orient}/{$state}_atlas.png?v={$v}";
+                // Fix: folder is 'conveyor_left' not 'left', 'conveyor' for 'right'
+                $folder = ($orient === 'right') ? 'conveyor' : "conveyor_{$orient}";
+                $assets[$key] = "/assets/tiles/entities/conveyor/{$folder}/{$state}_atlas.png?v={$v}";
             }
         }
 
-        // Pipe atlases (16: 4 states × 4 pipe types)
-        $pipeStates = ['empty', 'water', 'oil', 'gas'];
-        $pipeFolders = ['pipe', 'pipe_to_ground', 'pump', 'storage_tank'];
-        foreach ($pipeFolders as $folder) {
-            foreach ($pipeStates as $state) {
-                $key = "pipe_{$folder}_{$state}";
-                $assets[$key] = "/assets/tiles/entities/pipe/{$folder}/pipe_atlas_{$state}.png?v={$v}";
-            }
-        }
+        // REMOVED (2026-01-15): Old pipe atlases by fluid type
+        // Pipes now use regular entity atlases (from entity_type.atlas_url)
+        // Fluid visualization is handled by PipeRenderer at runtime
+        // Old code tried to load non-existent files like:
+        // - /pipe/storage_tank/pipe_atlas_water.png (doesn't exist)
+        // - /pipe/pump/pipe_atlas_oil.png (doesn't exist)
 
         // Special textures
         $assets['clouds_atlas'] = "/assets/clouds/clouds_atlas.png?v={$v}";
