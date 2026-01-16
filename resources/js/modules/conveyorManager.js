@@ -1,3 +1,5 @@
+import { ConveyorVariantManager } from './ConveyorVariantManager.js';
+
 /**
  * ConveyorManager - Handles conveyor belt animations and connections
  *
@@ -10,6 +12,11 @@
 export class ConveyorManager {
     constructor(game) {
         this.game = game;
+        this.variantManager = new ConveyorVariantManager(game);
+
+        // Variant cache: variantCache[entityId] = variant (0-15)
+        // Cached to avoid recalculating on every animation frame
+        this.variantCache = new Map();
 
         // Atlas storage: atlases[orientation][state] = texture
         this.atlases = {
@@ -100,61 +107,57 @@ export class ConveyorManager {
      */
     registerConveyor(entityId, sprite) {
         this.conveyorSprites.set(entityId, sprite);
+
+        // Add to spatial index for fast neighbor lookup
+        const key = `entity_${entityId}`;
+        const entity = this.game.entityData.get(key);
+        if (entity) {
+            this.variantManager.addToIndex(entity);
+
+            // Calculate and cache variant for this conveyor
+            const variant = this.variantManager.calculateVariant(entity);
+            this.variantCache.set(entityId, variant);
+        }
     }
 
     /**
      * Unregister a conveyor sprite (when removed)
      */
     unregisterConveyor(entityId) {
+        // Remove from spatial index
+        const key = `entity_${entityId}`;
+        const entity = this.game.entityData.get(key);
+        if (entity) {
+            this.variantManager.removeFromIndex(entity);
+        }
+
         this.conveyorSprites.delete(entityId);
+        this.variantCache.delete(entityId);
     }
 
     /**
      * Get connection variant (0-15) based on neighboring conveyors
      * Bit mask: [DOWN][UP][RIGHT][LEFT]
+     * Delegates to ConveyorVariantManager for isolated, testable logic
      */
     getConnectionVariant(entity) {
-        const neighbors = this.getNeighbors(entity);
-        const entityType = this.game.entityTypes[entity.entity_type_id];
-        const currentOrientation = entityType.folder;
-        let variant = 0;
-
-        // Устанавливаем бит если:
-        // 1. Сосед входящий (движется к нам) ИЛИ
-        // 2. Мы исходящие (движемся к соседу)
-        if (this.isIncomingConveyor(neighbors.left, 'left') || this.isOutgoingToNeighbor(currentOrientation, 'left')) variant |= 1;  // Bit 0
-        if (this.isIncomingConveyor(neighbors.right, 'right') || this.isOutgoingToNeighbor(currentOrientation, 'right')) variant |= 2; // Bit 1
-        if (this.isIncomingConveyor(neighbors.up, 'up') || this.isOutgoingToNeighbor(currentOrientation, 'up')) variant |= 4;    // Bit 2
-        if (this.isIncomingConveyor(neighbors.down, 'down') || this.isOutgoingToNeighbor(currentOrientation, 'down')) variant |= 8;  // Bit 3
-
-        return variant;
+        return this.variantManager.calculateVariant(entity);
     }
 
     /**
      * Get neighboring entities at 4 cardinal directions
+     * NOTE: Kept for backward compatibility, but variantManager has its own implementation
      */
     getNeighbors(entity) {
-        const x = parseInt(entity.x);
-        const y = parseInt(entity.y);
-
-        return {
-            left: this.getEntityAt(x - 1, y),
-            right: this.getEntityAt(x + 1, y),
-            up: this.getEntityAt(x, y - 1),
-            down: this.getEntityAt(x, y + 1)
-        };
+        return this.variantManager.getNeighbors(entity);
     }
 
     /**
      * Get entity at specific tile coordinates
+     * NOTE: Kept for backward compatibility, but variantManager has its own implementation
      */
     getEntityAt(x, y) {
-        for (const [key, entity] of this.game.entityData) {
-            if (parseInt(entity.x) === x && parseInt(entity.y) === y) {
-                return entity;
-            }
-        }
-        return null;
+        return this.variantManager.getConveyorAt(x, y);
     }
 
     /**
@@ -173,46 +176,8 @@ export class ConveyorManager {
         return this.atlases.hasOwnProperty(folder);
     }
 
-    /**
-     * Check if neighboring conveyor is incoming (moving towards current conveyor)
-     * @param {Object} neighbor - соседний entity
-     * @param {string} direction - направление относительно текущего ('left', 'right', 'up', 'down')
-     * @returns {boolean}
-     */
-    isIncomingConveyor(neighbor, direction) {
-        if (!this.isConveyor(neighbor)) return false;
-
-        const entityType = this.game.entityTypes[neighbor.entity_type_id];
-        const orientation = entityType.folder; // 'conveyor', 'conveyor_up', etc.
-
-        // Конвейер входящий если его направление противоположно его положению
-        const incomingMap = {
-            'left': 'conveyor',        // слева -> должен двигать вправо (RIGHT)
-            'right': 'conveyor_left',  // справа -> должен двигать влево (LEFT)
-            'up': 'conveyor_down',     // сверху -> должен двигать вниз (DOWN)
-            'down': 'conveyor_up'      // снизу -> должен двигать вверх (UP)
-        };
-
-        return orientation === incomingMap[direction];
-    }
-
-    /**
-     * Check if current conveyor is outgoing to neighbor (moving towards neighbor)
-     * @param {string} currentOrientation - текущая ориентация ('conveyor', 'conveyor_up', etc.)
-     * @param {string} neighborDirection - направление соседа ('left', 'right', 'up', 'down')
-     * @returns {boolean}
-     */
-    isOutgoingToNeighbor(currentOrientation, neighborDirection) {
-        // Проверяем движемся ли мы в сторону соседа
-        const outgoingMap = {
-            'left': 'conveyor_left',   // движемся влево
-            'right': 'conveyor',       // движемся вправо
-            'up': 'conveyor_up',       // движемся вверх
-            'down': 'conveyor_down'    // движемся вниз
-        };
-
-        return currentOrientation === outgoingMap[neighborDirection];
-    }
+    // REMOVED: isIncomingConveyor, isOutgoingToNeighbor methods
+    // These have been moved to ConveyorVariantManager for isolated, testable logic
 
     /**
      * Get current entity state based on durability
@@ -238,7 +203,9 @@ export class ConveyorManager {
         const orientation = entityType.folder; // 'conveyor', 'conveyor_up', etc.
         const baseState = this.getEntityState(entity);
         const state = isHovered ? `${baseState}_selected` : baseState;
-        const variant = this.getConnectionVariant(entity);
+
+        // Use cached variant instead of recalculating on every frame
+        const variant = this.variantCache.get(entity.entity_id) || 0;
         const frameIndex = currentFrame % this.ANIMATION_FRAMES;
 
         const atlas = this.atlases[orientation]?.[state];
@@ -303,6 +270,18 @@ export class ConveyorManager {
      * Called when a conveyor is placed or removed
      */
     updateAllConnections() {
+        // Recalculate and cache variants for all conveyors
+        for (const [entityId, sprite] of this.conveyorSprites) {
+            const key = `entity_${entityId}`;
+            const entity = this.game.entityData.get(key);
+
+            if (entity) {
+                const variant = this.variantManager.calculateVariant(entity);
+                this.variantCache.set(entityId, variant);
+            }
+        }
+
+        // Update textures with new variants
         this.updateAllConveyorTextures();
     }
 
@@ -316,6 +295,12 @@ export class ConveyorManager {
         const key = `entity_${entityId}`;
         const entity = this.game.entityData.get(key);
         if (!entity) return;
+
+        // Ensure variant is cached for this entity
+        if (!this.variantCache.has(entityId)) {
+            const variant = this.variantManager.calculateVariant(entity);
+            this.variantCache.set(entityId, variant);
+        }
 
         const texture = this.getConveyorTexture(entity, isHovered, this.currentFrame);
         if (texture) {

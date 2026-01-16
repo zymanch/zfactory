@@ -29,6 +29,7 @@ import { PipeConnectionManager } from './modules/pipes/PipeConnectionManager.js'
 import { ElectricitySystemManager } from './modules/electricity/ElectricitySystemManager.js';
 import { ElectrificationLayerManager } from './modules/electricity/ElectrificationLayerManager.js';
 import { NoPowerIndicator } from './modules/electricity/NoPowerIndicator.js';
+import { PerformanceMonitor } from './core/PerformanceMonitor.js';
 import { SPRITE_STATES, SPRITE_STATES_ORIGINAL, CONSTRUCTION_FRAMES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 import { getCSRFToken } from './modules/utils.js';
 
@@ -73,6 +74,9 @@ class ZFactoryGame {
         // Runtime state
         this.zoom = this.initialCameraPosition.zoom || 1;
         this.loadedEntities = new Map();
+
+        // Performance monitoring (accessible via game.perfMonitor in console)
+        this.perfMonitor = new PerformanceMonitor(60); // Average over 60 frames
         this.entityData = new Map();
         this.hoveredEntity = null;
         this.needsReload = false;
@@ -622,7 +626,10 @@ class ZFactoryGame {
 
         this.updateDebug('entities', this.loadedEntities.size);
 
-        // Update all pipe connections after all entities are loaded
+        // Update all connections after all entities are loaded
+        if (this.conveyorManager) {
+            this.conveyorManager.updateAllConnections();
+        }
         if (this.pipeConnectionManager) {
             this.pipeConnectionManager.updateAllConnections();
         }
@@ -838,6 +845,8 @@ class ZFactoryGame {
             if (data.result === 'ok') {
                 // Remove entity from client
                 const key = `entity_${entity.entity_id}`;
+                const entityType = this.entityTypes[entity.entity_type_id];
+
                 this.entityData.delete(key);
                 const sprite = this.loadedEntities.get(key);
                 if (sprite) {
@@ -846,21 +855,21 @@ class ZFactoryGame {
                     this.loadedEntities.delete(key);
                 }
 
+                // Unregister conveyor and update connections
+                if (this.conveyorManager && entityType && entityType.type === 'conveyor') {
+                    this.conveyorManager.unregisterConveyor(entity.entity_id);
+                    this.conveyorManager.updateAllConnections();
+                }
+
                 // Update fog of war if it was an eye entity
-                if (this.fogOfWar) {
-                    const entityType = this.entityTypes[entity.entity_type_id];
-                    if (entityType && entityType.type === 'eye') {
-                        this.fogOfWar.removeEyeEntity(entity.entity_id);
-                        this.updateViewport();
-                    }
+                if (this.fogOfWar && entityType && entityType.type === 'eye') {
+                    this.fogOfWar.removeEyeEntity(entity.entity_id);
+                    this.updateViewport();
                 }
 
                 // Invalidate electricity network cache if electricity entity was deleted
-                if (this.electricityManager) {
-                    const entityType = this.entityTypes[entity.entity_type_id];
-                    if (entityType && entityType.type === 'electricity') {
-                        this.electricityManager.invalidateNetworkCache();
-                    }
+                if (this.electricityManager && entityType && entityType.type === 'electricity') {
+                    this.electricityManager.invalidateNetworkCache();
                 }
             } else {
                 console.error('Failed to delete entity:', data.error);
@@ -875,12 +884,16 @@ class ZFactoryGame {
      */
     gameLoop(ticker) {
         try {
+            this.perfMonitor.start('camera');
             const moved = this.camera.update();
             this.camera.apply();
+            this.perfMonitor.end('camera');
 
+            this.perfMonitor.start('cloudParallax');
             if (this.cloudManager) {
                 this.cloudManager.applyParallax();
             }
+            this.perfMonitor.end('cloudParallax');
 
             if (moved) {
                 this.needsReload = true;
@@ -888,44 +901,62 @@ class ZFactoryGame {
 
             const now = performance.now();
             if (this.needsReload && now - this.lastReloadTime > VIEWPORT_RELOAD_INTERVAL) {
+                this.perfMonitor.start('viewport');
                 this.updateViewport();
+                this.perfMonitor.end('viewport');
                 this.needsReload = false;
                 this.lastReloadTime = now;
             }
 
             // Update UI
+            this.perfMonitor.start('cameraInfo');
             this.cameraInfo.update();
+            this.perfMonitor.end('cameraInfo');
 
             // Tick resource transport system
+            this.perfMonitor.start('resourceTransport');
             this.resourceTransport.tick();
+            this.perfMonitor.end('resourceTransport');
 
             // Render resource sprites on conveyors/manipulators
+            this.perfMonitor.start('resourceRenderer');
             this.resourceRenderer.render();
+            this.perfMonitor.end('resourceRenderer');
 
             // Update cloud positions
+            this.perfMonitor.start('cloudManager');
             if (this.cloudManager) {
                 this.cloudManager.update();
             }
+            this.perfMonitor.end('cloudManager');
 
             // Update conveyor animations
+            this.perfMonitor.start('conveyorManager');
             if (this.conveyorManager) {
                 this.conveyorManager.update();
             }
+            this.perfMonitor.end('conveyorManager');
 
             // Update construction progress
+            this.perfMonitor.start('constructionManager');
             if (this.constructionManager) {
                 this.constructionManager.update();
             }
+            this.perfMonitor.end('constructionManager');
 
             // Update electricity indicators (periodic, every 60 frames = ~1 second)
+            this.perfMonitor.start('noPowerIndicator');
             if (this.noPowerIndicator && this.frameCount % 60 === 0) {
                 this.noPowerIndicator.update();
             }
+            this.perfMonitor.end('noPowerIndicator');
 
             // Update pipe inlet sprites
+            this.perfMonitor.start('pipeInletRenderer');
             if (this.pipeInletRenderer) {
                 this.pipeInletRenderer.update();
             }
+            this.perfMonitor.end('pipeInletRenderer');
 
             this.updateDebug('camera', `${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`);
             this.updateFPS(now);

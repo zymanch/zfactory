@@ -18,6 +18,7 @@ export function createMockGame(overrides = {}) {
     const mockGame = {
         // Core data structures
         entities: [],
+        entityData: new Map(),  // Map of entity data (key: 'entity_{id}', value: entity object)
         entityTypes: {},
         resources: {},
         recipes: {},

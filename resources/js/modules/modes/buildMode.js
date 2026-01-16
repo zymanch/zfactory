@@ -477,6 +477,14 @@ export class BuildMode extends GameModeBase {
                 this.game.renderEntities([data.entity]);
                 this.handleEyeEntityPlacement(data.entity);
 
+                // Update conveyor connections if conveyor was placed
+                if (this.game.conveyorManager) {
+                    const entityType = this.game.entityTypes[data.entity.entity_type_id];
+                    if (entityType && entityType.type === 'conveyor') {
+                        this.game.conveyorManager.updateAllConnections();
+                    }
+                }
+
                 // Invalidate electricity network cache if electricity entity was placed
                 if (this.game.electricityManager) {
                     const entityType = this.game.entityTypes[data.entity.entity_type_id];
@@ -964,6 +972,17 @@ export class BuildMode extends GameModeBase {
                 // Handle eye entities for fog of war
                 for (const entity of data.entities) {
                     this.handleEyeEntityPlacement(entity);
+                }
+
+                // Update conveyor connections if any conveyors were placed
+                if (this.game.conveyorManager) {
+                    const hasConveyors = data.entities.some(entity => {
+                        const entityType = this.game.entityTypes[entity.entity_type_id];
+                        return entityType && entityType.type === 'conveyor';
+                    });
+                    if (hasConveyors) {
+                        this.game.conveyorManager.updateAllConnections();
+                    }
                 }
 
                 // Invalidate electricity network cache if any electricity entities were placed
