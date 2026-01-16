@@ -26,7 +26,14 @@ $this->registerJsFile('/js/game.js?v=' . $timestamp, ['position' => \yii\web\Vie
 
 <div id="game-container"></div>
 
-<div id="loading">Loading ZFactory...</div>
+<div id="loading">
+    <div id="loading-content">
+        <div id="loading-text">Initializing...</div>
+        <div id="loading-bar-container">
+            <div id="loading-bar"></div>
+        </div>
+    </div>
+</div>
 
 <div id="debug-info">
     Mode: <span id="debug-mode">Normal</span><br>

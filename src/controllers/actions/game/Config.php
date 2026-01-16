@@ -134,6 +134,7 @@ class Config extends JsonAction
             'name' => $region->name,
             'ship_attach_x' => (int)$region->ship_attach_x,
             'ship_attach_y' => (int)$region->ship_attach_y,
+            'is_admin' => !$this->isGuest() && (bool)$this->getUser()->is_admin,
         ];
     }
 

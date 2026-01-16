@@ -38,12 +38,38 @@ use yii\helpers\Html;
         }
         #loading {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        #loading-content {
+            text-align: center;
+        }
+        #loading-text {
             color: #fff;
             font-family: Arial, sans-serif;
-            font-size: 24px;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        #loading-bar-container {
+            width: 400px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #loading-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #67b8ff);
+            border-radius: 4px;
+            transition: width 0.3s ease;
         }
         #debug-info {
             position: fixed;

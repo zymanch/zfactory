@@ -21,6 +21,8 @@ export class MenuMode extends GameModeBase {
         super(game);
         this.modalContainer = null;
         this.backdrop = null;
+        this.settingsWindow = null;
+        this.settingsBackdrop = null;
         this.isAdmin = false;
         this.profilingActive = false;
         this.profilingTimeout = null;
@@ -33,6 +35,7 @@ export class MenuMode extends GameModeBase {
     init() {
         this.createBackdrop();
         this.createModal();
+        this.createSettingsWindow();
     }
 
     /**
@@ -40,6 +43,8 @@ export class MenuMode extends GameModeBase {
      */
     onActivate(data) {
         this.isAdmin = data.isAdmin || false;
+
+        console.log('[MenuMode] Activated with isAdmin:', this.isAdmin);
 
         // Пересоздать содержимое меню для учета admin статуса
         this.updateMenuContent();
@@ -59,6 +64,14 @@ export class MenuMode extends GameModeBase {
         // Скрыть backdrop и modal
         this.backdrop.style.display = 'none';
         this.modalContainer.style.display = 'none';
+
+        // Скрыть окно настроек если открыто
+        if (this.settingsWindow) {
+            this.settingsWindow.style.display = 'none';
+        }
+        if (this.settingsBackdrop) {
+            this.settingsBackdrop.style.display = 'none';
+        }
 
         // Остановить профилирование если активно
         if (this.profilingActive) {
@@ -101,8 +114,6 @@ export class MenuMode extends GameModeBase {
             transform: translate(-50%, -50%);
             width: 500px;
             max-width: 90vw;
-            max-height: 90vh;
-            overflow-y: auto;
             background: rgba(20, 20, 30, 0.98);
             border: 2px solid #4a90e2;
             border-radius: 12px;
@@ -145,8 +156,10 @@ export class MenuMode extends GameModeBase {
         this.modalContainer.appendChild(saveBtn);
 
         // 3. Настройки
-        const settingsSection = this.createSettingsSection();
-        this.modalContainer.appendChild(settingsSection);
+        const settingsBtn = this.createButton('⚙️ Settings', () => {
+            this.openSettings();
+        });
+        this.modalContainer.appendChild(settingsBtn);
 
         // 4. Профилирование (только для админов)
         if (this.isAdmin) {
@@ -166,71 +179,161 @@ export class MenuMode extends GameModeBase {
     }
 
     /**
-     * Создать секцию настроек
+     * Создать окно настроек
      */
-    createSettingsSection() {
-        const section = document.createElement('div');
-        section.style.cssText = `
+    createSettingsWindow() {
+        // Backdrop для окна настроек
+        this.settingsBackdrop = document.createElement('div');
+        this.settingsBackdrop.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            display: none;
+        `;
+        document.body.appendChild(this.settingsBackdrop);
+
+        // Окно настроек
+        this.settingsWindow = document.createElement('div');
+        this.settingsWindow.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            max-width: 90vw;
+            background: rgba(20, 20, 30, 0.98);
+            border: 2px solid #4a90e2;
+            border-radius: 12px;
+            padding: 30px;
+            z-index: 10002;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        `;
+        document.body.appendChild(this.settingsWindow);
+
+        // Предотвратить закрытие при клике внутри окна
+        this.settingsWindow.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Закрыть при клике на backdrop
+        this.settingsBackdrop.addEventListener('click', () => {
+            this.closeSettings();
+        });
+    }
+
+    /**
+     * Открыть окно настроек
+     */
+    openSettings() {
+        // Заполнить содержимое окна настроек
+        this.settingsWindow.innerHTML = '';
+
+        // Заголовок
+        const title = this.createTitle('Settings');
+        this.settingsWindow.appendChild(title);
+
+        // FPS настройка
+        const fpsContainer = document.createElement('div');
+        fpsContainer.style.cssText = `
             border: 1px solid #555;
             border-radius: 8px;
             padding: 15px;
             background: rgba(0, 0, 0, 0.3);
         `;
 
-        const sectionTitle = document.createElement('div');
-        sectionTitle.textContent = '⚙️ Settings';
-        sectionTitle.style.cssText = `
-            color: #4a90e2;
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 15px;
-        `;
-        section.appendChild(sectionTitle);
-
-        // FPS ползунок
-        const fpsContainer = document.createElement('div');
-        fpsContainer.style.marginBottom = '15px';
-
         const fpsLabel = document.createElement('label');
         const currentFPS = this.game.graphics?.getTicker()?.maxFPS || 60;
+        this.tempFPS = currentFPS; // Сохраняем текущее значение
         fpsLabel.textContent = `Target FPS: ${currentFPS}`;
-        fpsLabel.style.cssText = 'color: #ccc; font-size: 14px; display: block; margin-bottom: 5px;';
+        fpsLabel.style.cssText = 'color: #ccc; font-size: 14px; display: block; margin-bottom: 10px;';
 
         const fpsSlider = document.createElement('input');
         fpsSlider.type = 'range';
         fpsSlider.min = '30';
         fpsSlider.max = '120';
         fpsSlider.value = currentFPS.toString();
-        fpsSlider.style.cssText = 'width: 100%;';
+        fpsSlider.style.cssText = 'width: 100%; cursor: pointer;';
 
         fpsSlider.addEventListener('input', (e) => {
             const fps = parseInt(e.target.value);
             fpsLabel.textContent = `Target FPS: ${fps}`;
-
-            // Обновить FPS в игре
-            if (this.game.graphics?.getTicker()) {
-                this.game.graphics.getTicker().maxFPS = fps;
-            }
+            this.tempFPS = fps;
         });
 
         fpsContainer.appendChild(fpsLabel);
         fpsContainer.appendChild(fpsSlider);
-        section.appendChild(fpsContainer);
+        this.settingsWindow.appendChild(fpsContainer);
 
         // Автосохранение (read-only)
+        const autoSaveContainer = document.createElement('div');
+        autoSaveContainer.style.cssText = `
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+        `;
+
         const autoSaveText = document.createElement('div');
         const interval = this.game.config?.autoSaveInterval || 60;
         autoSaveText.textContent = `💾 Auto-save: every ${interval} seconds`;
-        autoSaveText.style.cssText = `
-            color: #888;
-            font-size: 13px;
-            padding: 8px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-        `;
-        section.appendChild(autoSaveText);
+        autoSaveText.style.cssText = 'color: #888; font-size: 14px;';
+        autoSaveContainer.appendChild(autoSaveText);
+        this.settingsWindow.appendChild(autoSaveContainer);
 
-        return section;
+        // Кнопки Apply и Cancel
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.cssText = `
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        `;
+
+        const applyBtn = this.createButton('✓ Apply', () => {
+            this.applySettings();
+        });
+        applyBtn.style.flex = '1';
+
+        const cancelBtn = this.createButton('✕ Cancel', () => {
+            this.closeSettings();
+        }, 'secondary');
+        cancelBtn.style.flex = '1';
+
+        buttonsContainer.appendChild(applyBtn);
+        buttonsContainer.appendChild(cancelBtn);
+        this.settingsWindow.appendChild(buttonsContainer);
+
+        // Показать окно настроек
+        this.settingsBackdrop.style.display = 'block';
+        this.settingsWindow.style.display = 'flex';
+    }
+
+    /**
+     * Закрыть окно настроек
+     */
+    closeSettings() {
+        this.settingsBackdrop.style.display = 'none';
+        this.settingsWindow.style.display = 'none';
+    }
+
+    /**
+     * Применить настройки
+     */
+    applySettings() {
+        // Применить FPS
+        if (this.tempFPS && this.game.graphics?.getTicker()) {
+            this.game.graphics.getTicker().maxFPS = this.tempFPS;
+            console.log('[MenuMode] Applied FPS:', this.tempFPS);
+        }
+
+        // Закрыть окно
+        this.closeSettings();
     }
 
     /**
@@ -418,6 +521,7 @@ export class MenuMode extends GameModeBase {
         let background = '#4a90e2';
         if (variant === 'danger') background = '#d9534f';
         if (variant === 'warning') background = '#e2a430';
+        if (variant === 'secondary') background = '#666';
 
         button.style.cssText = `
             padding: 12px 20px;
