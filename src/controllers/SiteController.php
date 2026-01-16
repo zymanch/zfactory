@@ -33,9 +33,9 @@ class SiteController extends Controller
     public function actions()
     {
         return [
-            'index' => \commands\actions\site\Index::class,
-            'login' => \commands\actions\site\Login::class,
-            'logout' => \commands\actions\site\Logout::class,
+            'index' => \controllers\actions\site\Index::class,
+            'login' => \controllers\actions\site\Login::class,
+            'logout' => \controllers\actions\site\Logout::class,
         ];
     }
 }

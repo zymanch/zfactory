@@ -84,23 +84,34 @@ export class InputManager {
             }
         }
 
-        // Escape - close windows / cancel modes
+        // Escape - close windows / cancel modes / toggle menu
         if (key === 'escape') {
-            // Return to normal mode or previous mode
-            if (!mode.isMode(GameMode.NORMAL)) {
-                if (mode.isMode(GameMode.ENTITY_INFO)) {
-                    // Close entity info, return to normal
-                    mode.returnToNormalMode();
-                } else if (mode.isMode(GameMode.BUILD)) {
-                    // Cancel build mode, return to normal
-                    mode.returnToNormalMode();
-                } else if (mode.isMode(GameMode.DELETE)) {
-                    // Cancel delete mode, return to normal
-                    mode.returnToNormalMode();
-                } else {
-                    // For windows and other modes, return to previous mode or normal
-                    mode.returnToPreviousMode();
-                }
+            // If in MENU mode - close menu
+            if (mode.isMode(GameMode.MENU)) {
+                mode.returnToNormalMode();
+                return;
+            }
+
+            // If in NORMAL mode - open menu
+            if (mode.isMode(GameMode.NORMAL)) {
+                const isAdmin = this.game.region?.is_admin || false;
+                mode.switchMode(GameMode.MENU, { isAdmin });
+                return;
+            }
+
+            // For other modes - return to normal or previous mode
+            if (mode.isMode(GameMode.ENTITY_INFO)) {
+                // Close entity info, return to normal
+                mode.returnToNormalMode();
+            } else if (mode.isMode(GameMode.BUILD)) {
+                // Cancel build mode, return to normal
+                mode.returnToNormalMode();
+            } else if (mode.isMode(GameMode.DELETE)) {
+                // Cancel delete mode, return to normal
+                mode.returnToNormalMode();
+            } else {
+                // For windows and other modes, return to previous mode or normal
+                mode.returnToPreviousMode();
             }
         }
 

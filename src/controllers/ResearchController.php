@@ -34,8 +34,8 @@ class ResearchController extends Controller
     public function actions()
     {
         return [
-            'tree' => \commands\actions\research\Tree::class,
-            'unlock' => \commands\actions\research\Unlock::class,
+            'tree' => \controllers\actions\research\Tree::class,
+            'unlock' => \controllers\actions\research\Unlock::class,
         ];
     }
 }

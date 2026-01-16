@@ -175,14 +175,17 @@ export class GameLoader {
      * @returns {Object} { config, entities, tiles }
      */
     async loadAll() {
-        // Phase 1: Load config (required for URLs)
+        // Phase 1: Load config (0-5%)
+        this.emit('progress', { percent: 0, message: 'Loading game configuration...' });
         const config = await this.loadConfig();
+        this.emit('progress', { percent: 5, message: 'Loading game data...' });
 
-        // Phase 2: Load entities and tiles in parallel
+        // Phase 2: Load entities and tiles in parallel (5-10%)
         const [entities, tiles] = await Promise.all([
             this.loadEntities(config.config.entitiesUrl),
             this.loadTiles(config.config.mapUrl)
         ]);
+        this.emit('progress', { percent: 10, message: 'Configuration loaded' });
 
         console.log('[GameLoader] All data loaded');
         return { config, entities, tiles };

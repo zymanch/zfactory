@@ -52,17 +52,17 @@ class AdminController extends Controller
     public function actions()
     {
         return [
-            'index' => \commands\actions\admin\Index::class,
-            'regions' => \commands\actions\admin\Regions::class,
-            'users' => \commands\actions\admin\Users::class,
-            'edit-map' => \commands\actions\admin\EditMap::class,
-            'config' => \commands\actions\admin\Config::class,
-            'tiles' => \commands\actions\admin\Tiles::class,
-            'update-landing' => \commands\actions\admin\UpdateLanding::class,
-            'create-deposit' => \commands\actions\admin\CreateDeposit::class,
-            'technologies' => \commands\actions\admin\Technologies::class,
-            'save-technology' => \commands\actions\admin\SaveTechnology::class,
-            'delete-technology' => \commands\actions\admin\DeleteTechnology::class,
+            'index' => \controllers\actions\admin\Index::class,
+            'regions' => \controllers\actions\admin\Regions::class,
+            'users' => \controllers\actions\admin\Users::class,
+            'edit-map' => \controllers\actions\admin\EditMap::class,
+            'config' => \controllers\actions\admin\Config::class,
+            'tiles' => \controllers\actions\admin\Tiles::class,
+            'update-landing' => \controllers\actions\admin\UpdateLanding::class,
+            'create-deposit' => \controllers\actions\admin\CreateDeposit::class,
+            'technologies' => \controllers\actions\admin\Technologies::class,
+            'save-technology' => \controllers\actions\admin\SaveTechnology::class,
+            'delete-technology' => \controllers\actions\admin\DeleteTechnology::class,
         ];
     }
 }

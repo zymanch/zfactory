@@ -45,8 +45,8 @@ class UserController extends Controller
     public function actions()
     {
         return [
-            'save-build-panel' => \commands\actions\user\SaveBuildPanel::class,
-            'save-position' => \commands\actions\user\SavePosition::class,
+            'save-build-panel' => \controllers\actions\user\SaveBuildPanel::class,
+            'save-position' => \controllers\actions\user\SavePosition::class,
         ];
     }
 }

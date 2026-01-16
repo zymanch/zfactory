@@ -41,10 +41,10 @@ class RegionsController extends Controller
     public function actions()
     {
         return [
-            'index' => '\commands\actions\regions\Index',
-            'list' => '\commands\actions\regions\ListRegions',
-            'travel' => '\commands\actions\regions\Travel',
-            'resources' => '\commands\actions\regions\Resources',
+            'index' => '\controllers\actions\regions\Index',
+            'list' => '\controllers\actions\regions\ListRegions',
+            'travel' => '\controllers\actions\regions\Travel',
+            'resources' => '\controllers\actions\regions\Resources',
         ];
     }
 }

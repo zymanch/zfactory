@@ -41,15 +41,15 @@ class GameController extends Controller
     public function actions()
     {
         return [
-            'index' => \commands\actions\game\Index::class,
-            'entities' => \commands\actions\game\Entities::class,
-            'deposits' => \commands\actions\game\Deposits::class,
-            'config' => \commands\actions\game\Config::class,
-            'entity-resources' => \commands\actions\game\EntityResources::class,
-            'save-state' => \commands\actions\game\SaveState::class,
-            'finish-construction' => \commands\actions\game\FinishConstruction::class,
-            'add-user-resource' => \commands\actions\game\AddUserResource::class,
-            'save-manipulator-config' => \commands\actions\game\SaveManipulatorConfig::class,
+            'index' => \controllers\actions\game\Index::class,
+            'entities' => \controllers\actions\game\Entities::class,
+            'deposits' => \controllers\actions\game\Deposits::class,
+            'config' => \controllers\actions\game\Config::class,
+            'entity-resources' => \controllers\actions\game\EntityResources::class,
+            'save-state' => \controllers\actions\game\SaveState::class,
+            'finish-construction' => \controllers\actions\game\FinishConstruction::class,
+            'add-user-resource' => \controllers\actions\game\AddUserResource::class,
+            'save-manipulator-config' => \controllers\actions\game\SaveManipulatorConfig::class,
         ];
     }
 }

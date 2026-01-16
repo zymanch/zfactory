@@ -9,6 +9,7 @@ import { BuildingWindow } from './modules/windows/buildingWindow.js';
 import { BuildMode } from './modules/modes/buildMode.js';
 import { NormalMode } from './modules/modes/normalMode.js';
 import { DeleteMode } from './modules/modes/deleteMode.js';
+import { MenuMode } from './modules/modes/menuMode.js';
 import { FogOfWar } from './modules/fogOfWar.js';
 import { TileLayerManager } from './modules/tileLayerManager.js';
 import { EntityTooltip } from './modules/tooltips/EntityTooltip.js';
@@ -84,6 +85,9 @@ class ZFactoryGame {
         this.lastFpsTime = 0;
         this.frameCount = 0;
 
+        // Progress tracking
+        this.progressCallbacks = [];
+
         // Modules (initialized in initModules())
         this.camera = null;
         this.input = null;
@@ -95,6 +99,7 @@ class ZFactoryGame {
         this.buildMode = null;
         this.normalMode = null;
         this.deleteMode = null;
+        this.menuMode = null;
         this.fogOfWar = null;
         this.tileManager = null;
         this.depositManager = null;
@@ -132,35 +137,46 @@ class ZFactoryGame {
     /**
      * Initialize game
      * Data and textures are already loaded by bootstrap
+     * Progress range: 75-100%
      */
     async init() {
+        this.emitProgress(75, 'Initializing modules');
         console.log('[Game] 1/8 Initializing modules...');
         this.initModules();
 
+        this.emitProgress(77, 'Creating layers');
         console.log('[Game] 2/8 Initializing layers...');
         this.initLayers();
 
+        this.emitProgress(79, 'Setting up camera');
         console.log('[Game] 3/8 Initializing camera...');
         this.initCamera();
 
+        this.emitProgress(81, 'Initializing systems');
         console.log('[Game] 4/8 Post-init modules...');
         await this.initModulesPost();
 
+        this.emitProgress(85, 'Preparing textures');
         console.log('[Game] 5/8 Preparing entity textures...');
         this.prepareEntityTextures();
 
+        this.emitProgress(88, 'Loading special assets');
         console.log('[Game] 5.5/8 Preparing special textures...');
         await this.prepareSpecialTextures();
 
+        this.emitProgress(91, 'Loading map');
         console.log('[Game] 6/8 Loading map tiles...');
         this.loadMapTiles();
 
+        this.emitProgress(95, 'Loading entities');
         console.log('[Game] 7/8 Loading entities...');
         this.loadEntities();
 
+        this.emitProgress(98, 'Starting game');
         console.log('[Game] 8/8 Starting game loop...');
         this.startGameLoop();
 
+        this.emitProgress(100, 'Game ready');
         console.log('[Game] Init complete!');
     }
 
@@ -172,6 +188,7 @@ class ZFactoryGame {
         this.normalMode = new NormalMode(this);
         this.deleteMode = new DeleteMode(this);
         this.buildMode = new BuildMode(this);
+        this.menuMode = new MenuMode(this);
 
         // Create GameModeManager (will access modes via this.game)
         this.gameModeManager = new GameModeManager(this);
@@ -282,6 +299,7 @@ class ZFactoryGame {
         this.normalMode.init();
         this.deleteMode.init();
         this.buildMode.init();
+        this.menuMode.init();
 
         this.buildingWindow.init();
         this.fogOfWar.init();
@@ -299,6 +317,10 @@ class ZFactoryGame {
         await this.noPowerIndicator.init();
 
         this.buildPanel.refresh();
+
+        // Create menu button
+        this.createMenuButton();
+
         // Note: resourceTransport.init() is called after entities are loaded in loadViewport()
     }
 
@@ -1007,6 +1029,123 @@ class ZFactoryGame {
 
     get tileDataMap() {
         return this.tileManager?.tileDataMap || new Map();
+    }
+
+    /**
+     * Register progress callback
+     * @param {Function} callback - callback({ percent, message })
+     */
+    onProgress(callback) {
+        this.progressCallbacks.push(callback);
+    }
+
+    /**
+     * Emit progress to all registered callbacks
+     * @private
+     */
+    emitProgress(percent, message) {
+        this.progressCallbacks.forEach(cb => cb({ percent, message }));
+    }
+
+    /**
+     * Start profiling managers performance
+     * Resets perfMonitor and starts collecting data
+     */
+    startProfiling() {
+        console.log('[Game] Starting profiling...');
+
+        // Reset performance monitor to collect fresh data
+        if (this.perfMonitor) {
+            this.perfMonitor.reset();
+            this.perfMonitor.setEnabled(true);
+        }
+
+        this.profiling = {
+            active: true,
+            startTime: performance.now()
+        };
+    }
+
+    /**
+     * Stop profiling
+     */
+    stopProfiling() {
+        if (this.profiling) {
+            this.profiling.active = false;
+            console.log('[Game] Profiling stopped');
+        }
+    }
+
+    /**
+     * Get profiling results
+     * Uses PerformanceMonitor stats
+     * @returns {Array} Array of manager stats sorted by average time
+     */
+    getProfilingResults() {
+        if (!this.perfMonitor) {
+            return [];
+        }
+
+        // Get stats from PerformanceMonitor
+        const stats = this.perfMonitor.getStats();
+
+        // Convert to format expected by MenuMode
+        return stats.map(s => ({
+            manager: s.name,
+            avgTime: parseFloat(s.avg),
+            totalTime: parseFloat(s.total),
+            calls: s.count
+        }));
+    }
+
+    /**
+     * Create menu button in top-right corner
+     */
+    createMenuButton() {
+        const menuButton = document.createElement('button');
+        menuButton.id = 'menu-button';
+        menuButton.innerHTML = '☰';
+        menuButton.title = 'Open Menu (ESC)';
+
+        menuButton.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border: 2px solid #4a90e2;
+            border-radius: 8px;
+            background: rgba(20, 20, 30, 0.9);
+            color: #4a90e2;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        `;
+
+        menuButton.addEventListener('mouseenter', () => {
+            menuButton.style.background = 'rgba(74, 144, 226, 0.2)';
+            menuButton.style.transform = 'scale(1.05)';
+        });
+
+        menuButton.addEventListener('mouseleave', () => {
+            menuButton.style.background = 'rgba(20, 20, 30, 0.9)';
+            menuButton.style.transform = 'scale(1)';
+        });
+
+        menuButton.addEventListener('click', () => {
+            const isAdmin = this.region?.is_admin || false;
+            this.gameModeManager.switchMode(GameMode.MENU, { isAdmin });
+        });
+
+        document.body.appendChild(menuButton);
+        console.log('[Game] Menu button created');
     }
 
 }

@@ -45,9 +45,9 @@ class MapController extends Controller
     public function actions()
     {
         return [
-            'tiles' => \commands\actions\map\Tiles::class,
-            'create-entity' => \commands\actions\map\CreateEntity::class,
-            'delete-entity' => \commands\actions\map\DeleteEntity::class,
+            'tiles' => \controllers\actions\map\Tiles::class,
+            'create-entity' => \controllers\actions\map\CreateEntity::class,
+            'delete-entity' => \controllers\actions\map\DeleteEntity::class,
         ];
     }
 }

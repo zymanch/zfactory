@@ -11,7 +11,8 @@ export const GameMode = {
     LANDING_EDIT: 'LANDING_EDIT',              // Режим редактирования landing
     DEPOSIT_SELECTION_WINDOW: 'DEPOSIT_SELECTION_WINDOW', // Окно выбора deposit (admin)
     DEPOSIT_BUILD: 'DEPOSIT_BUILD',             // Режим размещения deposit (admin)
-    TECHNOLOGY_WINDOW: 'TECHNOLOGY_WINDOW'     // Окно дерева технологий
+    TECHNOLOGY_WINDOW: 'TECHNOLOGY_WINDOW',     // Окно дерева технологий
+    MENU: 'MENU'                                // ESC-меню (затемнение игры)
 };
 
 /**
@@ -103,6 +104,9 @@ export class GameModeManager {
             case GameMode.TECHNOLOGY_WINDOW:
                 this.deactivateTechnologyWindow();
                 break;
+            case GameMode.MENU:
+                this.deactivateMenuMode();
+                break;
         }
     }
 
@@ -140,6 +144,9 @@ export class GameModeManager {
                 break;
             case GameMode.TECHNOLOGY_WINDOW:
                 this.activateTechnologyWindow();
+                break;
+            case GameMode.MENU:
+                this.activateMenuMode();
                 break;
         }
     }
@@ -453,6 +460,24 @@ export class GameModeManager {
             return 'selected';
         }
         return null;
+    }
+
+    // ================ MENU MODE ================
+    activateMenuMode() {
+        // Отключить hover на entity
+        this.setEntityInteractivity(false);
+
+        // Активировать menuMode
+        if (this.game.menuMode) {
+            const isAdmin = this.modeData.isAdmin || false;
+            this.game.menuMode.activate({ isAdmin });
+        }
+    }
+
+    deactivateMenuMode() {
+        if (this.game.menuMode) {
+            this.game.menuMode.deactivate();
+        }
     }
 }
 

@@ -54,6 +54,7 @@ export class GraphicsEngine {
     /**
      * Load all textures from asset manifest
      * Emits progress events via onProgress callbacks
+     * Progress range: 15-75% (60% of total loading)
      */
     async loadAllTextures() {
         const keys = Object.keys(this.manifest);
@@ -70,19 +71,31 @@ export class GraphicsEngine {
                 this.textures.set(key, texture);
                 loaded++;
 
-                // Emit progress
+                // Emit progress (15% to 75% range)
+                const assetPercent = (loaded / total) * 60; // 60% of total progress
+                const totalPercent = 15 + assetPercent;
+
                 const progress = {
                     loaded,
                     total,
-                    percent: Math.round((loaded / total) * 100),
-                    currentKey: key
+                    percent: Math.round(totalPercent),
+                    message: `Loading assets... (${loaded}/${total})`
                 };
                 this.emitProgress(progress);
 
             } catch (error) {
                 console.warn(`[GraphicsEngine] Failed to load texture: ${key} (${url})`, error);
                 loaded++;
-                this.emitProgress({ loaded, total, percent: Math.round((loaded / total) * 100), currentKey: key });
+
+                const assetPercent = (loaded / total) * 60;
+                const totalPercent = 15 + assetPercent;
+
+                this.emitProgress({
+                    loaded,
+                    total,
+                    percent: Math.round(totalPercent),
+                    message: `Loading assets... (${loaded}/${total})`
+                });
             }
         }
 

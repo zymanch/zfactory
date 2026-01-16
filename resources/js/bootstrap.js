@@ -30,9 +30,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         console.log('[Bootstrap] Starting game initialization...');
 
-        // Phase 1: Load data
+        // Phase 1: Load data (0-10%)
         showLoading('Loading game data...');
         const loader = new GameLoader(window.gameConfig.configUrl);
+
+        // Subscribe to GameLoader progress
+        loader.on('progress', ({ percent, message }) => {
+            updateProgress(percent);
+            showLoading(message);
+        });
 
         const { config, entities, tiles } = await loader.loadAll();
         console.log('[Bootstrap] Data loaded:', {
@@ -41,7 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             assetManifest: Object.keys(config.assetManifest || {}).length
         });
 
-        // Phase 2: Initialize graphics engine
+        // Phase 2: Initialize graphics engine (10-15%)
+        updateProgress(10);
         showLoading('Initializing graphics...');
         const graphics = new GraphicsEngine(config.assetManifest, {
             width: window.innerWidth,
@@ -52,18 +59,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const gameContainer = document.getElementById('game-container');
         await graphics.initApplication(gameContainer);
 
-        // Phase 3: Load textures with progress tracking
+        // Phase 3: Load textures with progress tracking (15-75%)
+        updateProgress(15);
         showLoading('Loading assets...');
-        updateProgress(0);
 
-        graphics.onProgress((progress) => {
-            updateProgress(progress.percent);
-            showLoading(`Loading assets... ${progress.loaded}/${progress.total} (${progress.percent}%)`);
+        // Subscribe to GraphicsEngine progress
+        graphics.onProgress(({ percent, message }) => {
+            updateProgress(percent);
+            showLoading(message);
         });
 
         await graphics.loadAllTextures();
 
-        // Phase 4: Initialize game
+        // Phase 4: Initialize game (75-100%)
+        updateProgress(75);
         showLoading('Initializing game...');
         // Wrap entities and tiles in expected format
         const entitiesData = Array.isArray(entities) ? entities : [];
@@ -77,12 +86,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const game = new ZFactoryGame(config, entitiesData, tilesData, graphics);
 
+        // Subscribe to Game initialization progress
+        game.onProgress(({ percent, message }) => {
+            updateProgress(percent);
+            showLoading(message);
+        });
+
         console.log('[Bootstrap] Game instance created, calling init()...');
         await game.init();
         console.log('[Bootstrap] Game init completed');
 
         // Done - hide loading screen
+        updateProgress(100);
         console.log('[Bootstrap] Initialization complete!');
+
+        // Small delay before hiding loading screen for visual feedback
+        await new Promise(resolve => setTimeout(resolve, 200));
+
         const loadingEl = document.getElementById('loading');
         if (loadingEl) {
             loadingEl.style.display = 'none';

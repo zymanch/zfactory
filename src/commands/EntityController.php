@@ -13,9 +13,9 @@ class EntityController extends \yii\console\Controller
     public function actions()
     {
         return [
-            'generate' => \commands\actions\entity\Generate::class,
-            'generate-states' => \commands\actions\entity\GenerateStates::class,
-            'generate-ai-flux' => \commands\actions\entity\GenerateAiFlux::class,
+            'generate' => \commands\entity\Generate::class,
+            'generate-states' => \commands\entity\GenerateStates::class,
+            'generate-ai-flux' => \commands\entity\GenerateAiFlux::class,
         ];
     }
 }
