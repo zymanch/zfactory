@@ -176,11 +176,13 @@ export class ConstructionManager {
                     console.log(`Entity ${entityId} converted to landing at world (${tileX}, ${tileY})`);
                 } else {
                     // Normal construction finish - update entity to built state
+                    let finishedEntity = null;
                     for (const [key, entityData] of this.game.entityData.entries()) {
                         if (entityData.entity_id === entityId) {
                             entityData.state = 'built';
                             entityData.construction_progress = 100;
                             entityData.durability = data.durability;
+                            finishedEntity = entityData;
 
                             // Update sprite to normal (key is already entity_${entity_id})
                             const sprite = this.game.loadedEntities.get(key);
@@ -207,8 +209,8 @@ export class ConstructionManager {
                     }
 
                     // Invalidate electricity network cache if electricity entity was finished
-                    if (this.game.electricityManager) {
-                        const entityType = this.game.entityTypes[entityData.entity_type_id];
+                    if (this.game.electricityManager && finishedEntity) {
+                        const entityType = this.game.entityTypes[finishedEntity.entity_type_id];
                         if (entityType && entityType.type === 'electricity') {
                             this.game.electricityManager.invalidateNetworkCache();
                         }

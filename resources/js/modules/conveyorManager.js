@@ -16,7 +16,16 @@ export class ConveyorManager {
             'conveyor': {},
             'conveyor_up': {},
             'conveyor_down': {},
-            'conveyor_left': {}
+            'conveyor_left': {},
+            // Underground belts (animated)
+            'underground_belt_in': {},
+            'underground_belt_in_down': {},
+            'underground_belt_in_left': {},
+            'underground_belt_in_up': {},
+            'underground_belt_out': {},
+            'underground_belt_out_down': {},
+            'underground_belt_out_left': {},
+            'underground_belt_out_up': {}
         };
 
         // Conveyor sprite registry: conveyorSprites[entityId] = sprite
@@ -39,15 +48,28 @@ export class ConveyorManager {
             'conveyor': 'right',
             'conveyor_up': 'up',
             'conveyor_down': 'down',
-            'conveyor_left': 'left'
+            'conveyor_left': 'left',
+            // Underground belts map to themselves (folder name = manifest key)
+            'underground_belt_in': 'underground_belt_in',
+            'underground_belt_in_down': 'underground_belt_in_down',
+            'underground_belt_in_left': 'underground_belt_in_left',
+            'underground_belt_in_up': 'underground_belt_in_up',
+            'underground_belt_out': 'underground_belt_out',
+            'underground_belt_out_down': 'underground_belt_out_down',
+            'underground_belt_out_left': 'underground_belt_out_left',
+            'underground_belt_out_up': 'underground_belt_out_up'
         };
     }
 
     /**
-     * Load all conveyor atlases (20 total: 5 states × 4 orientations)
+     * Load all conveyor atlases (60 total: 5 states × 12 orientations)
      */
     async loadAtlases() {
-        const orientations = ['conveyor', 'conveyor_up', 'conveyor_down', 'conveyor_left'];
+        const orientations = [
+            'conveyor', 'conveyor_up', 'conveyor_down', 'conveyor_left',
+            'underground_belt_in', 'underground_belt_in_down', 'underground_belt_in_left', 'underground_belt_in_up',
+            'underground_belt_out', 'underground_belt_out_down', 'underground_belt_out_left', 'underground_belt_out_up'
+        ];
         const states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
 
         console.log('Loading conveyor atlases...');
@@ -136,7 +158,7 @@ export class ConveyorManager {
     }
 
     /**
-     * Check if entity is an animated conveyor (not underground)
+     * Check if entity is an animated conveyor
      */
     isConveyor(entity) {
         if (!entity) return false;
@@ -144,10 +166,11 @@ export class ConveyorManager {
         const entityType = this.game.entityTypes[entity.entity_type_id];
         if (!entityType || entityType.type !== 'conveyor') return false;
 
-        // Only animated conveyors (basic, dual, fast)
-        // Exclude underground belts (they are static entities)
         const folder = entityType.folder;
-        return folder && !folder.includes('underground');
+        if (!folder) return false;
+
+        // Check if this orientation has animation support
+        return this.atlases.hasOwnProperty(folder);
     }
 
     /**

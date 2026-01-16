@@ -339,6 +339,18 @@ class Config extends JsonAction
             }
         }
 
+        // Underground belt atlases (40: 5 states × 8 orientations)
+        $undergroundOrientations = [
+            'underground_belt_in', 'underground_belt_in_down', 'underground_belt_in_left', 'underground_belt_in_up',
+            'underground_belt_out', 'underground_belt_out_down', 'underground_belt_out_left', 'underground_belt_out_up'
+        ];
+        foreach ($states as $state) {
+            foreach ($undergroundOrientations as $folder) {
+                $key = "conveyor_{$state}_{$folder}";
+                $assets[$key] = "/assets/tiles/entities/conveyor/{$folder}/{$state}_atlas.png?v={$v}";
+            }
+        }
+
         // REMOVED (2026-01-15): Old pipe atlases by fluid type
         // Pipes now use regular entity atlases (from entity_type.atlas_url)
         // Fluid visualization is handled by PipeRenderer at runtime

@@ -166,7 +166,7 @@ export class BuildMode extends GameModeBase {
         if (!entityType) return;
 
         const textureKey = `entity_${this.entityTypeId}_blueprint`;
-        const texture = this.game.graphics.getTexture(textureKey);
+        const texture = this.game.textures[textureKey];
         if (!texture) return;
 
         this.previewSprite = this.game.graphics.createSprite(texture, {
@@ -510,7 +510,9 @@ export class BuildMode extends GameModeBase {
             parseInt(entity.x),
             parseInt(entity.y)
         );
-        this.game.loadViewport();
+
+        // Note: addEyeEntity() already calls recalculateVisibility()
+        // which updates fog and entity visibility automatically
     }
 
     /**
