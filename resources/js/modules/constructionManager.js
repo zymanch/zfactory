@@ -208,11 +208,28 @@ export class ConstructionManager {
                         }
                     }
 
-                    // Invalidate electricity network cache if electricity entity was finished
-                    if (this.game.electricityManager && finishedEntity) {
+                    // Handle post-construction updates
+                    if (finishedEntity) {
                         const entityType = this.game.entityTypes[finishedEntity.entity_type_id];
-                        if (entityType && entityType.type === 'electricity') {
-                            this.game.electricityManager.invalidateNetworkCache();
+
+                        if (entityType) {
+                            // Register conveyor and update connections
+                            if (entityType.type === 'conveyor' && this.game.conveyorManager) {
+                                this.game.conveyorManager.registerConveyor(finishedEntity);
+                                this.game.conveyorManager.updateAllConnections();
+                            }
+
+                            // Update resource transport links for all types
+                            if (this.game.resourceTransport) {
+                                // Entity already in spatial index and Maps from blueprint
+                                // Just recalculate links to connect with neighbors
+                                this.game.resourceTransport.calculateLinks();
+                            }
+
+                            // Invalidate electricity network cache
+                            if (entityType.type === 'electricity' && this.game.electricityManager) {
+                                this.game.electricityManager.invalidateNetworkCache();
+                            }
                         }
                     }
 

@@ -861,6 +861,11 @@ class ZFactoryGame {
                     this.conveyorManager.updateAllConnections();
                 }
 
+                // Remove from resource transport system
+                if (this.resourceTransport) {
+                    this.resourceTransport.onEntityRemoved(entity.entity_id);
+                }
+
                 // Update fog of war if it was an eye entity
                 if (this.fogOfWar && entityType && entityType.type === 'eye') {
                     this.fogOfWar.removeEyeEntity(entity.entity_id);

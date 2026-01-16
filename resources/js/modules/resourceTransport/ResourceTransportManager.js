@@ -151,6 +151,7 @@ export class ResourceTransportManager {
             this.spatialIndex.add(entity, width, height);
 
             switch (entityType.type) {
+                case 'conveyor':  // Conveyors (including underground belts)
                 case 'transporter':
                     // Check if this is a splitter
                     if (this.SPLITTER_TYPE_IDS.has(entity.entity_type_id)) {
@@ -248,6 +249,54 @@ export class ResourceTransportManager {
 
             state.sourceEntityId = this.spatialIndex.getAt(sourcePos.x, sourcePos.y);
             state.targetEntityId = this.spatialIndex.getAt(targetPos.x, targetPos.y);
+        }
+
+        // Calculate underground conveyor pairs (IN → OUT)
+        for (const [entityId, state] of this.transporters) {
+            if (!state.isUndergroundIn) continue;
+
+            // Find nearest underground OUT in same orientation
+            let bestOut = null;
+            let bestDistance = Infinity;
+
+            for (const [outId, outState] of this.transporters) {
+                if (!outState.isUndergroundOut) continue;
+                if (outState.orientation !== state.orientation) continue;
+
+                // Check if OUT is in front of IN in correct direction
+                const dx = outState.x - state.x;
+                const dy = outState.y - state.y;
+                let isAhead = false;
+                let distance = 0;
+
+                switch (state.orientation) {
+                    case 'right':
+                        isAhead = dx > 0 && dy === 0;
+                        distance = dx;
+                        break;
+                    case 'left':
+                        isAhead = dx < 0 && dy === 0;
+                        distance = Math.abs(dx);
+                        break;
+                    case 'down':
+                        isAhead = dy > 0 && dx === 0;
+                        distance = dy;
+                        break;
+                    case 'up':
+                        isAhead = dy < 0 && dx === 0;
+                        distance = Math.abs(dy);
+                        break;
+                }
+
+                if (isAhead && distance < bestDistance && distance > 1) {
+                    bestDistance = distance;
+                    bestOut = outId;
+                }
+            }
+
+            if (bestOut) {
+                state.undergroundPairId = bestOut;
+            }
         }
     }
 
@@ -436,17 +485,23 @@ export class ResourceTransportManager {
 
     /**
      * Animation: Move resources along conveyor belts (runs every tick)
-     * Only updates positions, status changes happen in logic tick
+     * Simply increment ticks - position calculated on-the-fly by renderer
      */
     updateTransporterAnimation() {
         for (const [entityId, state] of this.transporters) {
             if (state.isEmpty()) continue;
 
-            const speed = state.getSpeed();  // pixels per frame
+            // Don't animate if waiting for transfer
+            if (state.status === 'waiting_transfer') continue;
 
-            // Move from -centerPx (entry) to +centerPx (exit)
-            if (state.position_px < state.centerPositionPx) {
-                state.position_px = Math.min(state.centerPositionPx, state.position_px + speed);
+            // Increment ticks based on power
+            const increment = state.getTickIncrement();
+            state.ticks += increment;
+
+            // Check if reached end (30 ticks for power=100)
+            if (state.ticks >= state.TICKS_PER_TILE) {
+                state.ticks = state.TICKS_PER_TILE;
+                state.status = 'waiting_transfer';
             }
         }
     }
@@ -467,8 +522,8 @@ export class ResourceTransportManager {
         for (const [entityId, state] of this.transporters) {
             if (state.isEmpty()) continue;
 
-            // Check if reached end (+centerPx) and should wait for transfer
-            if (state.position_px >= state.centerPositionPx && state.status === 'carrying') {
+            // Check if reached end (30 ticks) and should wait for transfer
+            if (state.ticks >= state.TICKS_PER_TILE && state.status === 'carrying') {
                 state.status = 'waiting_transfer';
             }
         }
@@ -482,11 +537,43 @@ export class ResourceTransportManager {
      * For now, all conveyors work as single-lane.
      */
     processTransporterTransfers() {
+        // Phase 0: Handle underground conveyor transfer (when resource reaches end of IN)
+        for (const [entityId, state] of this.transporters) {
+            if (!state.isUndergroundIn) continue;
+            if (state.status !== 'waiting_transfer') continue;
+            if (!state.undergroundPairId) continue;
+
+            const outState = this.transporters.get(state.undergroundPairId);
+            if (!outState || !outState.isEmpty()) continue;
+
+            // Calculate underground distance in tiles (edge-to-edge)
+            const dx = Math.abs(outState.x - state.x);
+            const dy = Math.abs(outState.y - state.y);
+            const distanceTiles = (dx + dy) - 1;
+
+            // Transfer to OUT with negative ticks for underground travel
+            // Distance in tiles × ticks per tile = underground ticks
+            const undergroundTicks = -(distanceTiles * state.TICKS_PER_TILE);
+
+            const fromDirection = this.calculateFromDirection(state.undergroundPairId, entityId);
+            outState.resourceId = state.resourceId;
+            outState.resourceAmount = state.resourceAmount;
+            outState.fromDirection = fromDirection;
+            outState.ticks = undergroundTicks;
+            outState.status = 'carrying';
+
+            state.clear();
+        }
+
         // Phase 1: Determine who will transfer
         for (const [entityId, state] of this.transporters) {
             state.willTransfer = false;
 
             if (state.status !== 'waiting_transfer') continue;
+
+            // Underground IN conveyors transfer via teleportation (Phase 0), not via normal target
+            if (state.isUndergroundIn) continue;
+
             if (!state.targetEntityId) continue;
 
             const canAccept = this.canEntityAccept(state.targetEntityId, state.resourceId, state.resourceAmount);
@@ -541,8 +628,8 @@ export class ResourceTransportManager {
             if (targetState) {
                 // Target is a transporter
                 const fromDirection = this.calculateFromDirection(t.toId, t.fromId);
-                // Start at entry (-centerPx)
-                targetState.setResource(t.resourceId, t.resourceAmount, fromDirection, -targetState.centerPositionPx);
+                // Let setResource determine starting position and phase based on entry direction
+                targetState.setResource(t.resourceId, t.resourceAmount, fromDirection);
             } else {
                 // Target is a building
                 const buildingState = this.buildings.get(t.toId);
@@ -632,8 +719,8 @@ export class ResourceTransportManager {
      */
     doSingleTransfer(fromState, toState) {
         const fromDirection = this.calculateFromDirection(toState.entityId, fromState.entityId);
-        // Resources start at entry (-centerPx)
-        toState.setResource(fromState.resourceId, fromState.resourceAmount, fromDirection, -toState.centerPositionPx);
+        // Let setResource determine starting position and phase
+        toState.setResource(fromState.resourceId, fromState.resourceAmount, fromDirection);
         fromState.clear();
     }
 
@@ -999,8 +1086,8 @@ export class ResourceTransportManager {
             if (requesterType === 'manipulator') {
                 return { resourceId: transporter.resourceId, amount: transporter.resourceAmount };
             }
-            // Transporter can only take when at end (+centerPx)
-            if (transporter.position_px >= transporter.centerPositionPx) {
+            // Transporter can only take when at end (30 ticks)
+            if (transporter.ticks >= transporter.TICKS_PER_TILE) {
                 return { resourceId: transporter.resourceId, amount: transporter.resourceAmount };
             }
             return null;
@@ -1065,7 +1152,8 @@ export class ResourceTransportManager {
         const transporter = this.transporters.get(entityId);
         if (transporter) {
             const fromDirection = 'down'; // Default direction for manipulator placement
-            transporter.setResource(resourceId, amount, fromDirection, 0); // Start at center (0)
+            const centerTicks = transporter.TICKS_PER_TILE / 2; // 15 ticks = center
+            transporter.setResource(resourceId, amount, fromDirection, centerTicks);
             return true;
         }
 
@@ -1323,6 +1411,7 @@ export class ResourceTransportManager {
         this.spatialIndex.add(entity, width, height);
 
         switch (entityType.type) {
+            case 'conveyor':  // Conveyors (including underground belts)
             case 'transporter':
                 // Check if this is a splitter
                 if (this.SPLITTER_TYPE_IDS.has(entity.entity_type_id)) {

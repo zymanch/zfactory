@@ -106,56 +106,70 @@ export class ResourceRenderer {
         const centerX = state.x * tileWidth + tileWidth / 2;
         const centerY = state.y * tileHeight + tileHeight / 2;
 
-        // position_px is already centered: 0 = center, negative = towards center, positive = from center
-        // Calculate main offset (along movement direction)
+        // Get current position from ticks
+        const position_px = state.getPositionPx();
+        const movementPhase = state.getMovementPhase();
+
+        // Two-phase positioning:
+        // Phase 1: Move from entry edge to center (depends on fromDirection)
+        // Phase 2: Move from center to exit edge (depends on orientation)
         let offsetX = 0;
         let offsetY = 0;
 
-        switch (state.orientation) {
-            case 'right':
-                offsetX = state.position_px;  // Already centered!
-                // Perpendicular offset based on from_direction
-                if (state.fromDirection === 'down') {
-                    offsetY = tileHeight / 4;  // Bottom lane
-                } else if (state.fromDirection === 'up') {
-                    offsetY = -tileHeight / 4;  // Top lane
-                }
-                break;
+        if (movementPhase === 1) {
+            // Phase 1: Moving to center based on fromDirection
+            // position_px: -32 → 0
+            const distance = Math.abs(position_px);  // 32px → 0px
 
-            case 'down':
-                offsetY = state.position_px;
-                // Perpendicular offset
-                if (state.fromDirection === 'left') {
-                    offsetX = -tileHeight / 4;  // Left lane
-                } else if (state.fromDirection === 'right') {
-                    offsetX = tileHeight / 4;  // Right lane
-                }
-                break;
+            switch (state.fromDirection) {
+                case 'up':
+                    offsetY = -distance;  // Moving down to center
+                    break;
+                case 'down':
+                    offsetY = distance;   // Moving up to center
+                    break;
+                case 'left':
+                    offsetX = -distance;  // Moving right to center
+                    break;
+                case 'right':
+                    offsetX = distance;   // Moving left to center
+                    break;
+            }
+        } else {
+            // Phase 2: Moving from center to exit based on orientation
+            // position_px: 0 → +32
+            const distance = position_px;  // 0px → 32px
 
-            case 'left':
-                offsetX = -state.position_px;  // Reverse for left movement
-                // Perpendicular offset
-                if (state.fromDirection === 'up') {
-                    offsetY = -tileHeight / 4;  // Top lane
-                } else if (state.fromDirection === 'down') {
-                    offsetY = tileHeight / 4;  // Bottom lane
-                }
-                break;
-
-            case 'up':
-                offsetY = -state.position_px;  // Reverse for up movement
-                // Perpendicular offset
-                if (state.fromDirection === 'right') {
-                    offsetX = tileHeight / 4;  // Right lane
-                } else if (state.fromDirection === 'left') {
-                    offsetX = -tileHeight / 4;  // Left lane
-                }
-                break;
+            switch (state.orientation) {
+                case 'right':
+                    offsetX = distance;
+                    break;
+                case 'down':
+                    offsetY = distance;
+                    break;
+                case 'left':
+                    offsetX = -distance;
+                    break;
+                case 'up':
+                    offsetY = -distance;
+                    break;
+            }
         }
 
         sprite.x = centerX + offsetX;
         sprite.y = centerY + offsetY;
         sprite.zIndex = centerY + tileHeight;  // Slightly above entity
+
+        // Underground conveyor transparency
+        // Resource is "underground" (30% transparent) when:
+        // - On IN belt after reaching center (position_px >= 0)
+        // - On OUT belt before reaching surface (position_px < 0)
+        if ((state.isUndergroundIn && position_px >= 0) ||
+            (state.isUndergroundOut && position_px < 0)) {
+            sprite.alpha = 0.3;
+        } else {
+            sprite.alpha = 1.0;
+        }
     }
 
     /**

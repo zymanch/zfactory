@@ -8,6 +8,8 @@ use models\ShipEntity;
 use models\Region;
 use models\EntityResource;
 use models\EntityCrafting;
+use models\ShipEntityResource;
+use models\ShipEntityCrafting;
 
 /**
  * AJAX: Load all entities (called once on init)
@@ -107,6 +109,98 @@ class Entities extends JsonAction
         return $indexed;
     }
 
+    /**
+     * Get ship entity resources grouped by ship_entity_id
+     * @param array $shipEntityIds
+     * @return array ['ship_entity_id' => [['resource_id' => ..., 'amount' => ...], ...]]
+     */
+    protected function getShipEntityResourcesGrouped($shipEntityIds)
+    {
+        if (empty($shipEntityIds)) {
+            return [];
+        }
+
+        $rows = ShipEntityResource::find()
+            ->where(['ship_entity_id' => $shipEntityIds])
+            ->andWhere(['position_px' => null])  // Building storage only
+            ->select(['ship_entity_id', 'resource_id', 'amount'])
+            ->asArray()
+            ->all();
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $shipEntityId = (int)$row['ship_entity_id'];
+            if (!isset($grouped[$shipEntityId])) {
+                $grouped[$shipEntityId] = [];
+            }
+            $grouped[$shipEntityId][] = [
+                'resource_id' => (int)$row['resource_id'],
+                'amount' => (int)$row['amount']
+            ];
+        }
+        return $grouped;
+    }
+
+    /**
+     * Get ship crafting states indexed by ship_entity_id
+     * @param array $shipEntityIds
+     * @return array ['ship_entity_id' => ['recipe_id' => ..., 'ticks_remaining' => ...]]
+     */
+    protected function getShipCraftingStatesIndexed($shipEntityIds)
+    {
+        if (empty($shipEntityIds)) {
+            return [];
+        }
+
+        $rows = ShipEntityCrafting::find()
+            ->where(['ship_entity_id' => $shipEntityIds])
+            ->select(['ship_entity_id', 'recipe_id', 'ticks_remaining'])
+            ->asArray()
+            ->all();
+
+        $indexed = [];
+        foreach ($rows as $row) {
+            $shipEntityId = (int)$row['ship_entity_id'];
+            $indexed[$shipEntityId] = [
+                'recipe_id' => (int)$row['recipe_id'],
+                'ticks_remaining' => (int)$row['ticks_remaining']
+            ];
+        }
+        return $indexed;
+    }
+
+    /**
+     * Get ship transport states indexed by ship_entity_id
+     * @param array $shipEntityIds
+     * @return array ['ship_entity_id' => ['resource_id' => ..., 'amount' => ..., ...]]
+     */
+    protected function getShipTransportStatesIndexed($shipEntityIds)
+    {
+        if (empty($shipEntityIds)) {
+            return [];
+        }
+
+        $rows = ShipEntityResource::find()
+            ->where(['ship_entity_id' => $shipEntityIds])
+            ->andWhere(['not', ['position_px' => null]])  // Transport only
+            ->select(['ship_entity_id', 'resource_id', 'amount', 'position_px', 'from_direction', 'status'])
+            ->asArray()
+            ->all();
+
+        $indexed = [];
+        foreach ($rows as $row) {
+            $shipEntityId = (int)$row['ship_entity_id'];
+            $indexed[$shipEntityId] = [
+                'resource_id' => (int)$row['resource_id'],
+                'amount' => (int)$row['amount'],
+                'position_px' => (int)$row['position_px'],
+                'from_direction' => $row['from_direction'],
+                'status' => $row['status']
+            ];
+        }
+        return $indexed;
+    }
+
     public function run()
     {
         // Get current region ID
@@ -171,16 +265,42 @@ class Entities extends JsonAction
                 ->asArray()
                 ->all();
 
+            // Load all ship entity states in 3 queries
+            $shipEntityIds = array_column($shipEntities, 'ship_entity_id');
+
+            $shipEntityResources = $this->getShipEntityResourcesGrouped($shipEntityIds);
+            $shipCraftingStates = $this->getShipCraftingStatesIndexed($shipEntityIds);
+            $shipTransportStates = $this->getShipTransportStatesIndexed($shipEntityIds);
+
             // Convert ship coordinates to world coordinates and add to entities
             foreach ($shipEntities as $shipEntity) {
-                $entities[] = [
-                    'entity_id' => 'ship_' . $shipEntity['ship_entity_id'], // Prefix to distinguish from island entities
+                $shipEntityId = $shipEntity['ship_entity_id'];
+
+                $entity = [
+                    'entity_id' => 'ship_' . $shipEntityId, // Prefix to distinguish from island entities
                     'entity_type_id' => (int)$shipEntity['entity_type_id'],
                     'state' => $shipEntity['state'],
                     'durability' => (int)$shipEntity['durability'],
                     'x' => (int)$shipEntity['x'] + $shipAttachX, // Convert to world coordinates
                     'y' => (int)$shipEntity['y'] + $shipAttachY,
                 ];
+
+                // Add resources if exists
+                if (isset($shipEntityResources[$shipEntityId])) {
+                    $entity['resources'] = $shipEntityResources[$shipEntityId];
+                }
+
+                // Add crafting state if exists
+                if (isset($shipCraftingStates[$shipEntityId])) {
+                    $entity['craftingState'] = $shipCraftingStates[$shipEntityId];
+                }
+
+                // Add transport state if exists
+                if (isset($shipTransportStates[$shipEntityId])) {
+                    $entity['transportState'] = $shipTransportStates[$shipEntityId];
+                }
+
+                $entities[] = $entity;
             }
         }
 

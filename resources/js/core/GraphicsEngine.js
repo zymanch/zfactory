@@ -40,11 +40,14 @@ export class GraphicsEngine {
             antialias: true
         });
 
+        // Normal FPS (60) - remove this line to use browser's native FPS
+        // this.app.ticker.maxFPS = 60;
+
         if (containerElement) {
             containerElement.appendChild(this.app.canvas);
         }
 
-        console.log('[GraphicsEngine] Application initialized');
+        console.log('[GraphicsEngine] Application initialized (FPS: ' + this.app.ticker.maxFPS + ')');
         return { canvas: this.app.canvas, stage: this.app.stage };
     }
 

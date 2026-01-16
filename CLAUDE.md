@@ -101,6 +101,7 @@ composer run ar         # Generate models
 | **ai-sprite-wizard** | Генерация спрайтов FLUX.1 | ComfyUI API, prompt patterns, atlas generation |
 | **pixi-renderer** | Оптимизация PixiJS | Layer system, batching, culling, effects |
 | **game-mechanic** | Разработка механик | Network algorithms, manager patterns, integration |
+| **transport-mechanic** | Система перемещения ресурсов | Tick-based движение, two-phase logic, underground conveyors |
 | **js-test-writer** | JavaScript тестирование | Vitest setup, mocking patterns, coverage |
 | **maria** | Database optimization | Schema design, query optimization, MariaDB tuning |
 
