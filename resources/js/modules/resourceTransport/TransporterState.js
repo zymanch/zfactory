@@ -1,3 +1,5 @@
+import { ConveyorConnectionHelper } from '../ConveyorConnectionHelper.js';
+
 /**
  * TransporterState - State of a conveyor belt
  */
@@ -10,10 +12,9 @@ export class TransporterState {
         this.power = parseInt(entityType.power) || 100;
         this.game = game;
 
-        // Underground conveyor detection
-        const folder = entityType.folder || '';
-        this.isUndergroundIn = folder.includes('underground_belt_') && folder.includes('_in');
-        this.isUndergroundOut = folder.includes('underground_belt_') && folder.includes('_out');
+        // Underground conveyor detection (based on connection configuration)
+        this.isUndergroundIn = ConveyorConnectionHelper.isUndergroundIn(entityType);
+        this.isUndergroundOut = ConveyorConnectionHelper.isUndergroundOut(entityType);
         this.undergroundPairId = null;  // For underground_in: ID of underground_out
 
         // Current state

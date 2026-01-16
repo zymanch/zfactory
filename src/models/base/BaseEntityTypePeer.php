@@ -25,5 +25,7 @@ class BaseEntityTypePeer  {
     const STORAGE_RESOURCE_COUNT = "storage_resource_count";
     const STORAGE_PER_RESOURCE = "storage_per_resource";
     const RESOURCE_TYPES = "resource_types";
+    const INPUT_CONNECTIONS = "input_connections";
+    const OUTPUT_CONNECTIONS = "output_connections";
 
 }

@@ -585,14 +585,13 @@ class ZFactoryGame {
             const entityType = this.entityTypes[entity.entity_type_id];
             const folder = entityType?.folder || '';
 
-            // Check if this is a pipe entity with connection variants
+            // Check entity types
             const isPipeEntity = this.pipeConnectionManager.isPipe(entity);
+            const isConveyor = this.conveyorManager.isConveyor(entity);
+            const hasAnimation = this.conveyorManager.hasAnimationAtlas(entity);
 
-            // Check if this is an animated conveyor (not underground)
-            const isAnimatedConveyor = this.conveyorManager.isConveyor(entity);
-
-            // Handle animated conveyors separately (but exclude pipes and underground)
-            if (isAnimatedConveyor && !isPipeEntity) {
+            // Handle animated conveyors with atlas support (but exclude pipes)
+            if (isConveyor && hasAnimation && !isPipeEntity) {
                 const texture = this.conveyorManager.getConveyorTexture(entity, false, 0);
                 if (texture) {
                     const sprite = this.createEntitySprite(entity, texture, isVisible);
@@ -602,14 +601,23 @@ class ZFactoryGame {
                 }
             } else if (isPipeEntity) {
                 // Handle pipes with connection variants and fluid visualization
-                // Use entity type's own texture as fallback, will update after all entities loaded
                 const fallbackTexture = this.textures[`entity_${entity.entity_type_id}_normal`];
                 if (fallbackTexture) {
-                    // Create container for pipe + fluid sprite
                     const container = this.pipeRenderer.createPipeContainer(entity, fallbackTexture, isVisible);
                     this.entityLayer.addChild(container);
                     this.loadedEntities.set(key, container);
                     this.pipeConnectionManager.registerPipe(entity.entity_id, container);
+                }
+            } else if (isConveyor && !isPipeEntity) {
+                // Handle non-animated conveyors (dual, fast, etc.) - use regular texture but register for spatial index
+                const textureKey = this.getEntityTextureKey(entity, false);
+                const texture = this.textures[textureKey];
+
+                if (texture) {
+                    const sprite = this.createEntitySprite(entity, texture, isVisible);
+                    this.entityLayer.addChild(sprite);
+                    this.loadedEntities.set(key, sprite);
+                    this.conveyorManager.registerConveyor(entity.entity_id, sprite);
                 }
             } else {
                 // Handle other entities normally

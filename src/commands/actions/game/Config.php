@@ -57,6 +57,14 @@ class Config extends JsonAction
             $data['atlas_url'] = $entityType->getAtlasUrl();
             $data['icon_url'] = $entityType->getIconUrl();
 
+            // Convert SET fields to arrays for easier JS handling
+            $data['input_connections'] = $data['input_connections']
+                ? explode(',', $data['input_connections'])
+                : [];
+            $data['output_connections'] = $data['output_connections']
+                ? explode(',', $data['output_connections'])
+                : [];
+
             // Add costs, recipes, behavior
             $data['costs'] = $entityTypeCosts[$id] ?? [];
             $data['recipes'] = $entityTypeRecipes[$id] ?? [];

@@ -49,6 +49,11 @@ resources/js/modules/resourceTransport/
 ├── ResourceRenderer.js          # Visual rendering of resources
 ├── SpatialIndex.js              # Fast position lookups
 └── UndergroundConveyorState.js  # (legacy, now merged into TransporterState)
+
+resources/js/modules/
+├── ConveyorConnectionHelper.js  # Data-driven conveyor connectivity (NEW 2026-01)
+├── ConveyorVariantManager.js    # Texture variant calculation (0-15 based on neighbors)
+└── conveyorManager.js           # Animation and rendering manager
 ```
 
 ### Manager Responsibilities
@@ -64,6 +69,18 @@ resources/js/modules/resourceTransport/
 - Calculates sprite positions from state
 - Applies transparency for underground resources
 - Manages sprite lifecycle (create/update/destroy)
+
+**ConveyorConnectionHelper** (NEW 2026-01):
+- Data-driven conveyor connectivity using `entity_type.input_connections` and `output_connections`
+- Replaces hardcoded orientation checks (removed `isMovingRight/Left/Up/Down` methods)
+- Static methods for checking connection capabilities:
+  - `canReceiveFrom(entityType, direction, position)` - check if entity accepts input from direction
+  - `canOutputTo(entityType, direction, position)` - check if entity can output to direction
+  - `isUndergroundIn(entityType)` - has input but no output (resources go underground)
+  - `isUndergroundOut(entityType)` - has output but no input (resources come from underground)
+  - `isSplitter(entityType)` - has multiple outputs (e.g., 2 perpendicular outputs)
+- Supports positioned connections for multi-tile entities (e.g., `up_1`, `up_2`)
+- Handles both array (from API) and string (legacy) formats with backward compatibility
 
 ---
 

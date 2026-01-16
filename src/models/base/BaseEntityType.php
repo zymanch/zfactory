@@ -28,6 +28,8 @@ namespace models\base;
  * @property integer $storage_resource_count
  * @property integer $storage_per_resource
  * @property string $resource_types
+ * @property string $input_connections
+ * @property string $output_connections
  *
  * @property \models\Landing $convertsToLanding
  * @property \models\EntityTypeCost[] $entityTypeCosts
@@ -56,7 +58,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
         return [
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::FOLDER], 'required'],
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::CENTER_POSITION_PX, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS, BaseEntityTypePeer::STORAGE_RESOURCE_COUNT, BaseEntityTypePeer::STORAGE_PER_RESOURCE], 'integer'],
-            [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION, BaseEntityTypePeer::STORAGE_TYPE, BaseEntityTypePeer::RESOURCE_TYPES], 'string'],
+            [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION, BaseEntityTypePeer::STORAGE_TYPE, BaseEntityTypePeer::RESOURCE_TYPES, BaseEntityTypePeer::INPUT_CONNECTIONS, BaseEntityTypePeer::OUTPUT_CONNECTIONS], 'string'],
             [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
             [[BaseEntityTypePeer::FOLDER, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
@@ -92,6 +94,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::STORAGE_RESOURCE_COUNT => 'Storage Resource Count',
             BaseEntityTypePeer::STORAGE_PER_RESOURCE => 'Storage Per Resource',
             BaseEntityTypePeer::RESOURCE_TYPES => 'Resource Types',
+            BaseEntityTypePeer::INPUT_CONNECTIONS => 'Input Connections',
+            BaseEntityTypePeer::OUTPUT_CONNECTIONS => 'Output Connections',
         ];
     }
     /**
@@ -181,6 +185,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'storage_resource_count' => BaseEntityTypePeer::STORAGE_RESOURCE_COUNT,
             'storage_per_resource' => BaseEntityTypePeer::STORAGE_PER_RESOURCE,
             'resource_types' => BaseEntityTypePeer::RESOURCE_TYPES,
+            'input_connections' => BaseEntityTypePeer::INPUT_CONNECTIONS,
+            'output_connections' => BaseEntityTypePeer::OUTPUT_CONNECTIONS,
         ];
     }
     

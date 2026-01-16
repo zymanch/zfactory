@@ -114,9 +114,8 @@ export class ConveyorManager {
         if (entity) {
             this.variantManager.addToIndex(entity);
 
-            // Calculate and cache variant for this conveyor
-            const variant = this.variantManager.calculateVariant(entity);
-            this.variantCache.set(entityId, variant);
+            // NOTE: Variant calculation deferred until updateAllConnections()
+            // This ensures all neighbors are in spatial index first
         }
     }
 
@@ -161,19 +160,27 @@ export class ConveyorManager {
     }
 
     /**
-     * Check if entity is an animated conveyor
+     * Check if entity is a conveyor (for spatial index and variant calculation)
+     * NOTE: Animation support checked separately - some conveyors use fallback textures
      */
     isConveyor(entity) {
+        if (!entity) return false;
+
+        const entityType = this.game.entityTypes[entity.entity_type_id];
+        return entityType && entityType.type === 'conveyor';
+    }
+
+    /**
+     * Check if entity has animation atlas support
+     */
+    hasAnimationAtlas(entity) {
         if (!entity) return false;
 
         const entityType = this.game.entityTypes[entity.entity_type_id];
         if (!entityType || entityType.type !== 'conveyor') return false;
 
         const folder = entityType.folder;
-        if (!folder) return false;
-
-        // Check if this orientation has animation support
-        return this.atlases.hasOwnProperty(folder);
+        return folder && this.atlases.hasOwnProperty(folder);
     }
 
     // REMOVED: isIncomingConveyor, isOutgoingToNeighbor methods

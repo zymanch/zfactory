@@ -92,19 +92,22 @@ CREATE TABLE IF NOT EXISTS `entity_type` (
   `construction_ticks` int(11) NOT NULL DEFAULT 60 COMMENT 'Количество тиков для строительства',
   `storage_type` enum('none','unlimited','limited') NOT NULL DEFAULT 'none' COMMENT 'Storage capacity type',
   `storage_resource_count` int(10) unsigned DEFAULT NULL COMMENT 'Total max resources',
-  `storage_per_resource` int(10) unsigned DEFAULT NULL COMMENT 'Max per resource type'
+  `storage_per_resource` int(10) unsigned DEFAULT NULL COMMENT 'Max per resource type',
+  `input_connections` SET('up','up_1','up_2','down','down_1','down_2','left','left_1','left_2','right','right_1','right_2') DEFAULT NULL COMMENT 'Directions from which entity can receive resources',
+  `output_connections` SET('up','up_1','up_2','down','down_1','down_2','left','left_1','left_2','right','right_1','right_2') DEFAULT NULL COMMENT 'Directions to which entity can output resources'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`, `animation_fps`, `description`, `storage_type`, `storage_resource_count`, `storage_per_resource`) VALUES
+INSERT INTO `entity_type` (`entity_type_id`, `type`, `name`, `image_url`, `extension`, `max_durability`, `width`, `height`, `icon_url`, `power`, `parent_entity_type_id`, `orientation`, `animation_fps`, `description`, `storage_type`, `storage_resource_count`, `storage_per_resource`, `input_connections`, `output_connections`) VALUES
     -- Transporters (with orientation variants) - animation: 4 FPS = 8 frames / 2 sec (resource travel time per tile)
-    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'png', 100, 1, 1, 'conveyor/normal.png', 100, NULL, 'right', 4.00, 'Транспортная лента для перемещения ресурсов', 'none', NULL, NULL),
-    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'png', 100, 1, 1, 'conveyor_up/normal.png', 100, 100, 'up', 4.00, 'Транспортная лента (вверх)', 'none', NULL, NULL),
-    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'png', 100, 1, 1, 'conveyor_down/normal.png', 100, 100, 'down', 4.00, 'Транспортная лента (вниз)', 'none', NULL, NULL),
-    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'png', 100, 1, 1, 'conveyor_left/normal.png', 100, 100, 'left', 4.00, 'Транспортная лента (влево)', 'none', NULL, NULL),
+    -- Input: all sides except output direction | Output: movement direction only
+    (100, 'transporter', 'Conveyor Belt', 'conveyor', 'png', 100, 1, 1, 'conveyor/normal.png', 100, NULL, 'right', 4.00, 'Транспортная лента для перемещения ресурсов', 'none', NULL, NULL, 'up,down,left', 'right'),
+    (120, 'transporter', 'Conveyor Belt', 'conveyor_up', 'png', 100, 1, 1, 'conveyor_up/normal.png', 100, 100, 'up', 4.00, 'Транспортная лента (вверх)', 'none', NULL, NULL, 'down,left,right', 'up'),
+    (121, 'transporter', 'Conveyor Belt', 'conveyor_down', 'png', 100, 1, 1, 'conveyor_down/normal.png', 100, 100, 'down', 4.00, 'Транспортная лента (вниз)', 'none', NULL, NULL, 'up,left,right', 'down'),
+    (122, 'transporter', 'Conveyor Belt', 'conveyor_left', 'png', 100, 1, 1, 'conveyor_left/normal.png', 100, 100, 'left', 4.00, 'Транспортная лента (влево)', 'none', NULL, NULL, 'up,down,right', 'left'),
     -- Buildings - power=100 means baseline crafting speed
-    (101, 'building', 'Small Furnace', 'furnace', 'png', 200, 2, 2, 'furnace/normal.png', 100, NULL, 'none', NULL, 'Небольшая печь для переплавки руды', 'limited', 50, 10),
-    (103, 'building', 'Assembly Machine', 'assembler', 'png', 400, 3, 3, 'assembler/normal.png', 100, NULL, 'none', NULL, 'Сборочная машина для создания деталей', 'limited', 50, 10),
-    (104, 'storage', 'Storage Chest', 'chest', 'png', 150, 1, 1, 'chest/normal.png', 1, NULL, 'none', NULL, 'Хранилище для ресурсов', 'limited', 1000, 100),
+    (101, 'building', 'Small Furnace', 'furnace', 'png', 200, 2, 2, 'furnace/normal.png', 100, NULL, 'none', NULL, 'Небольшая печь для переплавки руды', 'limited', 50, 10, NULL, NULL),
+    (103, 'building', 'Assembly Machine', 'assembler', 'png', 400, 3, 3, 'assembler/normal.png', 100, NULL, 'none', NULL, 'Сборочная машина для создания деталей', 'limited', 50, 10, NULL, NULL),
+    (104, 'storage', 'Storage Chest', 'chest', 'png', 150, 1, 1, 'chest/normal.png', 1, NULL, 'none', NULL, 'Хранилище для ресурсов', 'limited', 1000, 100, NULL, NULL),
     (105, 'building', 'Power Pole', 'power_pole', 'png', 100, 1, 1, 'power_pole/normal.png', 1, NULL, 'none', NULL, 'Электрический столб', 'none', NULL, NULL),
     (106, 'building', 'Steam Engine', 'steam_engine', 'png', 350, 2, 3, 'steam_engine/normal.png', 1, NULL, 'none', NULL, 'Паровой генератор', 'none', NULL, NULL),
     (107, 'building', 'Boiler', 'boiler', 'png', 250, 2, 2, 'boiler/normal.png', 100, NULL, 'none', NULL, 'Котел для переработки нефти', 'limited', 50, 10),

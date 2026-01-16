@@ -4,6 +4,7 @@ import { ManipulatorState } from './ManipulatorState.js';
 import { BuildingState } from './BuildingState.js';
 import { SplitterState } from './SplitterState.js';
 import { getCSRFToken } from '../utils.js';
+import { ConveyorConnectionHelper } from '../ConveyorConnectionHelper.js';
 
 /**
  * ResourceTransportManager - Main controller for resource movement
@@ -18,13 +19,6 @@ export class ResourceTransportManager {
         this.manipulators = new Map();  // entity_id → ManipulatorState
         this.splitters = new Map();     // entity_id → SplitterState
         this.buildings = new Map();     // entity_id → BuildingState
-
-        // Splitter entity type IDs (800-811)
-        this.SPLITTER_TYPE_IDS = new Set([
-            800, 801, 802, 803,  // Splitter Normal
-            804, 805, 806, 807,  // Splitter Dual
-            808, 809, 810, 811   // Fast Splitter
-        ]);
 
         // Spatial index for fast position lookups
         this.spatialIndex = new SpatialIndex();
@@ -153,8 +147,8 @@ export class ResourceTransportManager {
             switch (entityType.type) {
                 case 'conveyor':  // Conveyors (including underground belts)
                 case 'transporter':
-                    // Check if this is a splitter
-                    if (this.SPLITTER_TYPE_IDS.has(entity.entity_type_id)) {
+                    // Check if this is a splitter (has multiple outputs)
+                    if (ConveyorConnectionHelper.isSplitter(entityType)) {
                         this.splitters.set(entity.entity_id, new SplitterState(entity, entityType, this.game));
                     } else {
                         this.transporters.set(entity.entity_id, new TransporterState(entity, entityType, this.game));

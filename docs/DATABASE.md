@@ -189,6 +189,8 @@ Defines types of entities that can be placed on the map.
 | parent_entity_type_id| INT UNSIGNED NULL                                                                 | Parent entity for orientation variants|
 | orientation          | ENUM('none','up','right','down','left','horizontal','vertical') DEFAULT 'none'    | Entity orientation/direction (NEW 2026-01: horizontal/vertical for pipes) |
 | resource_types       | SET('raw','liquid','crafted','deposit','energy') NULL                             | Accepted resource types (NEW 2026-01) |
+| input_connections    | SET('up','up_1','up_2','down','down_1','down_2','left','left_1','left_2','right','right_1','right_2') NULL | Directions from which entity can receive resources (NEW 2026-01) |
+| output_connections   | SET('up','up_1','up_2','down','down_1','down_2','left','left_1','left_2','right','right_1','right_2') NULL | Directions to which entity can output resources (NEW 2026-01) |
 | storage_type          | ENUM('none', 'unlimited', 'limited') DEFAULT 'none'                              | Storage capacity type                 |
 | storage_resource_count| INT UNSIGNED NULL                                                                 | Total max resources                   |
 | storage_per_resource  | INT UNSIGNED NULL                                                                 | Max per resource type                 |
@@ -202,6 +204,21 @@ Defines types of entities that can be placed on the map.
   - Buildings: 'raw,crafted,liquid' (all except energy)
   - Mining: 'deposit,raw'
   - Electricity: 'energy'
+
+**NEW (2026-01): Input/Output Connections System**
+- `input_connections` and `output_connections` define data-driven conveyor connectivity
+- Replaces hardcoded orientation checks in JavaScript
+- **API Returns Arrays**: Backend converts SET to arrays via `explode()` for easier JS handling
+- **Position Support**: Suffixes like `_1`, `_2` for multi-tile entities (e.g., `up_1`, `up_2`)
+- Examples:
+  - Regular conveyor (right): `input=['up','down','left']`, `output=['right']` (accepts from 3 sides)
+  - Splitter (right): `input=['left']`, `output=['up','down']` (1 input → 2 perpendicular outputs)
+  - Underground IN: `input=['left']`, `output=[]` (resources go underground)
+  - Underground OUT: `input=[]`, `output=['right']` (resources come from underground)
+- **Helper Class**: `ConveyorConnectionHelper.js` provides methods:
+  - `canReceiveFrom(entityType, direction, position)` - check if entity accepts input
+  - `canOutputTo(entityType, direction, position)` - check if entity can output
+  - `isUndergroundIn(entityType)`, `isUndergroundOut(entityType)`, `isSplitter(entityType)`
 
 **NEW (2026-01): Horizontal/Vertical Orientation**
 - Pipes can now have 'horizontal' (131) or 'vertical' (132) orientation

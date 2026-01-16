@@ -310,6 +310,32 @@ conveyor_left (ID 123, parent_entity_type_id = 100)
 // No AI generation needed for variants
 ```
 
+### Conveyor Connections (NEW 2026-01)
+```php
+// Data-driven connection system using input_connections and output_connections
+
+// Regular conveyors - accept from 3 sides, output to 1 side
+'input_connections' => 'up,down,left',  // All sides except output
+'output_connections' => 'right'         // Movement direction
+
+// Splitters - 1 input, 2 perpendicular outputs
+'input_connections' => 'left',
+'output_connections' => 'up,down'
+
+// Underground IN - only input (resources go underground)
+'input_connections' => 'left',
+'output_connections' => null
+
+// Underground OUT - only output (resources come from underground)
+'input_connections' => null,
+'output_connections' => 'right'
+
+// Frontend: ConveyorConnectionHelper.js provides static methods:
+// - canReceiveFrom(entityType, direction, position)
+// - canOutputTo(entityType, direction, position)
+// - isUndergroundIn/Out(entityType), isSplitter(entityType)
+```
+
 ## Checklist
 
 Before marking entity complete:
