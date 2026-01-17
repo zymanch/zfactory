@@ -83,7 +83,8 @@ class ZFactoryGame {
         this.needsReload = false;
         this.lastReloadTime = 0;
         this.lastFpsTime = 0;
-        this.frameCount = 0;
+        this.frameCount = 0; // For FPS display (resets every second)
+        this.gameTick = 0;   // For game logic (never resets)
 
         // Progress tracking
         this.progressCallbacks = [];
@@ -919,6 +920,9 @@ class ZFactoryGame {
      */
     gameLoop(ticker) {
         try {
+            // Increment game tick (never resets)
+            this.gameTick++;
+
             this.perfMonitor.start('camera');
             const moved = this.camera.update();
             this.camera.apply();
@@ -943,52 +947,56 @@ class ZFactoryGame {
                 this.lastReloadTime = now;
             }
 
-            // Update UI
+            // === EVERY FRAME UPDATES (60 fps) ===
+
+            // Update UI (every frame)
             this.perfMonitor.start('cameraInfo');
             this.cameraInfo.update();
             this.perfMonitor.end('cameraInfo');
 
-            // Tick resource transport system
+            // Tick resource transport system (every frame for animation, heavy logic every 30 ticks internally)
             this.perfMonitor.start('resourceTransport');
             this.resourceTransport.tick();
             this.perfMonitor.end('resourceTransport');
 
-            // Render resource sprites on conveyors/manipulators
+            // Render resource sprites on conveyors/manipulators (every frame)
             this.perfMonitor.start('resourceRenderer');
             this.resourceRenderer.render();
             this.perfMonitor.end('resourceRenderer');
 
-            // Update cloud positions
+            // Update cloud positions (every frame)
             this.perfMonitor.start('cloudManager');
             if (this.cloudManager) {
                 this.cloudManager.update();
             }
             this.perfMonitor.end('cloudManager');
 
-            // Update conveyor animations
+            // Update conveyor animations (every frame)
             this.perfMonitor.start('conveyorManager');
             if (this.conveyorManager) {
                 this.conveyorManager.update();
             }
             this.perfMonitor.end('conveyorManager');
 
-            // Update construction progress
+            // Update construction progress (every frame)
             this.perfMonitor.start('constructionManager');
             if (this.constructionManager) {
                 this.constructionManager.update();
             }
             this.perfMonitor.end('constructionManager');
 
+            // === PERIODIC UPDATES (lower frequency) ===
+
             // Update electricity indicators (periodic, every 60 frames = ~1 second)
             this.perfMonitor.start('noPowerIndicator');
-            if (this.noPowerIndicator && this.frameCount % 60 === 0) {
+            if (this.noPowerIndicator && this.gameTick % 60 === 0) {
                 this.noPowerIndicator.update();
             }
             this.perfMonitor.end('noPowerIndicator');
 
-            // Update pipe inlet sprites
+            // Update pipe inlet sprites (periodic, every 30 frames = ~0.5 second)
             this.perfMonitor.start('pipeInletRenderer');
-            if (this.pipeInletRenderer) {
+            if (this.pipeInletRenderer && this.gameTick % 30 === 0) {
                 this.pipeInletRenderer.update();
             }
             this.perfMonitor.end('pipeInletRenderer');
