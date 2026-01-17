@@ -23,6 +23,8 @@ export class MenuMode extends GameModeBase {
         this.backdrop = null;
         this.settingsWindow = null;
         this.settingsBackdrop = null;
+        this.adminWindow = null;
+        this.adminBackdrop = null;
         this.isAdmin = false;
         this.profilingActive = false;
         this.profilingTimeout = null;
@@ -36,6 +38,7 @@ export class MenuMode extends GameModeBase {
         this.createBackdrop();
         this.createModal();
         this.createSettingsWindow();
+        this.createAdminWindow();
     }
 
     /**
@@ -71,6 +74,14 @@ export class MenuMode extends GameModeBase {
         }
         if (this.settingsBackdrop) {
             this.settingsBackdrop.style.display = 'none';
+        }
+
+        // Скрыть окно администрирования если открыто
+        if (this.adminWindow) {
+            this.adminWindow.style.display = 'none';
+        }
+        if (this.adminBackdrop) {
+            this.adminBackdrop.style.display = 'none';
         }
 
         // Остановить профилирование если активно
@@ -161,10 +172,12 @@ export class MenuMode extends GameModeBase {
         });
         this.modalContainer.appendChild(settingsBtn);
 
-        // 4. Профилирование (только для админов)
+        // 4. Администрирование (только для админов)
         if (this.isAdmin) {
-            const profilingSection = this.createProfilingSection();
-            this.modalContainer.appendChild(profilingSection);
+            const adminBtn = this.createButton('🔧 Administration', () => {
+                this.openAdminWindow();
+            }, 'warning');
+            this.modalContainer.appendChild(adminBtn);
         }
 
         // 5. Выход
@@ -309,6 +322,9 @@ export class MenuMode extends GameModeBase {
         buttonsContainer.appendChild(cancelBtn);
         this.settingsWindow.appendChild(buttonsContainer);
 
+        // Скрыть главное меню
+        this.modalContainer.style.display = 'none';
+
         // Показать окно настроек
         this.settingsBackdrop.style.display = 'block';
         this.settingsWindow.style.display = 'flex';
@@ -320,6 +336,9 @@ export class MenuMode extends GameModeBase {
     closeSettings() {
         this.settingsBackdrop.style.display = 'none';
         this.settingsWindow.style.display = 'none';
+
+        // Показать главное меню обратно
+        this.modalContainer.style.display = 'flex';
     }
 
     /**
@@ -334,6 +353,133 @@ export class MenuMode extends GameModeBase {
 
         // Закрыть окно
         this.closeSettings();
+    }
+
+    /**
+     * Создать окно администрирования
+     */
+    createAdminWindow() {
+        // Backdrop для окна администрирования
+        this.adminBackdrop = document.createElement('div');
+        this.adminBackdrop.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10003;
+            display: none;
+        `;
+        document.body.appendChild(this.adminBackdrop);
+
+        // Окно администрирования
+        this.adminWindow = document.createElement('div');
+        this.adminWindow.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            max-width: 90vw;
+            background: rgba(20, 20, 30, 0.98);
+            border: 2px solid #e2a430;
+            border-radius: 12px;
+            padding: 30px;
+            z-index: 10004;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        `;
+        document.body.appendChild(this.adminWindow);
+
+        // Предотвратить закрытие при клике внутри окна
+        this.adminWindow.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Закрыть при клике на backdrop
+        this.adminBackdrop.addEventListener('click', () => {
+            this.closeAdminWindow();
+        });
+    }
+
+    /**
+     * Открыть окно администрирования
+     */
+    openAdminWindow() {
+        // Заполнить содержимое окна
+        this.adminWindow.innerHTML = '';
+
+        // Заголовок
+        const title = this.createTitle('Administration');
+        this.adminWindow.appendChild(title);
+
+        // Профилирование
+        const profilingSection = this.createProfilingSection();
+        this.adminWindow.appendChild(profilingSection);
+
+        // Кнопки Cancel, Apply, Go to Admin Page
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.cssText = `
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        `;
+
+        const cancelBtn = this.createButton('✕ Cancel', () => {
+            this.closeAdminWindow();
+        }, 'secondary');
+        cancelBtn.style.flex = '1';
+
+        const applyBtn = this.createButton('✓ Apply', () => {
+            this.applyAdminSettings();
+        });
+        applyBtn.style.flex = '1';
+
+        const adminPageBtn = this.createButton('🔧 Go to Admin Page', () => {
+            window.location.href = '/admin';
+        }, 'warning');
+        adminPageBtn.style.flex = '1';
+
+        buttonsContainer.appendChild(cancelBtn);
+        buttonsContainer.appendChild(applyBtn);
+        buttonsContainer.appendChild(adminPageBtn);
+        this.adminWindow.appendChild(buttonsContainer);
+
+        // Скрыть главное меню
+        this.modalContainer.style.display = 'none';
+
+        // Показать окно администрирования
+        this.adminBackdrop.style.display = 'block';
+        this.adminWindow.style.display = 'flex';
+    }
+
+    /**
+     * Закрыть окно администрирования
+     */
+    closeAdminWindow() {
+        this.adminBackdrop.style.display = 'none';
+        this.adminWindow.style.display = 'none';
+
+        // Показать главное меню обратно
+        this.modalContainer.style.display = 'flex';
+
+        // Остановить профилирование если активно
+        if (this.profilingActive) {
+            this.stopProfiling();
+        }
+    }
+
+    /**
+     * Применить настройки администрирования
+     */
+    applyAdminSettings() {
+        // На данный момент профилирование работает в реальном времени,
+        // поэтому Apply просто закрывает окно
+        console.log('[MenuMode] Admin settings applied');
+        this.closeAdminWindow();
     }
 
     /**
