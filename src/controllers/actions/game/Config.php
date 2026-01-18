@@ -310,11 +310,11 @@ class Config extends JsonAction
         $assets = [];
         $v = Yii::$app->params['asset_version'];
 
-        // Landing textures (10) + atlases (10)
+        // Landing atlases (10)
+        // Removed individual tiles - use atlases only
         $landingTypes = $this->getLandingTypes();
         foreach ($landingTypes as $id => $landing) {
             $folder = $landing['folder'];
-            $assets["landing_{$id}"] = "/assets/tiles/landing/{$folder}/{$folder}_0.png?v={$v}";
             $assets["landing_atlas_{$folder}"] = "/assets/tiles/landing/atlases/{$folder}_atlas.png?v={$v}";
         }
 

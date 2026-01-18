@@ -145,7 +145,7 @@ class CreateEntity extends JsonAction
         }
 
         // Special rules for HQ building
-        $isHqBuilding = ($entityType->type === 'hq');
+        $isHqBuilding = ($entityType->subtype === 'hq');
 
         // Use provided region and user data
         $shipAttachX = $region ? (int)$region->ship_attach_x : 0;
@@ -209,13 +209,13 @@ class CreateEntity extends JsonAction
                 $existingHq = ShipEntity::find()
                     ->joinWith('entityType')
                     ->where(['ship_entity.user_id' => $userId])
-                    ->andWhere(['entity_type.type' => 'hq'])
+                    ->andWhere(['entity_type.subtype' => 'hq'])
                     ->one();
             } else {
                 $existingHq = Entity::find()
                     ->joinWith('entityType')
                     ->where(['entity.region_id' => $currentRegionId])
-                    ->andWhere(['entity_type.type' => 'hq'])
+                    ->andWhere(['entity_type.subtype' => 'hq'])
                     ->one();
             }
 

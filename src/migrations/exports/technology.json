@@ -1,0 +1,58 @@
+[
+    {
+        "technology_id": "1",
+        "name": "Automation",
+        "description": "Basic automation with conveyors and manipulators",
+        "icon": "automation.svg",
+        "tier": "1"
+    },
+    {
+        "technology_id": "2",
+        "name": "Stone Processing",
+        "description": "Build furnaces for smelting",
+        "icon": "stone_processing.svg",
+        "tier": "1"
+    },
+    {
+        "technology_id": "3",
+        "name": "Logistics",
+        "description": "Faster transportation systems",
+        "icon": "logistics.svg",
+        "tier": "2"
+    },
+    {
+        "technology_id": "4",
+        "name": "Metallurgy",
+        "description": "Advanced metal processing",
+        "icon": "metallurgy.svg",
+        "tier": "2"
+    },
+    {
+        "technology_id": "5",
+        "name": "Advanced Logistics",
+        "description": "Express conveyors and long manipulators",
+        "icon": "advanced_logistics.svg",
+        "tier": "3"
+    },
+    {
+        "technology_id": "6",
+        "name": "Steel Production",
+        "description": "Produce steel for advanced buildings",
+        "icon": "steel.svg",
+        "tier": "3"
+    },
+    {
+        "technology_id": "7",
+        "name": "Electricity",
+        "description": "Power generation and distribution",
+        "icon": "electricity.svg",
+        "tier": "4"
+    },
+    {
+        "technology_id": "8",
+        "name": "Military",
+        "description": "Defense towers and weapons",
+        "icon": "military.svg",
+        "tier": "4"
+    }
+]

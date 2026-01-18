@@ -1,0 +1,189 @@
+[
+    {
+        "landing_id": "1",
+        "type": "terrain",
+        "name": "Grass",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "grass",
+        "variations_count": "5",
+        "ai_seed": "348135371",
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "2",
+        "type": "terrain",
+        "name": "Dirt",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "dirt",
+        "variations_count": "5",
+        "ai_seed": "2105786588",
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "3",
+        "type": "terrain",
+        "name": "Sand",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "sand",
+        "variations_count": "5",
+        "ai_seed": "3184360691",
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "4",
+        "type": "fluid",
+        "name": "Water",
+        "is_buildable": "no",
+        "fluid_type": "water",
+        "folder": "water",
+        "variations_count": "5",
+        "ai_seed": "2282195271",
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "5",
+        "type": "terrain",
+        "name": "Stone",
+        "is_buildable": "no",
+        "fluid_type": "none",
+        "folder": "stone",
+        "variations_count": "5",
+        "ai_seed": "4178995992",
+        "blocks_vision": "yes"
+    },
+    {
+        "landing_id": "6",
+        "type": "fluid",
+        "name": "Lava",
+        "is_buildable": "no",
+        "fluid_type": "lava",
+        "folder": "lava",
+        "variations_count": "5",
+        "ai_seed": "3704067868",
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "7",
+        "type": "terrain",
+        "name": "Snow",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "snow",
+        "variations_count": "5",
+        "ai_seed": "3589010508",
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "8",
+        "type": "terrain",
+        "name": "Swamp",
+        "is_buildable": "no",
+        "fluid_type": "none",
+        "folder": "swamp",
+        "variations_count": "5",
+        "ai_seed": "1654076524",
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "9",
+        "type": "terrain",
+        "name": "Мост",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "bridge",
+        "variations_count": "1",
+        "ai_seed": null,
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "10",
+        "type": "special",
+        "name": "Island Edge",
+        "is_buildable": "no",
+        "fluid_type": "none",
+        "folder": "island_edge",
+        "variations_count": "5",
+        "ai_seed": "1944966095",
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "11",
+        "type": "special",
+        "name": "Sky",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "sky",
+        "variations_count": "1",
+        "ai_seed": null,
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "12",
+        "type": "special",
+        "name": "Ship Edge",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "ship_edge",
+        "variations_count": "5",
+        "ai_seed": null,
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "13",
+        "type": "terrain",
+        "name": "Деревянный пол корабля",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "ship_floor_wood",
+        "variations_count": "1",
+        "ai_seed": null,
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "14",
+        "type": "terrain",
+        "name": "Железный пол корабля",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "ship_floor_iron",
+        "variations_count": "5",
+        "ai_seed": null,
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "15",
+        "type": "terrain",
+        "name": "Стальной пол корабля",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "ship_floor_steel",
+        "variations_count": "1",
+        "ai_seed": null,
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "16",
+        "type": "terrain",
+        "name": "Титановый пол корабля",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "ship_floor_titanium",
+        "variations_count": "1",
+        "ai_seed": null,
+        "blocks_vision": "no"
+    },
+    {
+        "landing_id": "17",
+        "type": "terrain",
+        "name": "Кристаллический пол корабля",
+        "is_buildable": "yes",
+        "fluid_type": "none",
+        "folder": "ship_floor_crystal",
+        "variations_count": "1",
+        "ai_seed": null,
+        "blocks_vision": "no"
+    }
+]

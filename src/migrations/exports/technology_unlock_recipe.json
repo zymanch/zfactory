@@ -1,0 +1,70 @@
+[
+    {
+        "technology_id": "2",
+        "recipe_id": "3"
+    },
+    {
+        "technology_id": "2",
+        "recipe_id": "4"
+    },
+    {
+        "technology_id": "2",
+        "recipe_id": "17"
+    },
+    {
+        "technology_id": "4",
+        "recipe_id": "5"
+    },
+    {
+        "technology_id": "4",
+        "recipe_id": "7"
+    },
+    {
+        "technology_id": "4",
+        "recipe_id": "8"
+    },
+    {
+        "technology_id": "4",
+        "recipe_id": "9"
+    },
+    {
+        "technology_id": "4",
+        "recipe_id": "10"
+    },
+    {
+        "technology_id": "4",
+        "recipe_id": "11"
+    },
+    {
+        "technology_id": "6",
+        "recipe_id": "12"
+    },
+    {
+        "technology_id": "6",
+        "recipe_id": "13"
+    },
+    {
+        "technology_id": "7",
+        "recipe_id": "14"
+    },
+    {
+        "technology_id": "7",
+        "recipe_id": "18"
+    },
+    {
+        "technology_id": "7",
+        "recipe_id": "19"
+    },
+    {
+        "technology_id": "7",
+        "recipe_id": "20"
+    },
+    {
+        "technology_id": "7",
+        "recipe_id": "21"
+    },
+    {
+        "technology_id": "7",
+        "recipe_id": "22"
+    }
+]

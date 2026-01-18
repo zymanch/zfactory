@@ -184,9 +184,14 @@ export class EntityInfoWindow {
      * Get entity icon URL
      */
     getEntityIconUrl(entityType) {
+        // Priority 1: Use data URL from atlas if available
+        if (this.game.iconDataUrls && this.game.iconDataUrls[entityType.id]) {
+            return this.game.iconDataUrls[entityType.id];
+        }
+
         const v = this.game.config.assetVersion || 1;
 
-        // If icon_url is provided
+        // Priority 2: If icon_url is provided
         if (entityType.icon_url) {
             // Check if it's already an absolute path (starts with / or http)
             if (entityType.icon_url.startsWith('/') || entityType.icon_url.startsWith('http')) {
@@ -196,7 +201,7 @@ export class EntityInfoWindow {
             return `/assets/tiles/entities/${entityType.icon_url}?v=${v}`;
         }
 
-        // Fallback: construct from folder (old style)
+        // Priority 3: Fallback - construct from folder (old style)
         const iconUrl = `${entityType.folder}/normal.${entityType.extension || 'png'}`;
         return `/assets/tiles/entities/${iconUrl}?v=${v}`;
     }

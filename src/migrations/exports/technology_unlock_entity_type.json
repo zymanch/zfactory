@@ -1,0 +1,42 @@
+[
+    {
+        "technology_id": "1",
+        "entity_type_id": "100"
+    },
+    {
+        "technology_id": "1",
+        "entity_type_id": "200"
+    },
+    {
+        "technology_id": "2",
+        "entity_type_id": "101"
+    },
+    {
+        "technology_id": "4",
+        "entity_type_id": "103"
+    },
+    {
+        "technology_id": "5",
+        "entity_type_id": "201"
+    },
+    {
+        "technology_id": "7",
+        "entity_type_id": "106"
+    },
+    {
+        "technology_id": "7",
+        "entity_type_id": "107"
+    },
+    {
+        "technology_id": "8",
+        "entity_type_id": "400"
+    },
+    {
+        "technology_id": "8",
+        "entity_type_id": "401"
+    },
+    {
+        "technology_id": "8",
+        "entity_type_id": "402"
+    }
+]

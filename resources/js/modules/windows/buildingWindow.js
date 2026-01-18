@@ -165,7 +165,8 @@ export class BuildingWindow {
         const iconUrl = getEntityIconUrl(
             entityType,
             this.game.config.tilesPath,
-            this.game.config.assetVersion || 1
+            this.game.config.assetVersion || 1,
+            this.game // Use atlas data URLs
         );
 
         const item = document.createElement('div');

@@ -282,12 +282,33 @@ zfactory.local/
 │   │   │   │   ├── manipulator/  # Manipulator classes
 │   │   │   │   ├── relief/       # Rock classes
 │   │   │   │   └── eye/          # Crystal tower classes
-│   │   │   └── generators/       # AI sprite generators
+│   │   │   ├── sprite_generators/  # AI sprite generators (renamed from generators/)
+│   │   │   │   ├── base/
+│   │   │   │   │   ├── SpriteGeneratorInterface.php
+│   │   │   │   │   ├── AbstractSpriteGenerator.php
+│   │   │   │   │   └── ImageProcessor.php  # GD image transformations
+│   │   │   │   ├── EntityGeneratorFactory.php
+│   │   │   │   ├── building/
+│   │   │   │   ├── conveyor/
+│   │   │   │   ├── pipe/
+│   │   │   │   └── ...
+│   │   │   ├── atlas_providers/    # Atlas provider pattern (NEW)
+│   │   │   │   ├── base/
+│   │   │   │   │   ├── AtlasProviderInterface.php
+│   │   │   │   │   └── AbstractAtlasProvider.php
+│   │   │   │   ├── AtlasProviderRegistry.php
+│   │   │   │   ├── building/
+│   │   │   │   │   └── BuildingAtlasProvider.php
+│   │   │   │   ├── conveyor/
+│   │   │   │   │   └── ConveyorAtlasProvider.php
+│   │   │   │   └── pipe/
+│   │   │   │       └── PipeAtlasProvider.php
+│   │   │   └── atlas_generators/   # Atlas generators (NEW)
 │   │   │       ├── base/
-│   │   │       ├── EntityGeneratorFactory.php
-│   │   │       ├── building/
-│   │   │       ├── tree/
-│   │   │       └── ...
+│   │   │       │   └── AtlasGeneratorInterface.php
+│   │   │       ├── EntityAtlasGenerator.php     # 7×2 atlas (buildings)
+│   │   │       ├── ConveyorAtlasGenerator.php   # 16×8 atlas (conveyors)
+│   │   │       └── PipeAtlasGenerator.php       # 16×1 atlas (pipes)
 │   │   └── landing/              # Landing business logic
 │   │       ├── AbstractLanding.php
 │   │       ├── LandingFactory.php
@@ -396,68 +417,156 @@ bl\landing\
 └── IslandEdgeLanding           # LANDING_ID = 10
 ```
 
-### Entity Generators
+### Entity Sprite & Atlas Generation System
 
-Each EntityType class can return its corresponding AI sprite generator:
+**New Architecture (Jan 2026)**: Unified Provider Pattern for atlas generation. See **docs/ATLAS_GENERATION.md** for full documentation.
 
-```php
-$entityType = EntityType::findOne(FurnaceEntityType::ENTITY_TYPE_ID);
-$generator = $entityType->getGenerator();  // Returns FurnaceGenerator
-$generator->generate($entityType);         // Generates sprites via FLUX.1 Dev
+#### Overview
+
+The system consists of three layers:
+
+1. **Sprite Generators** (`bl\entity\sprite_generators\`) - Generate base sprites (sprite.png, animation.png)
+2. **Atlas Providers** (`bl\entity\atlas_providers\`) - Define which atlases are needed for entity type
+3. **Atlas Generators** (`bl\entity\atlas_generators\`) - Generate atlases from sprites
+
+#### Entity Type Subtyping
+
+Added `subtype` column to `entity_type` table to eliminate hardcoded entity_type_id:
+
+```sql
+-- Example: type + subtype instead of entity_type_id checks
+SELECT * FROM entity_type WHERE type = 'conveyor' AND subtype = 'conveyor';
+SELECT * FROM entity_type WHERE type = 'electricity' AND subtype = 'pylon';
 ```
 
-Generator hierarchy in `bl\entity\generators\`:
-- `base\AbstractEntityGenerator` - Base with generate(), generateStates()
-- `base\ImageProcessor` - Static image processing utilities
-- `EntityGeneratorFactory` - Maps folder name to generator class
-- Individual generators: `building\FurnaceGenerator`, `tree\PineTreeGenerator`, etc.
+**Common subtypes:**
+- `conveyor`: conveyor, underground_in, underground_out, splitter
+- `pipe`: pipe, underground_pipe
+- `electricity`: pylon, battery, generator
+- `manipulator`: short, long
+- Other types: `none` (default)
 
-#### ConveyorGenerator (Advanced Generation Logic)
+#### Sprite Generators (`bl\entity\sprite_generators\`)
 
-`bl\entity\generators\transporter\ConveyorGenerator` implements specialized logic for conveyor belt sprites with **three generation scenarios**:
-
-**1. Rotational Variants (parent_entity_type_id exists)**
-- Rotates sprite from parent entity type
-- Used for `conveyor_up`, `conveyor_down`, `conveyor_left` orientations
-- No AI generation needed - pure image rotation
-
-**2. Base Conveyor (entity_type_id=100)**
-- Generates with FLUX.1 Dev AI model
-- Applies horizontal mirror effect (copies bottom half to top, flipped)
-- Creates symmetric conveyor belt appearance
-- Requires ComfyUI running
-
-**3. Color Variants (dual/fast_dual conveyors)**
-- **Works WITHOUT ComfyUI** - uses HSL hue shifting
-- Loads base conveyor (entity_type_id=100) sprite
-- Applies HSL color transformation:
-  - **conveyor_dual** (123-126): +240° hue shift → **Strong Blue**
-  - **conveyor_fast_dual** (127-130): +120° hue shift → **Strong Green**
-- Generates all 5 sprite states automatically
-- Rotational variants inherit parent's color
-
-**GD Resource Pattern:**
-ConveyorGenerator returns GD image resources instead of saving files directly:
+**Interface**: `SpriteGeneratorInterface`
 ```php
-$generator = new ConveyorGenerator($entityType);
-$gdImage = $generator->generate($entity);  // Returns GD resource
-$entity->saveNormalSprite($gdImage);       // Caller saves it
-imagedestroy($gdImage);                     // Cleanup
+interface SpriteGeneratorInterface {
+    public function generate(EntityType $entityType, bool $testMode = false): bool;
+    public function generateStates(EntityType $entityType): bool;
+    public function supports(EntityType $entityType): bool;
+}
 ```
 
-**Commands:**
+**Hierarchy:**
+- `base\AbstractSpriteGenerator` - Base with generate(), generateStates()
+- `base\ImageProcessor` - GD image transformations (works ONLY with GD resources)
+- `base\SpriteGeneratorInterface` - Common interface
+- Individual generators: `building\FurnaceGenerator`, `conveyor\ConveyorSpriteGenerator`, etc.
+
+**ImageProcessor** (refactored to work with GD resources):
+```php
+// All methods return GD resources (NOT files)
+public static function createDamaged($src): resource;
+public static function createBlueprint($src, ?string $orientation = null): resource;
+public static function createSelected($src): resource;
+public static function rotateImage($src, int $angle): resource;
+```
+
+#### Atlas System (`bl\entity\atlas_providers\` + `bl\entity\atlas_generators\`)
+
+**Provider Pattern**: Each entity type/subtype has a provider that defines which atlases to generate.
+
+**Example: Building Atlas**
+```php
+// AtlasProviderRegistry maps type:subtype → provider
+AtlasProviderRegistry::init();
+$provider = AtlasProviderRegistry::getProvider($entityType);
+$generators = $provider->getAtlasGenerators($entityType);
+
+// Result for building:
+// ['atlas' => EntityAtlasGenerator($sprite, width, height)]
+
+// EntityAtlasGenerator creates 2-row atlas:
+// Row 1: 7 states (normal, damaged, blueprint, normal_selected, damaged_selected, deleting, crafting)
+// Row 2: 9 construction frames (10%, 20%, ..., 90%)
+```
+
+**Example: Conveyor Atlas**
+```php
+// Result for conveyor:conveyor
+// [
+//   'normal_atlas' => ConveyorAtlasGenerator($animation, 'normal', 'right'),
+//   'damaged_atlas' => ConveyorAtlasGenerator($animation, 'damaged', 'right'),
+//   'blueprint_atlas' => ConveyorAtlasGenerator($animation, 'blueprint', 'right'),
+//   'normal_selected_atlas' => ...,
+//   'damaged_selected_atlas' => ...
+// ]
+
+// ConveyorAtlasGenerator creates 16×8 atlas:
+// 16 connection variants × 8 animation frames
+```
+
+**Example: Pipe Atlas**
+```php
+// Result for pipe:pipe
+// [
+//   'pipe_atlas_normal' => PipeAtlasGenerator($sprite, 'normal'),
+//   'pipe_atlas_damaged' => PipeAtlasGenerator($sprite, 'damaged'),
+//   'pipe_atlas_normal_selected' => ...,
+//   'pipe_atlas_damaged_selected' => ...
+// ]
+
+// PipeAtlasGenerator creates 16×1 atlas:
+// 16 connection variants × 1 row
+```
+
+#### Commands
+
+**Migrate sprites** (one-time, copies normal.png → sprite.png):
 ```bash
-# Generate dual-lane conveyors (blue, no AI needed)
-php yii entity/generate-ai-flux conveyor_dual 0
+php yii entity/migrate-sprites
+```
 
-# Generate fast dual-lane conveyors (green, no AI needed)
-php yii entity/generate-ai-flux conveyor_fast_dual 0
+**Generate atlases**:
+```bash
+# Generate all atlases for all entity types
+php yii atlas/generate-all
 
-# Generate base conveyor (requires ComfyUI)
+# Generate atlases for specific entity
+php yii atlas/generate --entity_type_id=100
+```
+
+**AI sprite generation** (FLUX.1 Dev via ComfyUI):
+```bash
+# Generate base sprite using AI
 php yii entity/generate-ai-flux conveyor 0
 ```
 
-All rotational variants (_up, _down, _left) are generated automatically from base orientation.
+#### File Structure
+
+**Old structure (deprecated)**:
+```
+public/assets/tiles/entities/{folder}/
+├── normal.png          → DEPRECATED (use sprite.png)
+├── damaged.png         → DEPRECATED (generated via atlas)
+├── blueprint.png       → DEPRECATED (generated via atlas)
+```
+
+**New structure**:
+```
+public/assets/tiles/entities/{folder}/
+├── sprite.png              # Base sprite (buildings, pipes)
+├── animation.png           # 8 frames side-by-side (conveyors)
+├── atlas.png               # Generated atlas (buildings)
+├── normal_atlas.png        # Generated atlas (conveyors)
+├── pipe_atlas_normal.png   # Generated atlas (pipes)
+```
+
+#### Quick Start
+
+See **docs/ATLAS_QUICKSTART.md** for adding new entity types with atlas generation.
+
+**Full documentation**: docs/ATLAS_GENERATION.md
 
 ## Electricity System
 

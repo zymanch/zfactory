@@ -16,6 +16,7 @@ class EntityController extends \yii\console\Controller
             'generate' => \commands\entity\Generate::class,
             'generate-states' => \commands\entity\GenerateStates::class,
             'generate-ai-flux' => \commands\entity\GenerateAiFlux::class,
+            'migrate-sprites' => \commands\entity\MigrateSprites::class,
         ];
     }
 }

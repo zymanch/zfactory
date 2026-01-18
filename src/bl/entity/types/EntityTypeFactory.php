@@ -60,6 +60,8 @@ class EntityTypeFactory
         building\DrillFastEntityType::ENTITY_TYPE_ID => building\DrillFastEntityType::class,
         building\HqEntityType::ENTITY_TYPE_ID => building\HqEntityType::class,
         building\DrillLargeEntityType::ENTITY_TYPE_ID => building\DrillLargeEntityType::class,
+        building\HqSmallEntityType::ENTITY_TYPE_ID => building\HqSmallEntityType::class,
+        building\HqMediumEntityType::ENTITY_TYPE_ID => building\HqMediumEntityType::class,
         building\SawmillSmallEntityType::ENTITY_TYPE_ID => building\SawmillSmallEntityType::class,
         building\SawmillMediumEntityType::ENTITY_TYPE_ID => building\SawmillMediumEntityType::class,
         building\SawmillLargeEntityType::ENTITY_TYPE_ID => building\SawmillLargeEntityType::class,

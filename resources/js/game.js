@@ -161,6 +161,10 @@ class ZFactoryGame {
         console.log('[Game] 5/8 Preparing entity textures...');
         this.prepareEntityTextures();
 
+        this.emitProgress(87, 'Preparing icons');
+        console.log('[Game] 5.3/8 Preparing icon data URLs from atlases...');
+        this.prepareIconDataUrls();
+
         this.emitProgress(88, 'Loading special assets');
         console.log('[Game] 5.5/8 Preparing special textures...');
         await this.prepareSpecialTextures();
@@ -463,6 +467,51 @@ class ZFactoryGame {
         }
 
         console.log(`[Game] Prepared textures for ${Object.keys(this.entityTypes).length} entity types`);
+    }
+
+    /**
+     * Prepare icon data URLs from atlas textures
+     * Creates data URLs from normal state textures for use in UI
+     */
+    prepareIconDataUrls() {
+        this.iconDataUrls = {};
+
+        for (const typeId in this.entityTypes) {
+            const textureKey = `entity_${typeId}_normal`;
+            const texture = this.textures[textureKey];
+
+            if (!texture) {
+                console.warn(`[Game] Texture not found for icon: ${textureKey}`);
+                continue;
+            }
+
+            // Create canvas and render texture to it
+            const canvas = document.createElement('canvas');
+            const entityType = this.entityTypes[typeId];
+            const width = (entityType.width || 1) * this.config.tileWidth;
+            const height = (entityType.height || 1) * this.config.tileHeight;
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+
+            // Get base texture source (Image or Canvas)
+            const source = texture.baseTexture.resource.source;
+
+            // Draw the texture region to canvas
+            const frame = texture.frame;
+            ctx.drawImage(
+                source,
+                frame.x, frame.y, frame.width, frame.height,
+                0, 0, width, height
+            );
+
+            // Convert to data URL and cache
+            this.iconDataUrls[typeId] = canvas.toDataURL('image/png');
+        }
+
+        console.log(`[Game] Prepared ${Object.keys(this.iconDataUrls).length} icon data URLs from atlases`);
     }
 
     /**

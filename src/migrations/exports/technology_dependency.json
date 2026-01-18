@@ -1,0 +1,26 @@
+[
+    {
+        "technology_id": "3",
+        "required_technology_id": "1"
+    },
+    {
+        "technology_id": "4",
+        "required_technology_id": "2"
+    },
+    {
+        "technology_id": "5",
+        "required_technology_id": "3"
+    },
+    {
+        "technology_id": "6",
+        "required_technology_id": "4"
+    },
+    {
+        "technology_id": "7",
+        "required_technology_id": "6"
+    },
+    {
+        "technology_id": "8",
+        "required_technology_id": "6"
+    }
+]

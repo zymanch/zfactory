@@ -1,0 +1,13 @@
+[
+    {
+        "region_id": "1",
+        "name": "Starter Island",
+        "description": "Starting region for new players",
+        "width": "100",
+        "height": "75",
+        "seed": null,
+        "is_starter": "yes",
+        "ship_attach_x": "100",
+        "ship_attach_y": "37"
+    }
+]

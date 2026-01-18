@@ -1,0 +1,226 @@
+[
+    {
+        "entity_type_id": "101",
+        "recipe_id": "3"
+    },
+    {
+        "entity_type_id": "101",
+        "recipe_id": "4"
+    },
+    {
+        "entity_type_id": "101",
+        "recipe_id": "5"
+    },
+    {
+        "entity_type_id": "101",
+        "recipe_id": "6"
+    },
+    {
+        "entity_type_id": "102",
+        "recipe_id": "1"
+    },
+    {
+        "entity_type_id": "102",
+        "recipe_id": "2"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "7"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "8"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "9"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "10"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "11"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "12"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "13"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "14"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "15"
+    },
+    {
+        "entity_type_id": "103",
+        "recipe_id": "16"
+    },
+    {
+        "entity_type_id": "107",
+        "recipe_id": "17"
+    },
+    {
+        "entity_type_id": "107",
+        "recipe_id": "18"
+    },
+    {
+        "entity_type_id": "107",
+        "recipe_id": "19"
+    },
+    {
+        "entity_type_id": "107",
+        "recipe_id": "20"
+    },
+    {
+        "entity_type_id": "108",
+        "recipe_id": "1"
+    },
+    {
+        "entity_type_id": "108",
+        "recipe_id": "2"
+    },
+    {
+        "entity_type_id": "115",
+        "recipe_id": "27"
+    },
+    {
+        "entity_type_id": "115",
+        "recipe_id": "28"
+    },
+    {
+        "entity_type_id": "115",
+        "recipe_id": "29"
+    },
+    {
+        "entity_type_id": "115",
+        "recipe_id": "30"
+    },
+    {
+        "entity_type_id": "115",
+        "recipe_id": "31"
+    },
+    {
+        "entity_type_id": "115",
+        "recipe_id": "32"
+    },
+    {
+        "entity_type_id": "115",
+        "recipe_id": "33"
+    },
+    {
+        "entity_type_id": "145",
+        "recipe_id": "34"
+    },
+    {
+        "entity_type_id": "146",
+        "recipe_id": "35"
+    },
+    {
+        "entity_type_id": "147",
+        "recipe_id": "36"
+    },
+    {
+        "entity_type_id": "148",
+        "recipe_id": "37"
+    },
+    {
+        "entity_type_id": "500",
+        "recipe_id": "21"
+    },
+    {
+        "entity_type_id": "501",
+        "recipe_id": "21"
+    },
+    {
+        "entity_type_id": "502",
+        "recipe_id": "21"
+    },
+    {
+        "entity_type_id": "503",
+        "recipe_id": "22"
+    },
+    {
+        "entity_type_id": "504",
+        "recipe_id": "22"
+    },
+    {
+        "entity_type_id": "505",
+        "recipe_id": "22"
+    },
+    {
+        "entity_type_id": "506",
+        "recipe_id": "1"
+    },
+    {
+        "entity_type_id": "506",
+        "recipe_id": "2"
+    },
+    {
+        "entity_type_id": "507",
+        "recipe_id": "23"
+    },
+    {
+        "entity_type_id": "507",
+        "recipe_id": "24"
+    },
+    {
+        "entity_type_id": "508",
+        "recipe_id": "23"
+    },
+    {
+        "entity_type_id": "508",
+        "recipe_id": "24"
+    },
+    {
+        "entity_type_id": "509",
+        "recipe_id": "23"
+    },
+    {
+        "entity_type_id": "509",
+        "recipe_id": "24"
+    },
+    {
+        "entity_type_id": "510",
+        "recipe_id": "25"
+    },
+    {
+        "entity_type_id": "510",
+        "recipe_id": "26"
+    },
+    {
+        "entity_type_id": "511",
+        "recipe_id": "25"
+    },
+    {
+        "entity_type_id": "511",
+        "recipe_id": "26"
+    },
+    {
+        "entity_type_id": "512",
+        "recipe_id": "25"
+    },
+    {
+        "entity_type_id": "512",
+        "recipe_id": "26"
+    },
+    {
+        "entity_type_id": "920",
+        "recipe_id": "500"
+    },
+    {
+        "entity_type_id": "921",
+        "recipe_id": "501"
+    },
+    {
+        "entity_type_id": "922",
+        "recipe_id": "502"
+    }
+]

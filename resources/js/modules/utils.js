@@ -98,10 +98,16 @@ export function assetUrl(basePath, path, version = 1) {
  * @param {Object} entityType - Entity type object
  * @param {string} tilesPath - Base tiles path (unused, kept for compatibility)
  * @param {number} version - Asset version
- * @returns {string} Icon URL
+ * @param {Object} game - Game instance (optional, for atlas-based data URLs)
+ * @returns {string} Icon URL or data URL from atlas
  */
-export function getEntityIconUrl(entityType, tilesPath, version = 1) {
-    // icon_url now comes pre-formed from backend
+export function getEntityIconUrl(entityType, tilesPath, version = 1, game = null) {
+    // Priority 1: Use data URL from atlas if game instance provided and icon available
+    if (game && game.iconDataUrls && game.iconDataUrls[entityType.id]) {
+        return game.iconDataUrls[entityType.id];
+    }
+
+    // Priority 2: Fallback to icon_url from backend (for wiki, admin panel, etc.)
     return assetUrl('', entityType.icon_url, version);
 }
 

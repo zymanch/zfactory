@@ -84,6 +84,12 @@ abstract class BuildingEntityType extends AbstractEntityType
             case 'hq':
                 $generatorClass = building\HqGenerator::class;
                 break;
+            case 'hq_small':
+                $generatorClass = building\HqSmallGenerator::class;
+                break;
+            case 'hq_medium':
+                $generatorClass = building\HqMediumGenerator::class;
+                break;
             case 'sawmill_small':
                 $generatorClass = building\SawmillSmallGenerator::class;
                 break;

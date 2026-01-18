@@ -1,0 +1,345 @@
+[
+    {
+        "resource_id": "1",
+        "name": "Wood",
+        "icon_url": "wood.svg",
+        "type": "raw",
+        "max_stack": "200"
+    },
+    {
+        "resource_id": "2",
+        "name": "Iron Ore",
+        "icon_url": "iron_ore.svg",
+        "type": "raw",
+        "max_stack": "200"
+    },
+    {
+        "resource_id": "3",
+        "name": "Copper Ore",
+        "icon_url": "copper_ore.svg",
+        "type": "raw",
+        "max_stack": "200"
+    },
+    {
+        "resource_id": "4",
+        "name": "Coal",
+        "icon_url": "coal.svg",
+        "type": "raw",
+        "max_stack": "200"
+    },
+    {
+        "resource_id": "5",
+        "name": "Stone",
+        "icon_url": "stone.svg",
+        "type": "raw",
+        "max_stack": "200"
+    },
+    {
+        "resource_id": "6",
+        "name": "Raw Crystal",
+        "icon_url": "raw_crystal.svg",
+        "type": "raw",
+        "max_stack": "200"
+    },
+    {
+        "resource_id": "7",
+        "name": "Crude Oil",
+        "icon_url": "crude_oil.svg",
+        "type": "raw",
+        "max_stack": "200"
+    },
+    {
+        "resource_id": "8",
+        "name": "Iron Deposit",
+        "icon_url": "iron_deposit.svg",
+        "type": "deposit",
+        "max_stack": "10000"
+    },
+    {
+        "resource_id": "9",
+        "name": "Copper Deposit",
+        "icon_url": "copper_deposit.svg",
+        "type": "deposit",
+        "max_stack": "10000"
+    },
+    {
+        "resource_id": "10",
+        "name": "Aluminum Deposit",
+        "icon_url": "aluminum_deposit.svg",
+        "type": "deposit",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "11",
+        "name": "Titanium Deposit",
+        "icon_url": "titanium_deposit.svg",
+        "type": "deposit",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "12",
+        "name": "Silver Deposit",
+        "icon_url": "silver_deposit.svg",
+        "type": "deposit",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "13",
+        "name": "Gold Deposit",
+        "icon_url": "gold_deposit.svg",
+        "type": "deposit",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "14",
+        "name": "Aluminum Ore",
+        "icon_url": "aluminum_ore.svg",
+        "type": "raw",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "15",
+        "name": "Titanium Ore",
+        "icon_url": "titanium_ore.svg",
+        "type": "raw",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "16",
+        "name": "Silver Ore",
+        "icon_url": "silver_ore.svg",
+        "type": "raw",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "17",
+        "name": "Gold Ore",
+        "icon_url": "gold_ore.svg",
+        "type": "raw",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "20",
+        "name": "Refined Fuel",
+        "icon_url": "refined_fuel.svg",
+        "type": "liquid",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "21",
+        "name": "Lubricant",
+        "icon_url": "lubricant.svg",
+        "type": "liquid",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "22",
+        "name": "Heavy Oil",
+        "icon_url": "heavy_oil.svg",
+        "type": "liquid",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "23",
+        "name": "Light Oil",
+        "icon_url": "light_oil.svg",
+        "type": "liquid",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "100",
+        "name": "Iron Ingot",
+        "icon_url": "iron_ingot.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "101",
+        "name": "Copper Ingot",
+        "icon_url": "copper_ingot.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "102",
+        "name": "Iron Plate",
+        "icon_url": "iron_plate.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "103",
+        "name": "Copper Plate",
+        "icon_url": "copper_plate.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "104",
+        "name": "Copper Wire",
+        "icon_url": "copper_wire.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "105",
+        "name": "Screw",
+        "icon_url": "screw.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "106",
+        "name": "Gear",
+        "icon_url": "gear.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "107",
+        "name": "Rotor",
+        "icon_url": "rotor.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "108",
+        "name": "Crystal",
+        "icon_url": "crystal.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "109",
+        "name": "Steel Plate",
+        "icon_url": "steel_plate.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "110",
+        "name": "Circuit",
+        "icon_url": "circuit.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "111",
+        "name": "Motor",
+        "icon_url": "motor.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "112",
+        "name": "Charcoal",
+        "icon_url": "charcoal.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "113",
+        "name": "Fuel Cell",
+        "icon_url": "fuel_cell.svg",
+        "type": "crafted",
+        "max_stack": "50"
+    },
+    {
+        "resource_id": "200",
+        "name": "Red Science Pack",
+        "icon_url": "science\/red_science.svg",
+        "type": "crafted",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "201",
+        "name": "Green Science Pack",
+        "icon_url": "science\/green_science.svg",
+        "type": "crafted",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "202",
+        "name": "Blue Science Pack",
+        "icon_url": "science\/blue_science.svg",
+        "type": "crafted",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "203",
+        "name": "Purple Science Pack",
+        "icon_url": "science\/purple_science.svg",
+        "type": "crafted",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "204",
+        "name": "Iron Rod",
+        "icon_url": "iron_rod.svg",
+        "type": "crafted",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "205",
+        "name": "Copper Rod",
+        "icon_url": "copper_rod.svg",
+        "type": "crafted",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "206",
+        "name": "Bolt",
+        "icon_url": "bolt.svg",
+        "type": "crafted",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "300",
+        "name": "Water",
+        "icon_url": "water.svg",
+        "type": "liquid",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "301",
+        "name": "Crude Oil",
+        "icon_url": "crude_oil.svg",
+        "type": "liquid",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "302",
+        "name": "Natural Gas",
+        "icon_url": "natural_gas.svg",
+        "type": "liquid",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "303",
+        "name": "Lava",
+        "icon_url": "lava.svg",
+        "type": "liquid",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "400",
+        "name": "Electricity",
+        "icon_url": "electricity.png",
+        "type": "energy",
+        "max_stack": "1000"
+    },
+    {
+        "resource_id": "402",
+        "name": "Gas Vent",
+        "icon_url": "gas_vent.svg",
+        "type": "deposit",
+        "max_stack": "100"
+    },
+    {
+        "resource_id": "403",
+        "name": "Lava Pool",
+        "icon_url": "lava_pool.svg",
+        "type": "deposit",
+        "max_stack": "100"
+    }
+]
