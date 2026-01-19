@@ -248,6 +248,7 @@ class Config extends JsonAction
             'saveStateUrl' => \yii\helpers\Url::to(['game/save-state'], true),
             'finishConstructionUrl' => \yii\helpers\Url::to(['game/finish-construction'], true),
             'addUserResourceUrl' => \yii\helpers\Url::to(['game/add-user-resource'], true),
+            'rebuildEntityUrl' => \yii\helpers\Url::to(['game/rebuild-entity'], true),
             'regionsMapUrl' => \yii\helpers\Url::to(['regions/index'], true),
             'tilesPath' => '/assets/tiles/',
             'currentRegionId' => $currentRegionId,

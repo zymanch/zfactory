@@ -67,6 +67,49 @@ resources/js/modules/
 └── fogOfWar.js                 - Visibility mask
 ```
 
+### TileLayerManager - Terrain Rendering
+
+**Location:** `resources/js/modules/tileLayerManager.js`
+
+**Detailed Documentation:** See `docs/agents/tile-rendering.md` for complete implementation
+
+**Key Features:**
+- **Texture Atlas Rendering**: All tiles batched into single draw call per landing type
+- **Wavy Transitions**: Cosine-based smooth borders between terrain types
+- **Landing Variations**: 5 random variations per landing type for natural look
+- **Viewport Culling**: Only visible tiles rendered
+- **Island Edge Auto-Generation**: Edges automatically managed
+
+**Atlas Structure:**
+```
+{name}_atlas.png (352×288px)
+Row 0: 5 variations (random selection when no transitions)
+Row 1-11: Transitions based on neighbors (top/right combinations)
+Column 0-10: Neighbor landing types
+```
+
+**Performance Benefits:**
+- 2-3x FPS improvement through sprite batching
+- Reduced texture switches (10 atlases vs 170+ individual sprites)
+- Simple coordinate calculation: direct `landing_id` mapping
+
+**Integration Pattern:**
+```javascript
+// Create tile with automatic transition detection
+const topLandingId = this.getLandingAt(tileX, tileY - 1);
+const rightLandingId = this.getLandingAt(tileX + 1, tileY);
+
+// Atlas coordinates calculated from neighbor IDs
+const row = topLandingId + 1;
+const col = rightLandingId;
+const frame = new PIXI.Rectangle(col * 64, row * 64, 64, 64);
+```
+
+**Optimization Notes:**
+- Tiles created once during map load, not every frame
+- Texture reused across all tiles of same type
+- Can be further optimized with TilingSprite for large uniform areas
+
 ## Responsibilities
 
 ### 1. Performance Optimization

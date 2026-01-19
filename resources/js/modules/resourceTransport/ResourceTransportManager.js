@@ -1246,7 +1246,9 @@ export class ResourceTransportManager {
             transporterStates: {},    // Changed: dict instead of array
             splitterStates: {},       // Changed: dict instead of array
             manipulatorStates: {},    // Changed: dict instead of array
-            electricitySystems: []    // Unchanged: remains array
+            electricitySystems: [],   // Unchanged: remains array
+            entityDurability: {},     // NEW: entity durability for shake damage
+            currentTick: this.game.gameTick  // For shake damage processing
         };
 
         // Building resources and crafting
@@ -1289,12 +1291,19 @@ export class ResourceTransportManager {
         }
 
         // Electricity systems (unchanged)
-        if (this.game.electricityManager) {
+        if (this.game.electricityManager && this.game.electricityManager.systems) {
             for (const [systemId, system] of this.game.electricityManager.systems) {
                 data.electricitySystems.push({
                     system_id: systemId,
                     total_electricity: system.total_electricity
                 });
+            }
+        }
+
+        // Entity durability (for shake damage)
+        for (const [key, entity] of this.game.entityData) {
+            if (typeof entity.durability === 'number') {
+                data.entityDurability[entity.entity_id] = entity.durability;
             }
         }
 

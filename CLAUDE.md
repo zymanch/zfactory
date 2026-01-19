@@ -2,39 +2,61 @@
 
 ## Documentation Strategy
 
-### 📘 Full Documentation (docs/)
+### 📘 Documentation Structure
 
+**Common Documentation** (docs/common/ - read at session start):
 ```
-docs/PROJECT.md      - Project overview, structure, commands
-docs/DATABASE.md     - Complete DB schema, tables, fields
-docs/GAME_ENGINE.md  - PixiJS engine, camera, rendering, API
-docs/ADMIN.md        - Admin panel: map editor, deposits, regions
+docs/common/
+├── PROJECT.md         - Project overview, structure, commands
+├── DATABASE.md        - Complete DB schema, tables, fields
+├── ARCHITECTURE.md    - Core patterns, API structure, layers, asset loading
+├── AUTHENTICATION.md  - Auth flow, user model, routes
+├── ATLAS_SYSTEM.md    - Sprite generation workflow, atlas structure
+├── ADMIN.md           - Admin panel: map editor, deposits, regions
+├── REGIONS.md         - Region system
+└── HISTORICAL/        - Old documentation (refactorings, fixes)
 ```
 
-### 🎯 When to Read Full Documentation
+**Agent-Specific Documentation** (docs/agents/ - loaded by agents only):
+```
+docs/agents/
+├── shake-manager.md           - Shake zones, visual effects, damage, stabilizers
+├── electricity-systems.md     - Power networks, connectivity, BFS algorithm
+├── pipe-systems.md            - Fluid transport, priority distribution
+├── tile-rendering.md          - TileLayerManager, texture atlases, transitions
+├── fog-of-war.md              - Visibility system, raycasting algorithm
+├── game-modes.md              - GameModeManager, mode lifecycle
+├── construction.md            - Blueprint construction, progress tracking
+├── deposits.md                - DepositLayerManager, placement validation
+├── resource-transport.md      - Tick-based movement, two-phase logic
+└── entity-system.md           - Entity loading, tooltips, info window
+```
 
-**Working WITHOUT agents (regular mode):**
-- **ОБЯЗАТЕЛЬНО**: Read ALL documentation at session start
-- Use Read tool for all files in `docs/` folder
+### 🎯 When to Read Documentation
+
+**At Session Start (regular mode without agents):**
+- **ОБЯЗАТЕЛЬНО**: Read ONLY `docs/common/` folder
+- Do NOT read `docs/agents/` (loaded by agents only)
+- Do NOT read `docs/common/HISTORICAL/` (unless debugging old issues)
 
 **Working WITH agents (agent mode):**
-- Agents already contain necessary context for their domain
-- Read full docs only when:
+- Agents automatically load their specific docs from `docs/agents/`
+- Read common docs only when:
   - Task spans multiple agent domains (entity + recipe + sprites)
   - Non-standard cases outside agent workflows
   - Need to study complete system architecture
   - Debugging complex cross-system issues
 
-**Examples requiring docs even with agents:**
+**Examples:**
 ```
-❌ "entity-architect - create furnace"
-   → Agent has enough context, no docs needed
+❌ "shake-systems agent - add earthquake zone"
+   → Agent has docs/agents/shake-manager.md, no common docs needed
 
 ✅ "Implement new resource system affecting entities, recipes, sprites, and API"
-   → Read docs/DATABASE.md, docs/GAME_ENGINE.md (cross-functional)
+   → Read docs/common/DATABASE.md, docs/common/ARCHITECTURE.md (cross-functional)
 
 ✅ "Why does fog of war interact with electricity system?"
-   → Read docs/GAME_ENGINE.md (architecture understanding)
+   → Read docs/common/ARCHITECTURE.md (architecture understanding)
 ```
 
 ## Quick Reference
@@ -94,16 +116,21 @@ composer run ar         # Generate models
 
 Проект содержит специализированных агентов в `.claude/agents/`:
 
-| Agent | Назначение | Контекст внутри |
-|-------|-----------|-----------------|
-| **entity-architect** | Создание новых entity types | DB schema, PHP classes, behaviors, sprites workflow |
-| **recipe-balancer** | Балансировка экономики | Production chains, rate calculations, balance formulas |
-| **ai-sprite-wizard** | Генерация спрайтов FLUX.1 | ComfyUI API, prompt patterns, atlas generation |
-| **pixi-renderer** | Оптимизация PixiJS | Layer system, batching, culling, effects |
-| **game-mechanic** | Разработка механик | Network algorithms, manager patterns, integration |
-| **transport-mechanic** | Система перемещения ресурсов | Tick-based движение, two-phase logic, underground conveyors |
-| **js-test-writer** | JavaScript тестирование | Vitest setup, mocking patterns, coverage |
-| **maria** | Database optimization | Schema design, query optimization, MariaDB tuning |
+| Agent | Назначение | Документация |
+|-------|-----------|--------------|
+| **entity-architect** | Создание новых entity types | DB schema, PHP classes, behaviors |
+| **recipe-balancer** | Балансировка экономики | Production chains, balance formulas |
+| **ai-sprite-wizard** | Генерация спрайтов FLUX.1 | ComfyUI API, prompt patterns |
+| **pixi-renderer** | Оптимизация PixiJS | Layer system, batching, culling |
+| **game-mechanic** | Разработка механик | Network algorithms, manager patterns |
+| **transport-mechanic** | Система перемещения ресурсов | docs/agents/resource-transport.md |
+| **shake-systems** | Зоны тряски и стабилизаторы | docs/agents/shake-manager.md |
+| **electricity-systems** | Электросети и энергоснабжение | docs/agents/electricity-systems.md |
+| **fluid-systems** | Трубопроводы и жидкости | docs/agents/pipe-systems.md |
+| **fog-systems** | Туман войны и видимость | docs/agents/fog-of-war.md |
+| **construction-systems** | Строительство и прогресс | docs/agents/construction.md |
+| **js-test-writer** | JavaScript тестирование | Vitest setup, mocking patterns |
+| **maria** | Database optimization | Schema design, query optimization |
 
 ### What Agents Contain
 
@@ -139,31 +166,33 @@ ai-sprite-wizard сессия
 ### Decision Tree: Docs vs Agents
 
 ```
-Question: Do I need full documentation?
+Question: Do I need documentation?
 
-├─ Working on single-domain task? (entity creation, balance, sprites, tests)
-│  └─ NO DOCS → Use specialized agent (entity-architect, recipe-balancer, etc.)
+├─ Working on single-domain task? (mechanics, entities, balance, sprites)
+│  └─ USE AGENT → Specialized agent loads docs/agents/ automatically
 │
-├─ Task involves 2+ domains? (entity + recipes, mechanic + rendering, etc.)
-│  └─ PARTIAL DOCS → Agent + relevant docs sections
+├─ Task involves 2+ domains? (entity + recipes, mechanic + rendering)
+│  └─ AGENT + COMMON DOCS → Agent + docs/common/ARCHITECTURE.md
 │
-├─ Architecture question? (why systems interact certain way, design decisions)
-│  └─ FULL DOCS → Read docs/GAME_ENGINE.md, docs/PROJECT.md
+├─ Architecture question? (why systems interact, design decisions)
+│  └─ COMMON DOCS → Read docs/common/ARCHITECTURE.md, docs/common/PROJECT.md
 │
 ├─ Database-wide changes? (new tables, schema refactoring)
-│  └─ FULL DOCS → Read docs/DATABASE.md
+│  └─ COMMON DOCS → Read docs/common/DATABASE.md
 │
 └─ Not using any agent? (general task, exploration)
-   └─ FULL DOCS → Read ALL docs at session start
+   └─ COMMON DOCS → Read ALL docs/common/ at session start
 ```
 
 **Examples:**
 
-| Task | Strategy |
-|------|----------|
-| "Create advanced furnace 3×3" | ✅ **entity-architect only** |
-| "Create furnace and balance its recipes" | ✅ **entity-architect** + **recipe-balancer** |
-| "Add pollution mechanic (entities, rendering, DB)" | ⚠️ **game-mechanic** + read docs/DATABASE.md, docs/GAME_ENGINE.md |
-| "Refactor API structure" | ⚠️ Read docs/GAME_ENGINE.md (full architecture) |
-| "Fix bug in fog of war" | 📖 Read docs/GAME_ENGINE.md (no specific agent) |
-| "Optimize all database queries" | 📖 **maria** + read docs/DATABASE.md |
+| Task | Strategy | Docs Read |
+|------|----------|-----------|
+| "Create advanced furnace 3×3" | ✅ **entity-architect only** | None (agent has context) |
+| "Add earthquake zone" | ✅ **shake-systems only** | docs/agents/shake-manager.md (auto) |
+| "Setup electricity network" | ✅ **electricity-systems only** | docs/agents/electricity-systems.md (auto) |
+| "Create furnace and balance recipes" | ✅ **entity-architect** + **recipe-balancer** | None (agents collaborate) |
+| "Add pollution mechanic (entities, rendering, DB)" | ⚠️ **game-mechanic** + common docs | docs/common/DATABASE.md, ARCHITECTURE.md |
+| "Refactor API structure" | ⚠️ Read common docs | docs/common/ARCHITECTURE.md |
+| "Fix bug in fog of war" | 📖 **fog-systems agent** | docs/agents/fog-of-war.md (auto) |
+| "Optimize all database queries" | 📖 **maria** + common docs | docs/common/DATABASE.md |

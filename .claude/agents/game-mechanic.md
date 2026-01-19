@@ -56,6 +56,40 @@ Frontend: ResourceTransportManager.js, BuildingState.js
 Mechanics: Recipe execution, resource flow, crafting ticks, electricity consumption
 ```
 
+**7. Game Mode System**
+```
+Frontend: GameModeManager.js, GameModeBase.js
+Mechanics: Mode switching, lifecycle management, event cleanup
+Modes: NORMAL, BUILD, DELETE, ENTITY_INFO, LANDING_EDIT, windows
+Integration: InputManager (keyboard), ControlsHint (UI hints), CameraInfo (mode display)
+```
+
+**Detailed Documentation:** See `docs/agents/game-modes.md` for complete implementation
+
+**Key Features:**
+- **Centralized Mode Controller**: Only one mode active at a time
+- **Lifecycle Hooks**: `init()`, `activate()`, `deactivate()` for each mode
+- **Event Management**: Automatic cleanup to prevent memory leaks
+- **Entity Interactivity**: Global control of hover/click based on mode
+- **Visual Feedback**: Mode indicators and hints
+
+**Common Mode Patterns:**
+- **BUILD Mode**: Preview sprite, placement validation, rotation support (R key)
+- **DELETE Mode**: Click to delete, red banner indicator
+- **LANDING_EDIT Mode**: Tile painting with selected landing type
+- **Window Modes**: Modal windows that disable game interaction
+
+**Integration with Input:**
+```javascript
+// Keyboard shortcuts trigger mode switches
+if (event.key === 'b') {
+    this.game.gameModeManager.switchMode(GameMode.ENTITY_SELECTION_WINDOW);
+}
+if (event.key === 'Escape') {
+    this.game.gameModeManager.returnToNormalMode();
+}
+```
+
 ### Architecture Pattern
 
 **Backend (PHP):**

@@ -104,6 +104,11 @@ class EntityTypeFactory
         electricity\CoalGeneratorEntityType::ENTITY_TYPE_ID => electricity\CoalGeneratorEntityType::class,
         electricity\SolarPanelSmallEntityType::ENTITY_TYPE_ID => electricity\SolarPanelSmallEntityType::class,
         electricity\SolarPanelLargeEntityType::ENTITY_TYPE_ID => electricity\SolarPanelLargeEntityType::class,
+
+        // Buildings - Stabilizers (950-952)
+        building\StabilizerSmallEntityType::ENTITY_TYPE_ID => building\StabilizerSmallEntityType::class,
+        building\StabilizerMediumEntityType::ENTITY_TYPE_ID => building\StabilizerMediumEntityType::class,
+        building\StabilizerLargeEntityType::ENTITY_TYPE_ID => building\StabilizerLargeEntityType::class,
     ];
 
     /**

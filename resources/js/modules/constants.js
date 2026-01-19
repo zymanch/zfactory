@@ -25,6 +25,8 @@ export const Z_INDEX = {
     SKY: 0,
     ISLAND_EDGE: 0.5,
     TERRAIN: 1,
+    SHAKE: 1.5,     // Shake landing duplicates (between terrain and entities)
+    ENTITIES: 2,    // Entity layer (for reference)
     FOG: 9999
 };
 

@@ -69,9 +69,12 @@ export class DepositLayerManager {
             return null;
         }
 
+        const pixelX = deposit.x * this.game.config.tileWidth;
+        const pixelY = deposit.y * this.game.config.tileHeight;
+
         const sprite = this.game.graphics.createSprite(texture, {
-            x: deposit.x * this.game.config.tileWidth,
-            y: deposit.y * this.game.config.tileHeight,
+            x: pixelX,
+            y: pixelY,
             eventMode: 'static',
             cursor: 'pointer'
         });
@@ -79,6 +82,10 @@ export class DepositLayerManager {
         // Store deposit data
         sprite.depositId = deposit.deposit_id;
         sprite.depositData = deposit;
+
+        // Store base position for shake animation
+        sprite.baseX = pixelX;
+        sprite.baseY = pixelY;
         sprite.depositType = depositType;
 
         // Add event listeners for tooltip (same pattern as entities)

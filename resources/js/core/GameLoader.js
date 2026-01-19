@@ -163,8 +163,11 @@ export class GameLoader {
         this.emit('tilesLoaded', data);
         console.log(`[GameLoader] Loaded ${Object.keys(data.tiles).length} tiles`);
 
-        // Return clean data (just tiles object, without result wrapper)
-        return data.tiles;
+        // Return clean data (tiles + shakeZones, without result wrapper)
+        return {
+            tiles: data.tiles,
+            shakeZones: data.shakeZones || {}
+        };
     }
 
     /**

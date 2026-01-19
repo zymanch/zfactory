@@ -30,6 +30,7 @@ import { PipeConnectionManager } from './modules/pipes/PipeConnectionManager.js'
 import { ElectricitySystemManager } from './modules/electricity/ElectricitySystemManager.js';
 import { ElectrificationLayerManager } from './modules/electricity/ElectrificationLayerManager.js';
 import { NoPowerIndicator } from './modules/electricity/NoPowerIndicator.js';
+import { ShakeManager } from './modules/shake/ShakeManager.js';
 import { PerformanceMonitor } from './core/PerformanceMonitor.js';
 import { SPRITE_STATES, SPRITE_STATES_ORIGINAL, CONSTRUCTION_FRAMES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 import { getCSRFToken } from './modules/utils.js';
@@ -71,6 +72,8 @@ class ZFactoryGame {
 
         // Map tiles - now a dictionary {"x_y": landing_id}
         this.tilesData = tilesData.tiles || {};
+        // Shake zones - dictionary format {"x_y": intensity}
+        this.shakeZones = tilesData.shakeZones || {};
 
         // Runtime state
         this.zoom = this.initialCameraPosition.zoom || 1;
@@ -121,6 +124,7 @@ class ZFactoryGame {
         this.electrificationLayer = null;
         this.noPowerIndicator = null;
         this.constructionManager = null;
+        // this.shakeManager = null;  // Disabled for now
 
         // Game data structure (for managers)
         this.gameData = {
@@ -226,6 +230,7 @@ class ZFactoryGame {
         this.electricityManager = new ElectricitySystemManager(this);
         this.electrificationLayer = new ElectrificationLayerManager(this);
         this.noPowerIndicator = new NoPowerIndicator(this);
+        this.shakeManager = new ShakeManager(this);
     }
 
     /**
@@ -320,6 +325,9 @@ class ZFactoryGame {
         // Initialize electricity managers
         await this.electrificationLayer.init();
         await this.noPowerIndicator.init();
+
+        // Initialize shake manager
+        this.shakeManager.init();
 
         this.buildPanel.refresh();
 
@@ -499,6 +507,12 @@ class ZFactoryGame {
             // Get base texture source (Image or Canvas)
             const source = texture.baseTexture.resource.source;
 
+            // Validate source before drawing
+            if (!source || !(source instanceof HTMLImageElement || source instanceof HTMLCanvasElement)) {
+                console.warn(`[Game] Invalid source for icon ${typeId}, skipping`);
+                continue;
+            }
+
             // Draw the texture region to canvas
             const frame = texture.frame;
             ctx.drawImage(
@@ -534,6 +548,11 @@ class ZFactoryGame {
     getEntityTextureKey(entity, isSelected = false, hoverType = 'selected') {
         const typeId = entity.entity_type_id;
         const entityType = this.entityTypes[typeId];
+
+        // Check if broken (durability=0) - show blueprint sprite
+        if (typeof entity.durability === 'number' && entity.durability === 0) {
+            return `entity_${typeId}_blueprint`;
+        }
 
         // Check if entity is under construction
         const constructionProgress = parseInt(entity.construction_progress) || 100;
@@ -736,6 +755,10 @@ class ZFactoryGame {
         sprite.cursor = isVisible ? 'pointer' : 'default';
         sprite.entityKey = key;
 
+        // Store base position for shake animation
+        sprite.baseX = pixelX;
+        sprite.baseY = pixelY;
+
         if (entity.state !== 'blueprint') {
             sprite.on('pointerover', (e) => this.onEntityHover(sprite, true, e));
             sprite.on('pointerout', (e) => this.onEntityHover(sprite, false, e));
@@ -890,6 +913,12 @@ class ZFactoryGame {
             // Delete mode - delete entity
             this.deleteEntity(entity);
         } else if (mode.isMode(GameMode.NORMAL)) {
+            // Handle broken entities (durability=0) - offer rebuild
+            if (typeof entity.durability === 'number' && entity.durability === 0) {
+                this.handleBrokenEntityClick(entity, sprite);
+                return;
+            }
+
             // HQ - open technology window
             if (entityType && entityType.type === 'hq') {
                 mode.switchMode(GameMode.TECHNOLOGY_WINDOW);
@@ -897,6 +926,51 @@ class ZFactoryGame {
                 // Normal mode - open entity info window
                 mode.switchMode(GameMode.ENTITY_INFO, { entityId: entity.entity_id });
             }
+        }
+    }
+
+    /**
+     * Handle click on broken entity (durability=0) - rebuild immediately
+     */
+    async handleBrokenEntityClick(entity, sprite) {
+        const rebuildUrl = this.config.rebuildEntityUrl;
+        if (!rebuildUrl) {
+            console.error('rebuildEntityUrl not configured');
+            alert('Rebuild URL not configured');
+            return;
+        }
+
+        try {
+            const response = await fetch(rebuildUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
+                body: JSON.stringify({ entity_id: entity.entity_id })
+            });
+
+            const data = await response.json();
+
+            if (data.result === 'ok') {
+                // Update entity state to blueprint
+                entity.state = 'blueprint';
+                entity.construction_progress = 0;
+
+                // Update sprite texture to blueprint
+                const textureKey = this.getEntityTextureKey(entity, false);
+                if (this.textures[textureKey]) {
+                    sprite.texture = this.textures[textureKey];
+                }
+
+                console.log(`Entity ${entity.entity_id} converted to blueprint for rebuilding`);
+            } else {
+                console.error('Failed to rebuild entity:', data.error);
+                alert('Failed to rebuild: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error rebuilding entity:', error);
+            alert('Error rebuilding entity');
         }
     }
 
@@ -1026,6 +1100,14 @@ class ZFactoryGame {
                 this.conveyorManager.update();
             }
             this.perfMonitor.end('conveyorManager');
+
+            // Update shake animations (every frame)
+            this.perfMonitor.start('shakeManager');
+            if (this.shakeManager) {
+                const deltaTime = ticker.deltaMS / 1000;  // Convert to seconds
+                this.shakeManager.update(deltaTime);
+            }
+            this.perfMonitor.end('shakeManager');
 
             // Update construction progress (every frame)
             this.perfMonitor.start('constructionManager');

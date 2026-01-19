@@ -74,13 +74,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Phase 4: Initialize game (75-100%)
         updateProgress(75);
         showLoading('Initializing game...');
-        // Wrap entities and tiles in expected format
+        // Wrap entities in expected format (tiles already has correct format from GameLoader)
         const entitiesData = Array.isArray(entities) ? entities : [];
-        const tilesData = { tiles: tiles };
+        const tilesData = tiles;  // Already contains { tiles, shakeZones }
 
         console.log('[Bootstrap] Creating game instance with:', {
             entitiesCount: entitiesData.length,
-            tilesCount: Object.keys(tilesData.tiles).length,
+            tilesCount: Object.keys(tilesData.tiles || {}).length,
+            shakeZonesCount: Object.keys(tilesData.shakeZones || {}).length,
             configKeys: Object.keys(config)
         });
 

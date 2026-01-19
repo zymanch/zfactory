@@ -23,14 +23,15 @@ class Tiles extends JsonAction
             $userId = (int)$this->getUser()->user_id;
         }
 
-        // Get island tiles for current region
+        // Get island tiles for current region (include shake_intensity)
         $islandTiles = $this->castNumericFieldsArray(
             Map::find()
-                ->select(['map_id', 'landing_id', 'x', 'y'])
+                ->select(['map_id', 'landing_id', 'x', 'y', 'shake_intensity'])
                 ->where(['region_id' => $currentRegionId])
                 ->asArray()
                 ->all(),
-            ['map_id', 'landing_id', 'x', 'y']
+            ['map_id', 'landing_id', 'x', 'y'],  // int fields
+            ['shake_intensity']  // float fields
         );
 
         $tiles = $islandTiles;
@@ -62,11 +63,20 @@ class Tiles extends JsonAction
 
         // Convert to dictionary format {"x_y": landing_id} for optimized payload size
         $tilesDict = [];
+        $shakeZones = [];
         foreach ($tiles as $tile) {
             $key = $tile['x'] . '_' . $tile['y'];
             $tilesDict[$key] = (int)$tile['landing_id'];
+
+            // Add shake zones (only tiles with shake_intensity > 0)
+            if (isset($tile['shake_intensity']) && $tile['shake_intensity'] > 0) {
+                $shakeZones[$key] = (float)$tile['shake_intensity'];
+            }
         }
 
-        return $this->success(['tiles' => $tilesDict]);
+        return $this->success([
+            'tiles' => $tilesDict,
+            'shakeZones' => $shakeZones  // Dictionary format {"x_y": intensity}
+        ]);
     }
 }

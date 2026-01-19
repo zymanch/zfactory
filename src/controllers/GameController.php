@@ -50,6 +50,7 @@ class GameController extends Controller
             'finish-construction' => \controllers\actions\game\FinishConstruction::class,
             'add-user-resource' => \controllers\actions\game\AddUserResource::class,
             'save-manipulator-config' => \controllers\actions\game\SaveManipulatorConfig::class,
+            'rebuild-entity' => \controllers\actions\game\RebuildEntity::class,
         ];
     }
 }

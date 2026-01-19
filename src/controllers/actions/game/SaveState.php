@@ -5,6 +5,7 @@ namespace controllers\actions\game;
 use controllers\actions\JsonAction;
 use models\EntityResource;
 use models\EntityCrafting;
+use models\Entity;
 use Yii;
 use yii\db\Expression;
 
@@ -41,6 +42,10 @@ class SaveState extends JsonAction
                 $this->saveTransportStates($data['manipulatorStates']);
             }
 
+            // Save entity durability (for shake damage)
+            if (!empty($data['entityDurability'])) {
+                $this->saveEntityDurability($data['entityDurability']);
+            }
 
             $transaction->commit();
 
@@ -167,6 +172,22 @@ class SaveState extends JsonAction
                 $model->status = $s['status'] ?? 'empty';
                 $model->save(false);
             }
+        }
+    }
+
+    /**
+     * Save entity durability
+     * Dictionary format: {entity_id => durability}
+     */
+    private function saveEntityDurability(array $durabilityData)
+    {
+        if (empty($durabilityData)) return;
+
+        foreach ($durabilityData as $entityId => $durability) {
+            Entity::updateAll(
+                ['durability' => (float)$durability],
+                ['entity_id' => (int)$entityId]
+            );
         }
     }
 

@@ -46,11 +46,13 @@ resources/js/modules/
 
 ## Documentation Reference
 
-**Primary:** `docs/RESOURCE_TRANSPORT.md` - Complete tick-based system documentation
+**Primary:** `docs/agents/resource-transport.md` - Complete tick-based system documentation
 
 **Other:**
-- `docs/DATABASE.md` - Schema for entity_resource, entity_crafting tables
-- `docs/GAME_ENGINE.md` - Graphics engine integration
+- `docs/common/DATABASE.md` - Schema for entity_resource, entity_crafting tables
+- `docs/common/ARCHITECTURE.md` - Graphics engine integration
+- `docs/agents/electricity-systems.md` - Electricity integration
+- `docs/agents/pipe-systems.md` - Fluid systems integration
 
 ## Common Tasks
 
