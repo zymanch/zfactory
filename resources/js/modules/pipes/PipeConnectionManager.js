@@ -7,8 +7,7 @@ import * as PIXI from 'pixi.js';
  * - 16 connection variants based on 4-bit mask (right, down, left, up)
  * - Auto-updates connections when pipes are placed/removed
  * - No animations (pipes are static, unlike conveyors)
- *
- * NOTE: Uses PIXI.Assets.load for dynamic atlas loading - not yet in manifest
+ * - Uses pre-loaded atlases from assetManifest (like conveyors)
  */
 export class PipeConnectionManager {
     constructor(game) {
@@ -47,39 +46,6 @@ export class PipeConnectionManager {
 
         // Pipe sprite registry: pipeSprites[entityId] = sprite
         this.pipeSprites = new Map();
-
-        // Variant textures cache: variantTextures[state][variant] = texture
-        this.variantTextures = {};
-    }
-
-    /**
-     * Load pipe variant textures from atlases (normal, normal_selected, damaged, damaged_selected)
-     * Each atlas: 1024x64 (16 variants × 64px each)
-     * Loads atlases for all pipe types (horizontal, vertical, tanks, underground)
-     */
-    async loadVariantTextures() {
-        this.atlases = {}; // atlases[entityTypeId][state] = texture
-        const states = ['normal', 'normal_selected', 'damaged', 'damaged_selected'];
-
-        for (const typeId of this.PIPE_TYPES) {
-            const folder = this.PIPE_FOLDERS[typeId];
-            if (!folder) continue;
-
-            this.atlases[typeId] = {};
-
-            for (const state of states) {
-                const atlasUrl = this.game.assetUrl(
-                    `${this.game.config.tilesPath}entities/pipe/${folder}/pipe_atlas_${state}.png?v=${Date.now()}`
-                );
-
-                try {
-                    const atlasTexture = await PIXI.Assets.load(atlasUrl);
-                    this.atlases[typeId][state] = atlasTexture;
-                } catch (e) {
-                    console.error(`Failed to load pipe atlas ${folder}/${state}:`, e);
-                }
-            }
-        }
     }
 
     /**
@@ -165,10 +131,12 @@ export class PipeConnectionManager {
 
     /**
      * Get entity state based on durability
+     * Note: Pipes don't have blueprint state - use normal instead
      */
     getEntityState(entity) {
+        // Pipes don't have blueprint atlases - treat blueprint as normal
         if (entity.state === 'blueprint') {
-            return 'blueprint';
+            return 'normal';
         }
 
         const entityType = this.game.entityTypes[entity.entity_type_id];
@@ -187,29 +155,28 @@ export class PipeConnectionManager {
      */
     getPipeTexture(entity, isHovered = false) {
         const typeId = parseInt(entity.entity_type_id);
+        const folder = this.PIPE_FOLDERS[typeId];
+        if (!folder) {
+            console.warn(`Pipe folder not found for type ${typeId}`);
+            return null;
+        }
+
         const baseState = this.getEntityState(entity);
         const state = isHovered ? `${baseState}_selected` : baseState;
         const variant = this.getConnectionVariant(entity);
 
-        // Get atlas for this entity type and state
-        const typeAtlases = this.atlases[typeId];
-        if (!typeAtlases) {
-            console.warn(`Pipe atlases not found for type ${typeId}`);
-            return this.game.textures[`entity_${typeId}_normal`];
-        }
+        // Get atlas from pre-loaded textures (via assetManifest)
+        const atlasKey = `pipe_${folder}_${state}`;
+        const atlas = this.game.graphics.getTexture(atlasKey);
 
-        const atlas = typeAtlases[state];
         if (!atlas) {
-            console.warn(`Pipe atlas not found: type=${typeId}, state=${state}`);
-            return this.game.textures[`entity_${typeId}_normal`];
+            console.warn(`Pipe atlas not found: ${atlasKey}`);
+            return null;
         }
 
-        // Extract texture from atlas
+        // Extract texture from atlas (each variant is 64x64, laid out horizontally)
         const rect = this.game.graphics.createRectangle(variant * 64, 0, 64, 64);
-        return this.game.graphics.createTextureFromAtlas(
-            atlas,  // Pass texture directly since it's dynamically loaded
-            rect
-        );
+        return this.game.graphics.createTextureFromAtlas(atlas, rect);
     }
 
     /**

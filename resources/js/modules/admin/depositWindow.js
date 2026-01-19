@@ -186,7 +186,7 @@ export class DepositWindow {
      * Create deposit item element
      */
     createDepositItem(deposit, assetVersion) {
-        const iconUrl = `${this.game.config.tilesPath}deposits/${deposit.image_url}/normal.png?v=${assetVersion}`;
+        const iconUrl = `${deposit.sprite_url}?v=${assetVersion}`;
 
         const item = document.createElement('div');
         item.className = 'deposit-item';

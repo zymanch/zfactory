@@ -28,8 +28,6 @@ function updateProgress(percent) {
 // Main initialization
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        console.log('[Bootstrap] Starting game initialization...');
-
         // Phase 1: Load data (0-10%)
         showLoading('Loading game data...');
         const loader = new GameLoader(window.gameConfig.configUrl);
@@ -41,11 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         const { config, entities, tiles } = await loader.loadAll();
-        console.log('[Bootstrap] Data loaded:', {
-            entities: Array.isArray(entities) ? entities.length : 0,
-            tiles: typeof tiles === 'object' ? Object.keys(tiles).length : 0,
-            assetManifest: Object.keys(config.assetManifest || {}).length
-        });
 
         // Phase 2: Initialize graphics engine (10-15%)
         updateProgress(10);
@@ -71,19 +64,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         await graphics.loadAllTextures();
 
+        // Check for missing assets
+        const missingAssets = graphics.getMissingAssets();
+        if (missingAssets.length > 0) {
+            // Build error message
+            const assetList = missingAssets
+                .slice(0, 10) // Show first 10
+                .map(a => `- ${a.key}: ${a.url}`)
+                .join('\n');
+
+            const moreText = missingAssets.length > 10
+                ? `\n... и ещё ${missingAssets.length - 10} ассетов`
+                : '';
+
+            // Show modal but don't stop loading
+            ErrorModal.show(
+                'Отсутствующие ассеты',
+                `Не удалось загрузить ${missingAssets.length} ассетов`,
+                `Следующие ассеты отсутствуют:\n\n${assetList}${moreText}\n\nИгра продолжит загрузку, но некоторая графика может не отображаться корректно.`,
+                {
+                    showRefresh: false,
+                    showClose: true
+                }
+            );
+        }
+
         // Phase 4: Initialize game (75-100%)
         updateProgress(75);
         showLoading('Initializing game...');
         // Wrap entities in expected format (tiles already has correct format from GameLoader)
         const entitiesData = Array.isArray(entities) ? entities : [];
         const tilesData = tiles;  // Already contains { tiles, shakeZones }
-
-        console.log('[Bootstrap] Creating game instance with:', {
-            entitiesCount: entitiesData.length,
-            tilesCount: Object.keys(tilesData.tiles || {}).length,
-            shakeZonesCount: Object.keys(tilesData.shakeZones || {}).length,
-            configKeys: Object.keys(config)
-        });
 
         const game = new ZFactoryGame(config, entitiesData, tilesData, graphics);
 
@@ -93,13 +104,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             showLoading(message);
         });
 
-        console.log('[Bootstrap] Game instance created, calling init()...');
         await game.init();
-        console.log('[Bootstrap] Game init completed');
 
         // Done - hide loading screen
         updateProgress(100);
-        console.log('[Bootstrap] Initialization complete!');
 
         // Small delay before hiding loading screen for visual feedback
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -113,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.game = game;
 
     } catch (error) {
-        console.error('[Bootstrap] Failed to initialize game:', error);
+        console.error('Failed to initialize game:', error);
 
         // Hide loading screen
         const loadingEl = document.getElementById('loading');

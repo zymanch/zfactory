@@ -192,6 +192,10 @@ export class TechnologyWindow {
 
         const opacity = tech.status === 'locked' ? '0.5' : '1';
 
+        // Get tech icon from assetManifest
+        const iconKey = `technology_${tech.id}`;
+        const iconUrl = this.game.config.assetManifest?.[iconKey] || `/assets/tiles/technologies/${tech.icon}`;
+
         return `
             <div class="tech-node ${statusClass}${isSelected ? ' selected' : ''}"
                  data-id="${tech.id}"
@@ -205,7 +209,7 @@ export class TechnologyWindow {
                     transition: all 0.2s;
                  ">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <img src="/assets/tiles/technologies/${tech.icon}"
+                    <img src="${iconUrl}"
                          style="width: 32px; height: 32px;"
                          onerror="this.style.display='none'">
                     <span style="font-size: 13px; font-weight: 500; color: #fff;">${tech.name}</span>
@@ -250,9 +254,13 @@ export class TechnologyWindow {
         const tech = this.selectedTech;
         const v = this.game.config?.assetVersion || 1;
 
+        // Get tech icon from assetManifest
+        const iconKey = `technology_${tech.id}`;
+        const iconUrl = this.game.config.assetManifest?.[iconKey] || `/assets/tiles/technologies/${tech.icon}`;
+
         let html = `
             <div style="text-align: center; margin-bottom: 15px;">
-                <img src="/assets/tiles/technologies/${tech.icon}"
+                <img src="${iconUrl}"
                      style="width: 64px; height: 64px; margin-bottom: 10px;"
                      onerror="this.style.display='none'">
                 <h3 style="margin: 0; color: #fff; font-size: 16px;">${tech.name}</h3>
@@ -306,9 +314,12 @@ export class TechnologyWindow {
                 const userAmount = this.getUserResourceAmount(cost.resource_id);
                 const hasEnough = userAmount >= cost.quantity;
                 const color = hasEnough ? '#27ae60' : '#e74c3c';
+                // Get resource icon_url from resources config
+                const resource = this.game.resources?.[cost.resource_id];
+                const iconUrl = resource?.icon_url || `/assets/tiles/resources/${cost.icon}`;
                 html += `
                     <div style="display: flex; align-items: center; margin: 4px 0; font-size: 12px;">
-                        <img src="/assets/tiles/resources/${cost.icon}?v=${v}"
+                        <img src="${iconUrl}?v=${v}"
                              style="width: 18px; height: 18px; margin-right: 6px;">
                         <span style="flex: 1; color: #ccc;">${cost.name}</span>
                         <span style="color: ${color};">${userAmount} / ${cost.quantity}</span>

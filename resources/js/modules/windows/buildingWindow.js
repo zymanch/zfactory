@@ -164,7 +164,6 @@ export class BuildingWindow {
         const typeId = entityType.id;
         const iconUrl = getEntityIconUrl(
             entityType,
-            this.game.config.tilesPath,
             this.game.config.assetVersion || 1,
             this.game // Use atlas data URLs
         );
@@ -196,7 +195,7 @@ export class BuildingWindow {
 
                 tooltipHtml += `
                     <div class="${costClass}">
-                        <img src="${this.game.config.tilesPath}resources/${resource.icon_url}?v=${this.game.config.assetVersion}"
+                        <img src="${resource.icon_url}?v=${this.game.config.assetVersion}"
                              width="16" height="16" title="${resource.name}">
                         <span>${quantity}</span>
                         <span class="available">(${available})</span>

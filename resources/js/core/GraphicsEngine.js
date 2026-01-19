@@ -22,6 +22,7 @@ export class GraphicsEngine {
         this.app = null;
         this.textures = new Map(); // key => PIXI.Texture
         this.progressCallbacks = [];
+        this.missingAssets = []; // Collect missing assets during load
     }
 
     /**
@@ -47,7 +48,6 @@ export class GraphicsEngine {
             containerElement.appendChild(this.app.canvas);
         }
 
-        console.log('[GraphicsEngine] Application initialized (FPS: ' + this.app.ticker.maxFPS + ')');
         return { canvas: this.app.canvas, stage: this.app.stage };
     }
 
@@ -60,8 +60,7 @@ export class GraphicsEngine {
         const keys = Object.keys(this.manifest);
         const total = keys.length;
         let loaded = 0;
-
-        console.log(`[GraphicsEngine] Loading ${total} assets...`);
+        this.missingAssets = []; // Reset
 
         for (const key of keys) {
             const url = this.manifest[key];
@@ -70,36 +69,40 @@ export class GraphicsEngine {
                 const texture = await PIXI.Assets.load(url);
                 this.textures.set(key, texture);
                 loaded++;
-
-                // Emit progress (15% to 75% range)
-                const assetPercent = (loaded / total) * 60; // 60% of total progress
-                const totalPercent = 15 + assetPercent;
-
-                const progress = {
-                    loaded,
-                    total,
-                    percent: Math.round(totalPercent),
-                    message: `Loading assets... (${loaded}/${total})`
-                };
-                this.emitProgress(progress);
-
             } catch (error) {
-                console.warn(`[GraphicsEngine] Failed to load texture: ${key} (${url})`, error);
-                loaded++;
-
-                const assetPercent = (loaded / total) * 60;
-                const totalPercent = 15 + assetPercent;
-
-                this.emitProgress({
-                    loaded,
-                    total,
-                    percent: Math.round(totalPercent),
-                    message: `Loading assets... (${loaded}/${total})`
+                // Collect missing asset instead of logging
+                this.missingAssets.push({
+                    key: key,
+                    url: url,
+                    error: error.message
                 });
+                loaded++;
             }
+
+            // Emit progress (15% to 75% range)
+            const assetPercent = (loaded / total) * 60;
+            const totalPercent = 15 + assetPercent;
+
+            this.emitProgress({
+                loaded,
+                total,
+                percent: Math.round(totalPercent),
+                message: `Loading assets... (${loaded}/${total})`
+            });
         }
 
-        console.log(`[GraphicsEngine] Loaded ${loaded}/${total} assets`);
+        // Only log summary, not individual failures
+        if (this.missingAssets.length > 0) {
+            console.warn(`[GraphicsEngine] ${this.missingAssets.length} assets failed to load`);
+        }
+    }
+
+    /**
+     * Get list of missing assets after loading
+     * @returns {Array<{key: string, url: string, error: string}>}
+     */
+    getMissingAssets() {
+        return this.missingAssets;
     }
 
     /**
@@ -298,6 +301,5 @@ export class GraphicsEngine {
 
         this.textures.clear();
         this.progressCallbacks = [];
-        console.log('[GraphicsEngine] Destroyed');
     }
 }

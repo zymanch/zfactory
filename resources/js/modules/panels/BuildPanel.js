@@ -119,7 +119,6 @@ export class BuildPanel extends BasePanel {
             const entityType = this.game.entityTypes[entityTypeId];
             const iconUrl = getEntityIconUrl(
                 entityType,
-                this.game.config.tilesPath,
                 this.game.config.assetVersion || 1,
                 this.game // Use atlas data URLs
             );

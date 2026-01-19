@@ -102,7 +102,9 @@ class RegionsApp {
                     resolve();
                 };
                 img.onerror = () => resolve(); // Skip failed images
-                img.src = `/assets/images/regions/${region.image_url}`;
+                // Use assetManifest from window.gameConfig if available
+                const assetKey = `region_${region.region_id}`;
+                img.src = window.gameConfig?.assetManifest?.[assetKey] || `/assets/images/regions/${region.image_url}`;
             });
         });
 

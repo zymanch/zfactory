@@ -72,7 +72,7 @@ export class LandingWindow {
      * Create landing item element
      */
     createLandingItem(landingId, landing, assetVersion) {
-        const iconUrl = `${this.game.config.tilesPath}landing/${landing.folder}/${landing.folder}_0.png?v=${assetVersion}`;
+        const iconUrl = `${landing.icon_url}?v=${assetVersion}`;
 
         const item = document.createElement('div');
         item.className = 'landing-item';

@@ -79,8 +79,6 @@ export class ConveyorManager {
         ];
         const states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
 
-        console.log('Loading conveyor atlases...');
-
         for (const orientation of orientations) {
             this.atlases[orientation] = {};
 
@@ -92,14 +90,11 @@ export class ConveyorManager {
                 const texture = this.game.graphics.getTexture(textureKey);
                 if (texture) {
                     this.atlases[orientation][state] = texture;
-                    console.log(`Loaded: ${textureKey}`);
                 } else {
                     console.warn(`Texture not found: ${textureKey}`);
                 }
             }
         }
-
-        console.log('All conveyor atlases loaded.');
     }
 
     /**

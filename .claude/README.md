@@ -2,6 +2,34 @@
 
 Specialized AI agents for ZFactory development.
 
+---
+
+## 🚨 CRITICAL RULES - READ FIRST
+
+### ⛔ Database Safety
+
+**NEVER EVER run these commands:**
+```bash
+php yii migrate/fresh         # ❌ DROPS ENTIRE DATABASE!
+php yii migrate/fresh --interactive=0  # ❌ DROPS WITHOUT CONFIRMATION!
+```
+
+**Why:** This destroys all data including user progress, entities, map state, resources.
+
+**What to use instead:**
+- ✅ `php yii migrate` - Run new migrations only
+- ✅ `php yii migrate/down` - Rollback specific migration
+- ✅ Restore from `dump.sql` if database corrupted
+
+**Before any database operation:**
+1. Check if command is destructive
+2. Ask user for explicit confirmation
+3. Never assume it's safe
+
+**This rule was violated multiple times. DO NOT REPEAT THIS MISTAKE.**
+
+---
+
 ## Available Agents
 
 ### 1. entity-architect

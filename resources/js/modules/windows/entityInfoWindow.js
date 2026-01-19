@@ -191,19 +191,13 @@ export class EntityInfoWindow {
 
         const v = this.game.config.assetVersion || 1;
 
-        // Priority 2: If icon_url is provided
+        // Priority 2: icon_url already contains full path from API
         if (entityType.icon_url) {
-            // Check if it's already an absolute path (starts with / or http)
-            if (entityType.icon_url.startsWith('/') || entityType.icon_url.startsWith('http')) {
-                return `${entityType.icon_url}?v=${v}`;
-            }
-            // Otherwise treat as relative path
-            return `/assets/tiles/entities/${entityType.icon_url}?v=${v}`;
+            return `${entityType.icon_url}?v=${v}`;
         }
 
-        // Priority 3: Fallback - construct from folder (old style)
-        const iconUrl = `${entityType.folder}/normal.${entityType.extension || 'png'}`;
-        return `/assets/tiles/entities/${iconUrl}?v=${v}`;
+        // Priority 3: Fallback - construct from folder (old style, shouldn't happen)
+        return `/assets/tiles/entities/${entityType.folder}/normal.${entityType.extension || 'png'}?v=${v}`;
     }
 
     /**
@@ -287,7 +281,7 @@ export class EntityInfoWindow {
         for (const res of resources) {
             html += `
                 <div style="display: flex; align-items: center; margin: 4px 0; font-size: 13px;">
-                    <img src="/assets/tiles/resources/${res.icon_url}?v=${v}" width="20" height="20" style="margin-right: 8px;">
+                    <img src="${res.icon_url}?v=${v}" width="20" height="20" style="margin-right: 8px;">
                     <span style="flex: 1;">${res.name}</span>
                     <span style="color: #8af; font-weight: bold;">${this.formatAmount(res.amount)}</span>
                 </div>
@@ -357,7 +351,7 @@ export class EntityInfoWindow {
             <div style="margin: 15px 0; padding: 10px; background: rgba(0,150,0,0.2); border-radius: 4px; border-left: 3px solid #4a9;">
                 <div style="font-weight: bold; margin-bottom: 8px; color: #4a9;">Крафт:</div>
                 <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                    <img src="/assets/tiles/resources/${outputIcon}?v=${v}" width="20" height="20" style="margin-right: 8px;">
+                    <img src="${outputIcon}?v=${v}" width="20" height="20" style="margin-right: 8px;">
                     <span style="flex: 1;">${outputName}</span>
                     <span style="color: #aaa;">${secondsRemaining}s</span>
                 </div>
@@ -448,7 +442,7 @@ export class EntityInfoWindow {
      * Render resource icon with amount
      */
     renderResourceIcon(resource, amount, version) {
-        const iconUrl = `/assets/tiles/resources/${resource.icon_url}?v=${version}`;
+        const iconUrl = `${resource.icon_url}?v=${version}`;
         return `
             <div style="display: inline-flex; align-items: center; margin: 0 2px;" title="${resource.name}">
                 <img src="${iconUrl}" width="18" height="18" style="margin-right: 3px;">

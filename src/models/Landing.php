@@ -117,4 +117,14 @@ class Landing extends base\BaseLanding
         }
         return imagecreatefrompng($path);
     }
+
+    /**
+     * Get URL to landing icon (for frontend)
+     * Uses first variation (_0.png) as icon
+     * @return string
+     */
+    public function getIconUrl(): string
+    {
+        return "/assets/tiles/landing/{$this->folder}/{$this->folder}_0.png";
+    }
 }

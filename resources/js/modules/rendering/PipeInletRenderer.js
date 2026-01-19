@@ -26,14 +26,12 @@ export class PipeInletRenderer {
     }
 
     /**
-     * Load inlet atlas texture
+     * Load inlet atlas texture from GraphicsEngine
      */
     async loadAtlas() {
-        try {
-            this.atlasTexture = await PIXI.Assets.load('/assets/tiles/pipe_inlets/inlet_atlas.png');
-            console.log('[PipeInletRenderer] Atlas loaded successfully');
-        } catch (error) {
-            console.warn('[PipeInletRenderer] Failed to load atlas, inlet rendering disabled:', error);
+        this.atlasTexture = this.game.graphics.getTexture('pipe_inlet_atlas');
+        if (!this.atlasTexture) {
+            console.warn('[PipeInletRenderer] Atlas not loaded, inlet rendering disabled');
         }
     }
 

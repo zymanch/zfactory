@@ -37,8 +37,18 @@ class Config extends JsonAction
 
     protected function getLandingTypes()
     {
+        $landingTypes = Landing::find()->indexBy('landing_id')->all();
+        $result = [];
+
+        foreach ($landingTypes as $id => $landing) {
+            $data = $landing->toArray();
+            // Add icon URL for frontend (uses first variation _0.png)
+            $data['icon_url'] = $landing->getIconUrl();
+            $result[$id] = $data;
+        }
+
         return $this->castNumericFieldsIndexed(
-            Landing::find()->indexBy('landing_id')->asArray()->all(),
+            $result,
             ['landing_id']
         );
     }
@@ -54,7 +64,7 @@ class Config extends JsonAction
         foreach ($entityTypes as $id => $entityType) {
             $data = $entityType->toArray();
             // Add URL fields for frontend
-            $data['atlas_url'] = $entityType->getAtlasUrl();
+            $data['atlases'] = $entityType->getAtlases();
             $data['icon_url'] = $entityType->getIconUrl();
 
             // Convert SET fields to arrays for easier JS handling
@@ -86,7 +96,7 @@ class Config extends JsonAction
 
         foreach ($depositTypes as $id => $depositType) {
             $data = $depositType->toArray();
-            // Add URL field for frontend
+            // Add full path for frontend (deposits only have normal.png)
             $data['sprite_url'] = $depositType->getSpriteUrl();
             $result[$id] = $data;
         }
@@ -140,8 +150,18 @@ class Config extends JsonAction
 
     protected function getResources()
     {
+        $resources = Resource::find()->indexBy('resource_id')->all();
+        $result = [];
+
+        foreach ($resources as $id => $resource) {
+            $data = $resource->toArray();
+            // Add full path for frontend (backend controls all paths)
+            $data['icon_url'] = "/assets/tiles/resources/{$resource->icon_url}";
+            $result[$id] = $data;
+        }
+
         return $this->castNumericFieldsIndexed(
-            Resource::find()->indexBy('resource_id')->asArray()->all(),
+            $result,
             ['resource_id', 'max_stack']
         );
     }
@@ -237,6 +257,8 @@ class Config extends JsonAction
 
     protected function getConfig($currentRegionId)
     {
+        $v = Yii::$app->params['asset_version'];
+
         return [
             'mapUrl' => \yii\helpers\Url::to(['map/tiles'], true),
             'entitiesUrl' => \yii\helpers\Url::to(['game/entities'], true),
@@ -250,7 +272,6 @@ class Config extends JsonAction
             'addUserResourceUrl' => \yii\helpers\Url::to(['game/add-user-resource'], true),
             'rebuildEntityUrl' => \yii\helpers\Url::to(['game/rebuild-entity'], true),
             'regionsMapUrl' => \yii\helpers\Url::to(['regions/index'], true),
-            'tilesPath' => '/assets/tiles/',
             'currentRegionId' => $currentRegionId,
             'tileWidth' => Yii::$app->params['tile_width'],
             'tileHeight' => Yii::$app->params['tile_height'],
@@ -262,6 +283,11 @@ class Config extends JsonAction
             'landingIslandEdgeId' => Yii::$app->params['landing_island_edge_id'],
             'landingShipEdgeId' => Yii::$app->params['landing_ship_edge_id'],
             'cameraSpeed' => 8,
+            // Sprite paths (for direct access in JS, not loaded as textures)
+            'sprites' => [
+                'electrification' => "/assets/tiles/electrification.png?v={$v}",
+                'no_power' => "/assets/tiles/no_power.png?v={$v}",
+            ],
         ];
     }
 
@@ -334,7 +360,8 @@ class Config extends JsonAction
         // Resource icons (112)
         $resources = $this->getResources();
         foreach ($resources as $id => $resource) {
-            $assets["resource_{$id}"] = "/assets/tiles/resources/{$resource['icon_url']}?v={$v}";
+            // icon_url already contains full path from getResources()
+            $assets["resource_{$id}"] = "{$resource['icon_url']}?v={$v}";
         }
 
         // Conveyor atlases (20: 5 states × 4 orientations)
@@ -361,17 +388,40 @@ class Config extends JsonAction
             }
         }
 
-        // REMOVED (2026-01-15): Old pipe atlases by fluid type
-        // Pipes now use regular entity atlases (from entity_type.atlas_url)
-        // Fluid visualization is handled by PipeRenderer at runtime
-        // Old code tried to load non-existent files like:
-        // - /pipe/storage_tank/pipe_atlas_water.png (doesn't exist)
-        // - /pipe/pump/pipe_atlas_oil.png (doesn't exist)
+        // Pipe atlases (16: 4 states × 4 folders)
+        // Note: Pipes don't have blueprint state (only normal, damaged, normal_selected, damaged_selected)
+        $pipeStates = ['normal', 'damaged', 'normal_selected', 'damaged_selected'];
+        $pipeFolders = ['pipe', 'pipe_vertical', 'underground_pipe_in', 'underground_pipe_out'];
+        foreach ($pipeStates as $state) {
+            foreach ($pipeFolders as $folder) {
+                $key = "pipe_{$folder}_{$state}";
+                $assets[$key] = "/assets/tiles/entities/pipe/{$folder}/pipe_atlas_{$state}.png?v={$v}";
+            }
+        }
 
         // Special textures
         $assets['clouds_atlas'] = "/assets/clouds/clouds_atlas.png?v={$v}";
         $assets['electrification'] = "/assets/tiles/electrification.png?v={$v}";
         $assets['no_power'] = "/assets/tiles/no_power.png?v={$v}";
+
+        // Region images
+        $regions = \models\Region::find()->asArray()->all();
+        foreach ($regions as $region) {
+            if (!empty($region['image_url'])) {
+                $assets["region_{$region['region_id']}"] = "/assets/images/regions/{$region['image_url']}?v={$v}";
+            }
+        }
+
+        // Technology icons
+        $technologies = \models\Technology::find()->asArray()->all();
+        foreach ($technologies as $tech) {
+            if (!empty($tech['icon'])) {
+                $assets["technology_{$tech['technology_id']}"] = "/assets/tiles/technologies/{$tech['icon']}?v={$v}";
+            }
+        }
+
+        // Pipe inlet atlas
+        $assets['pipe_inlet_atlas'] = "/assets/tiles/pipe_inlets/inlet_atlas.png?v={$v}";
 
         return $assets;
     }

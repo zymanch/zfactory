@@ -42,6 +42,205 @@ Application Code (game.js, managers)
 - Enables testing without PixiJS initialization
 - Used in all unit and integration tests
 
+## Asset Loading System
+
+### Принцип централизации путей
+
+**КРИТИЧНО**: Frontend НИКОГДА не должен содержать хардкод путей к ассетам (`/assets/...`).
+
+Все пути к картинкам, спрайтам и атласам поступают из backend через API `/game/config`.
+
+### Структура путей в API
+
+**1. Entity atlases** - массив `entityTypes[id].atlases`:
+```javascript
+// Обычная entity (например, furnace)
+{
+  "entity_type_id": 1,
+  "atlases": {
+    "default": "/assets/tiles/entities/building/furnace/atlas.png"
+  }
+}
+
+// Конвейер (множественные атласы для разных состояний)
+{
+  "entity_type_id": 100,
+  "atlases": {
+    "normal": "/assets/tiles/entities/conveyor/conveyor/normal_atlas.png",
+    "damaged": "/assets/tiles/entities/conveyor/conveyor/damaged_atlas.png",
+    "blueprint": "/assets/tiles/entities/conveyor/conveyor/blueprint_atlas.png",
+    "normal_selected": "/assets/tiles/entities/conveyor/conveyor/normal_selected_atlas.png",
+    "damaged_selected": "/assets/tiles/entities/conveyor/conveyor/damaged_selected_atlas.png"
+  }
+}
+```
+
+**2. Resource icons** - полный путь в `resources[id].icon_url`:
+```javascript
+{
+  "resource_id": 1,
+  "name": "Iron Ore",
+  "icon_url": "/assets/tiles/resources/iron_ore.png"  // Полный путь
+}
+```
+
+**3. Asset Manifest** - `assetManifest` содержит ВСЕ пути с короткими ключами:
+```javascript
+{
+  // Landing atlases
+  "landing_atlas_grass": "/assets/tiles/landing/atlases/grass_atlas.png?v=123",
+  "landing_atlas_water": "/assets/tiles/landing/atlases/water_atlas.png?v=123",
+
+  // Entity atlases
+  "entity_atlas_1": "/assets/tiles/entities/building/furnace/atlas.png?v=123",
+
+  // Resources
+  "resource_1": "/assets/tiles/resources/iron_ore.png?v=123",
+
+  // Deposits
+  "deposit_1": "/assets/tiles/deposits/iron_deposit.png?v=123",
+
+  // Conveyor atlases (состояние + ориентация)
+  "conveyor_normal_right": "/assets/tiles/entities/conveyor/conveyor/normal_atlas.png?v=123",
+
+  // Regions
+  "region_1": "/assets/images/regions/island_1.png?v=123",
+
+  // Technologies
+  "technology_1": "/assets/tiles/technologies/automation.png?v=123",
+
+  // Special textures
+  "pipe_inlet_atlas": "/assets/tiles/pipe_inlets/inlet_atlas.png?v=123",
+  "clouds_atlas": "/assets/clouds/clouds_atlas.png?v=123",
+  "electrification": "/assets/tiles/electrification.png?v=123",
+  "no_power": "/assets/tiles/no_power.png?v=123"
+}
+```
+
+### Использование в коде
+
+**❌ НЕПРАВИЛЬНО** - хардкод путей:
+```javascript
+img.src = '/assets/tiles/resources/iron.png';
+const texture = await PIXI.Assets.load('/assets/tiles/entities/furnace/atlas.png');
+```
+
+**✅ ПРАВИЛЬНО** - использовать данные из API:
+```javascript
+// Для ресурсов - icon_url уже содержит полный путь
+const resource = game.config.resources[resourceId];
+img.src = resource.icon_url;
+
+// Для текстур - использовать GraphicsEngine + assetManifest
+const textureKey = `resource_${resourceId}`;
+const texture = game.graphics.getTexture(textureKey);
+
+// Для технологий - использовать assetManifest
+const iconKey = `technology_${tech.id}`;
+const iconUrl = game.config.assetManifest?.[iconKey] || `/assets/tiles/technologies/${tech.icon}`;
+```
+
+### Backend Implementation
+
+**EntityType.php** - метод `getAtlases()`:
+```php
+public function getAtlases(): array
+{
+    $multiAtlasTypes = ['conveyor', 'underground_belt', 'splitter'];
+
+    if (in_array($this->type, $multiAtlasTypes)) {
+        // 5 атласов для каждого состояния
+        $states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
+        $atlases = [];
+        foreach ($states as $state) {
+            $atlases[$state] = "/assets/tiles/entities/{$this->type}/{$this->folder}/{$state}_atlas.png";
+        }
+        return $atlases;
+    }
+
+    // Обычная entity - один атлас
+    return ['default' => "/assets/tiles/entities/{$this->type}/{$this->folder}/atlas.png"];
+}
+```
+
+**Config.php** - добавление путей:
+```php
+// Entity types
+$data['atlases'] = $entityType->getAtlases();
+$data['icon_url'] = $entityType->getIconUrl();
+
+// Resources
+$data['icon_url'] = "/assets/tiles/resources/{$resource->icon_url}";
+
+// Asset manifest
+$assets["region_{$region['region_id']}"] = "/assets/images/regions/{$region['image_url']}?v={$v}";
+$assets["technology_{$tech['technology_id']}"] = "/assets/tiles/technologies/{$tech['icon']}?v={$v}";
+$assets['pipe_inlet_atlas'] = "/assets/tiles/pipe_inlets/inlet_atlas.png?v={$v}";
+```
+
+### Обработка отсутствующих ассетов
+
+GraphicsEngine автоматически коллекционирует отсутствующие ассеты при загрузке:
+
+```javascript
+// GraphicsEngine.loadAllTextures()
+this.missingAssets = [];
+
+try {
+    const texture = await PIXI.Assets.load(url);
+    this.textures.set(key, texture);
+} catch (error) {
+    this.missingAssets.push({
+        key: key,
+        url: url,
+        error: error.message
+    });
+}
+
+// После загрузки
+const missingAssets = graphics.getMissingAssets();
+if (missingAssets.length > 0) {
+    ErrorModal.show('Отсутствующие ассеты', ...);
+    // Игра продолжает работу с доступными ассетами
+}
+```
+
+**Важно**:
+- Загрузка НЕ прерывается при ошибках
+- ErrorModal показывает список проблемных файлов
+- Игра продолжает работать с доступными ассетами
+
+### Добавление новых ассетов
+
+1. **Добавить файл** в `public/assets/tiles/...`
+2. **Backend**: добавить путь в `Config::getAssetManifest()`
+3. **Frontend**: использовать ключ из manifest
+
+**Пример** - добавление нового региона:
+```php
+// Backend: Config.php
+$assets["region_{$region['region_id']}"] = "/assets/images/regions/{$region['image_url']}?v={$v}";
+```
+
+```javascript
+// Frontend: regions.js
+const assetKey = `region_${region.region_id}`;
+img.src = window.gameConfig.assetManifest?.[assetKey] || `/assets/images/regions/${region.image_url}`;
+```
+
+### Migration Notes
+
+**Старый подход** (до рефакторинга):
+- Frontend содержал хардкод пути `/assets/tiles/resources/...`
+- Прямые вызовы `PIXI.Assets.load()` в модулях
+- Entity использовал `atlas_url` (строка)
+
+**Новый подход** (после рефакторинга):
+- Frontend получает все пути из API
+- Централизованная загрузка через GraphicsEngine
+- Entity использует `atlases` (массив)
+- Полная поддержка версионирования (?v=123)
+
 ## Layer System
 
 ### Rendering Layers

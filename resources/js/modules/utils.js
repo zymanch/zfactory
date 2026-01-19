@@ -96,12 +96,11 @@ export function assetUrl(basePath, path, version = 1) {
 /**
  * Generate entity icon URL
  * @param {Object} entityType - Entity type object
- * @param {string} tilesPath - Base tiles path (unused, kept for compatibility)
  * @param {number} version - Asset version
  * @param {Object} game - Game instance (optional, for atlas-based data URLs)
  * @returns {string} Icon URL or data URL from atlas
  */
-export function getEntityIconUrl(entityType, tilesPath, version = 1, game = null) {
+export function getEntityIconUrl(entityType, version = 1, game = null) {
     // Priority 1: Use data URL from atlas if game instance provided and icon available
     if (game && game.iconDataUrls && game.iconDataUrls[entityType.id]) {
         return game.iconDataUrls[entityType.id];

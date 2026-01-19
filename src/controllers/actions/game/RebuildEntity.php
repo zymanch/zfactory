@@ -4,6 +4,8 @@ namespace controllers\actions\game;
 
 use controllers\actions\JsonAction;
 use models\Entity;
+use models\EntityTypeCost;
+use models\UserResource;
 use Yii;
 
 /**
@@ -36,9 +38,59 @@ class RebuildEntity extends JsonAction
             return $this->error('Entity is not broken');
         }
 
+        // Get building costs
+        $costs = EntityTypeCost::find()
+            ->where(['entity_type_id' => $entity->entity_type_id])
+            ->asArray()
+            ->all();
+
+        $userId = $this->getUser()->user_id;
+
+        // Check if user has enough resources
+        foreach ($costs as $cost) {
+            $resourceId = (int)$cost['resource_id'];
+            $requiredAmount = (int)$cost['quantity'];
+
+            $userResource = UserResource::findOne([
+                'user_id' => $userId,
+                'resource_id' => $resourceId
+            ]);
+
+            $available = $userResource ? (int)$userResource->quantity : 0;
+
+            if ($available < $requiredAmount) {
+                return $this->error("Not enough resources (resource_id: {$resourceId}, need: {$requiredAmount}, have: {$available})");
+            }
+        }
+
         // Begin transaction
         $transaction = Yii::$app->db->beginTransaction();
         try {
+            // Deduct resources from user
+            foreach ($costs as $cost) {
+                $resourceId = (int)$cost['resource_id'];
+                $requiredAmount = (int)$cost['quantity'];
+
+                $userResource = UserResource::findOne([
+                    'user_id' => $userId,
+                    'resource_id' => $resourceId
+                ]);
+
+                $userResource->quantity -= $requiredAmount;
+
+                if ($userResource->quantity < 0) {
+                    throw new \Exception("Resource calculation error for resource_id: {$resourceId}");
+                }
+
+                if ($userResource->quantity == 0) {
+                    $userResource->delete();
+                } else {
+                    if (!$userResource->save()) {
+                        throw new \Exception('Failed to save user resource: ' . json_encode($userResource->errors));
+                    }
+                }
+            }
+
             // Convert to blueprint state for reconstruction
             $entity->state = 'blueprint';
             $entity->construction_progress = 0;

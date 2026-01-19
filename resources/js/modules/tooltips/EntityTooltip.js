@@ -132,7 +132,7 @@ export class EntityTooltip extends BaseTooltip {
             for (const res of resources) {
                 html += `
                     <div style="display:flex;align-items:center;margin:2px 0;">
-                        <img src="/assets/tiles/resources/${res.icon_url}" width="16" height="16" style="margin-right:6px;">
+                        <img src="${res.icon_url}" width="16" height="16" style="margin-right:6px;">
                         <span>${res.name}</span>
                         <span style="margin-left:auto;color:#8af;">${this.formatAmount(res.amount)}</span>
                     </div>
@@ -190,7 +190,7 @@ export class EntityTooltip extends BaseTooltip {
         html += `<div style="border-top:1px solid #4a4a5a;padding-top:6px;margin-top:6px;">`;
         html += `
             <div style="display:flex;align-items:center;margin:2px 0;">
-                <img src="/assets/tiles/resources/${resource.icon_url}" width="16" height="16" style="margin-right:6px;">
+                <img src="${resource.icon_url}" width="16" height="16" style="margin-right:6px;">
                 <span>${resource.name}</span>
                 <span style="margin-left:auto;color:#8af;">${this.formatAmount(deposit.resource_amount)}</span>
             </div>
@@ -403,7 +403,7 @@ export class EntityTooltip extends BaseTooltip {
         html += `<div style="margin-bottom:4px;font-weight:bold;color:#4a9;">Crafting:</div>`;
         html += `<div style="display:flex;align-items:center;margin-bottom:4px;">`;
         if (outputIcon) {
-            html += `<img src="/assets/tiles/resources/${outputIcon}" width="16" height="16" style="margin-right:6px;">`;
+            html += `<img src="${outputIcon}" width="16" height="16" style="margin-right:6px;">`;
         }
         html += `<span>${outputName}</span>`;
         html += `<span id="tooltip-crafting-progress-text" style="margin-left:auto;color:#aaa;">${secondsRemaining}s</span>`;
@@ -518,7 +518,7 @@ export class EntityTooltip extends BaseTooltip {
      * Render resource icon with amount
      */
     renderResourceIcon(resource, amount, version) {
-        const iconUrl = `/assets/tiles/resources/${resource.icon_url}?v=${version}`;
+        const iconUrl = `${resource.icon_url}?v=${version}`;
         return `
             <div style="display:flex;align-items:center;margin:0 2px;" title="${resource.name}">
                 <img src="${iconUrl}" width="16" height="16" style="margin-right:2px;">

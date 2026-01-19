@@ -46,7 +46,6 @@ export class GameLoader {
      * Returns: landing, entityTypes, resources, recipes, config, assetManifest, etc.
      */
     async loadConfig() {
-        console.log('[GameLoader] Loading config...');
         const response = await fetch(this.configUrl);
 
         // Check HTTP status
@@ -77,7 +76,6 @@ export class GameLoader {
         }
 
         this.emit('configLoaded', data);
-        console.log('[GameLoader] Config loaded');
 
         // Return clean data (without result/error wrapper)
         return data;
@@ -88,7 +86,6 @@ export class GameLoader {
      * Returns: entities
      */
     async loadEntities(entitiesUrl) {
-        console.log('[GameLoader] Loading entities...');
         const response = await fetch(entitiesUrl);
 
         // Check HTTP status
@@ -119,7 +116,6 @@ export class GameLoader {
         }
 
         this.emit('entitiesLoaded', data);
-        console.log(`[GameLoader] Loaded ${data.entities.length} entities`);
 
         // Return clean data (just entities array, without result wrapper)
         return data.entities;
@@ -130,7 +126,6 @@ export class GameLoader {
      * Returns: tiles
      */
     async loadTiles(mapUrl) {
-        console.log('[GameLoader] Loading map tiles...');
         const response = await fetch(mapUrl);
 
         // Check HTTP status
@@ -161,7 +156,6 @@ export class GameLoader {
         }
 
         this.emit('tilesLoaded', data);
-        console.log(`[GameLoader] Loaded ${Object.keys(data.tiles).length} tiles`);
 
         // Return clean data (tiles + shakeZones, without result wrapper)
         return {
@@ -190,7 +184,6 @@ export class GameLoader {
         ]);
         this.emit('progress', { percent: 10, message: 'Configuration loaded' });
 
-        console.log('[GameLoader] All data loaded');
         return { config, entities, tiles };
     }
 }

@@ -310,6 +310,64 @@ class m000000_000001_init_database extends Migration
         $this->addPrimaryKey('pk_pipe_system_member', 'pipe_system_member', ['pipe_system_id', 'entity_id']);
         $this->createIndex('idx_entity', 'pipe_system_member', 'entity_id');
 
+        // Ship Entity
+        $this->createTable('ship_entity', [
+            'ship_entity_id' => $this->primaryKey()->unsigned(),
+            'user_id' => $this->integer()->unsigned()->notNull(),
+            'entity_type_id' => $this->integer()->unsigned()->notNull(),
+            'x' => $this->integer()->notNull(),
+            'y' => $this->integer()->notNull(),
+            'state' => "enum('built','blueprint') NOT NULL DEFAULT 'built'",
+            'durability' => $this->integer()->unsigned()->null(),
+        ], 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+        $this->createIndex('idx_ship_entity_user', 'ship_entity', 'user_id');
+        $this->createIndex('idx_ship_entity_type', 'ship_entity', 'entity_type_id');
+        $this->addForeignKey('fk_ship_entity_user', 'ship_entity', 'user_id', 'user', 'user_id', 'CASCADE', 'CASCADE');
+        $this->addForeignKey('fk_ship_entity_entity_type', 'ship_entity', 'entity_type_id', 'entity_type', 'entity_type_id', 'CASCADE', 'CASCADE');
+
+        // Ship Entity Resource
+        $this->createTable('ship_entity_resource', [
+            'ship_entity_resource_id' => $this->primaryKey()->unsigned(),
+            'ship_entity_id' => $this->integer()->unsigned()->notNull(),
+            'resource_id' => $this->integer()->unsigned()->notNull(),
+            'amount' => $this->integer()->notNull()->defaultValue(1),
+            'status' => $this->string(50)->notNull()->defaultValue('idle'),
+            'position_px' => $this->integer()->null(),
+            'from_direction' => $this->string(20)->null(),
+            'last_output_direction' => $this->string(20)->null(),
+        ], 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+        $this->createIndex('idx_ship_entity_resource_ship_entity', 'ship_entity_resource', 'ship_entity_id');
+        $this->createIndex('idx_ship_entity_resource_resource', 'ship_entity_resource', 'resource_id');
+        $this->addForeignKey('fk_ship_entity_resource_ship_entity', 'ship_entity_resource', 'ship_entity_id', 'ship_entity', 'ship_entity_id', 'CASCADE', 'CASCADE');
+        $this->addForeignKey('fk_ship_entity_resource_resource', 'ship_entity_resource', 'resource_id', 'resource', 'resource_id', 'CASCADE', 'CASCADE');
+
+        // Ship Entity Crafting
+        $this->createTable('ship_entity_crafting', [
+            'ship_entity_crafting_id' => $this->primaryKey()->unsigned(),
+            'ship_entity_id' => $this->integer()->unsigned()->notNull(),
+            'recipe_id' => $this->integer()->unsigned()->notNull(),
+            'ticks_remaining' => $this->integer()->notNull(),
+        ], 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+        $this->createIndex('idx_ship_entity_crafting_ship_entity', 'ship_entity_crafting', 'ship_entity_id');
+        $this->createIndex('idx_ship_entity_crafting_recipe', 'ship_entity_crafting', 'recipe_id');
+        $this->addForeignKey('fk_ship_entity_crafting_ship_entity', 'ship_entity_crafting', 'ship_entity_id', 'ship_entity', 'ship_entity_id', 'CASCADE', 'CASCADE');
+        $this->addForeignKey('fk_ship_entity_crafting_recipe', 'ship_entity_crafting', 'recipe_id', 'recipe', 'recipe_id', 'CASCADE', 'CASCADE');
+
+        // Ship Landing
+        $this->createTable('ship_landing', [
+            'ship_landing_id' => $this->primaryKey()->unsigned(),
+            'user_id' => $this->integer()->unsigned()->notNull(),
+            'landing_id' => $this->integer()->unsigned()->notNull(),
+            'x' => $this->integer()->notNull(),
+            'y' => $this->integer()->notNull(),
+            'variation' => $this->integer()->unsigned()->null(),
+        ], 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+        $this->createIndex('idx_ship_landing_user', 'ship_landing', 'user_id');
+        $this->createIndex('idx_ship_landing_landing', 'ship_landing', 'landing_id');
+        $this->createIndex('idx_ship_landing_unique_coords', 'ship_landing', ['user_id', 'x', 'y'], true);
+        $this->addForeignKey('fk_ship_landing_user', 'ship_landing', 'user_id', 'user', 'user_id', 'CASCADE', 'CASCADE');
+        $this->addForeignKey('fk_ship_landing_landing', 'ship_landing', 'landing_id', 'landing', 'landing_id', 'CASCADE', 'CASCADE');
+
         // ============ POPULATE REFERENCE DATA ============
 
         // Load data from JSON files
@@ -384,6 +442,10 @@ class m000000_000001_init_database extends Migration
 
     public function safeDown()
     {
+        $this->dropTable('ship_landing');
+        $this->dropTable('ship_entity_crafting');
+        $this->dropTable('ship_entity_resource');
+        $this->dropTable('ship_entity');
         $this->dropTable('pipe_system_member');
         $this->dropTable('pipe_system');
         $this->dropTable('entity_crafting');

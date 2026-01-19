@@ -529,14 +529,13 @@ class ZFactoryGame {
     }
 
     /**
-     * Prepare special textures (conveyors, pipes) that need atlas organization
+     * Prepare special textures (conveyors) that need atlas organization
      */
     async prepareSpecialTextures() {
         // Conveyors: organize textures by orientation and state
         await this.conveyorManager.loadAtlases();
 
-        // Pipes: load variant atlases (separate from entity atlases)
-        await this.pipeConnectionManager.loadVariantTextures();
+        // Pipes: now use pre-loaded atlases from assetManifest (like conveyors)
     }
 
     /**
@@ -930,6 +929,25 @@ class ZFactoryGame {
     }
 
     /**
+     * Reload user resources from server
+     */
+    async reloadUserResources() {
+        try {
+            const response = await fetch(this.config.configUrl);
+            const data = await response.json();
+            if (data.result === 'ok') {
+                this.userResources = data.userResources || {};
+                // Refresh resource panel
+                if (this.resourcePanel) {
+                    this.resourcePanel.refresh();
+                }
+            }
+        } catch (error) {
+            console.error('Failed to reload user resources:', error);
+        }
+    }
+
+    /**
      * Handle click on broken entity (durability=0) - rebuild immediately
      */
     async handleBrokenEntityClick(entity, sprite) {
@@ -962,6 +980,9 @@ class ZFactoryGame {
                 if (this.textures[textureKey]) {
                     sprite.texture = this.textures[textureKey];
                 }
+
+                // Reload user resources from server
+                await this.reloadUserResources();
 
                 console.log(`Entity ${entity.entity_id} converted to blueprint for rebuilding`);
             } else {

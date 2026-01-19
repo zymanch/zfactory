@@ -159,12 +159,30 @@ class EntityType extends base\BaseEntityType
     }
 
     /**
-     * Get URL to entity atlas (for frontend)
-     * @return string
+     * Get atlas URLs for entity (supports multiple atlases for conveyors/underground belts)
+     * @return array ['default' => '/path'] or ['normal' => '/path', 'damaged' => '/path', ...]
      */
-    public function getAtlasUrl(): string
+    public function getAtlases(): array
     {
-        return "/assets/tiles/entities/{$this->type}/{$this->folder}/atlas.png";
+        // Check if entity uses multiple atlases
+        $multiAtlasTypes = ['conveyor', 'underground_belt', 'splitter'];
+
+        if (in_array($this->type, $multiAtlasTypes)) {
+            // Return 5 atlases for each state
+            $states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
+            $atlases = [];
+
+            foreach ($states as $state) {
+                $atlases[$state] = "/assets/tiles/entities/{$this->type}/{$this->folder}/{$state}_atlas.png";
+            }
+
+            return $atlases;
+        }
+
+        // Regular entity - single atlas
+        return [
+            'default' => "/assets/tiles/entities/{$this->type}/{$this->folder}/atlas.png"
+        ];
     }
 
     /**
@@ -178,15 +196,5 @@ class EntityType extends base\BaseEntityType
         }
 
         return "/assets/tiles/entities/{$this->type}/{$this->folder}/normal.{$this->extension}";
-    }
-
-    /**
-     * Get URL to state-specific atlas (for conveyor/pipe systems)
-     * @param string $state 'normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'
-     * @return string
-     */
-    public function getStateAtlasUrl(string $state): string
-    {
-        return "/assets/tiles/entities/{$this->type}/{$this->folder}/{$state}_atlas.png";
     }
 }
