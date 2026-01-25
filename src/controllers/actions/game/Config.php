@@ -63,9 +63,8 @@ class Config extends JsonAction
         $result = [];
         foreach ($entityTypes as $id => $entityType) {
             $data = $entityType->toArray();
-            // Add URL fields for frontend
+            // Add atlases for frontend
             $data['atlases'] = $entityType->getAtlases();
-            $data['icon_url'] = $entityType->getIconUrl();
 
             // Convert SET fields to arrays for easier JS handling
             $data['input_connections'] = $data['input_connections']

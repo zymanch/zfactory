@@ -34,7 +34,7 @@ class BaseUserRegionVisit extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseUserRegionVisitPeer::USER_ID, BaseUserRegionVisitPeer::REGION_ID, BaseUserRegionVisitPeer::VIEW_RADIUS], 'required'],
+            [[BaseUserRegionVisitPeer::USER_ID, BaseUserRegionVisitPeer::REGION_ID], 'required'],
             [[BaseUserRegionVisitPeer::USER_ID, BaseUserRegionVisitPeer::REGION_ID, BaseUserRegionVisitPeer::FROM_REGION_ID, BaseUserRegionVisitPeer::VIEW_RADIUS], 'integer'],
             [[BaseUserRegionVisitPeer::LAST_VISIT_AT], 'safe'],
             [[BaseUserRegionVisitPeer::USER_ID, BaseUserRegionVisitPeer::REGION_ID], 'unique', 'targetAttribute' => [BaseUserRegionVisitPeer::USER_ID, BaseUserRegionVisitPeer::REGION_ID]],

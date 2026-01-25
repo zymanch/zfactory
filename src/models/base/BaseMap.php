@@ -12,8 +12,7 @@ namespace models\base;
  * @property integer $landing_id
  * @property integer $x
  * @property integer $y
- *
- * @property \models\Region $region
+ * @property string $shake_intensity
  */
 class BaseMap extends \yii\db\ActiveRecord
 {
@@ -33,7 +32,7 @@ class BaseMap extends \yii\db\ActiveRecord
         return [
             [[BaseMapPeer::REGION_ID, BaseMapPeer::LANDING_ID, BaseMapPeer::X, BaseMapPeer::Y], 'integer'],
             [[BaseMapPeer::LANDING_ID, BaseMapPeer::X, BaseMapPeer::Y], 'required'],
-            [[BaseMapPeer::REGION_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseRegion::className(), 'targetAttribute' => [BaseMapPeer::REGION_ID => BaseRegionPeer::REGION_ID]],
+            [[BaseMapPeer::SHAKE_INTENSITY], 'number'],
         ];
     }
 
@@ -48,15 +47,10 @@ class BaseMap extends \yii\db\ActiveRecord
             BaseMapPeer::LANDING_ID => 'Landing ID',
             BaseMapPeer::X => 'X',
             BaseMapPeer::Y => 'Y',
+            BaseMapPeer::SHAKE_INTENSITY => 'Shake Intensity',
         ];
     }
-    /**
-     * @return \models\RegionQuery
-     */
-    public function getRegion() {
-        return $this->hasOne(\models\Region::className(), [BaseRegionPeer::REGION_ID => BaseMapPeer::REGION_ID]);
-    }
-    
+
     /**
      * @inheritdoc
      * @return \models\MapQuery the active query used by this AR class.
@@ -79,6 +73,7 @@ class BaseMap extends \yii\db\ActiveRecord
             'landing_id' => BaseMapPeer::LANDING_ID,
             'x' => BaseMapPeer::X,
             'y' => BaseMapPeer::Y,
+            'shake_intensity' => BaseMapPeer::SHAKE_INTENSITY,
         ];
     }
     
@@ -90,7 +85,7 @@ class BaseMap extends \yii\db\ActiveRecord
     {
         /*
         return [
-            'region' => 'region',
+            ,
         ];
         */
     }

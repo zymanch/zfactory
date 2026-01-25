@@ -9,5 +9,6 @@ class BaseMapPeer  {
     const LANDING_ID = "landing_id";
     const X = "x";
     const Y = "y";
+    const SHAKE_INTENSITY = "shake_intensity";
 
 }

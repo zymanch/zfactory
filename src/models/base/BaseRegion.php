@@ -10,19 +10,13 @@ namespace models\base;
  * @property integer $region_id
  * @property string $name
  * @property string $description
- * @property integer $difficulty
- * @property integer $x
- * @property integer $y
  * @property integer $width
  * @property integer $height
- * @property string $image_url
- * @property string $created_at
+ * @property integer $seed
+ * @property string $is_starter
  * @property integer $ship_attach_x
  * @property integer $ship_attach_y
  *
- * @property \models\Deposit[] $deposits
- * @property \models\Entity[] $entities
- * @property \models\Map[] $maps
  * @property \models\User[] $users
  * @property \models\UserRegionVisit[] $userRegionVisits
  * @property \models\UserRegionVisit[] $userRegionVisits0
@@ -44,12 +38,10 @@ class BaseRegion extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseRegionPeer::NAME, BaseRegionPeer::X, BaseRegionPeer::Y, BaseRegionPeer::WIDTH, BaseRegionPeer::HEIGHT], 'required'],
-            [[BaseRegionPeer::DESCRIPTION], 'string'],
-            [[BaseRegionPeer::DIFFICULTY, BaseRegionPeer::X, BaseRegionPeer::Y, BaseRegionPeer::WIDTH, BaseRegionPeer::HEIGHT, BaseRegionPeer::SHIP_ATTACH_X, BaseRegionPeer::SHIP_ATTACH_Y], 'integer'],
-            [[BaseRegionPeer::CREATED_AT], 'safe'],
-            [[BaseRegionPeer::NAME], 'string', 'max' => 100],
-            [[BaseRegionPeer::IMAGE_URL], 'string', 'max' => 255],
+            [[BaseRegionPeer::NAME], 'required'],
+            [[BaseRegionPeer::DESCRIPTION, BaseRegionPeer::IS_STARTER], 'string'],
+            [[BaseRegionPeer::WIDTH, BaseRegionPeer::HEIGHT, BaseRegionPeer::SEED, BaseRegionPeer::SHIP_ATTACH_X, BaseRegionPeer::SHIP_ATTACH_Y], 'integer'],
+            [[BaseRegionPeer::NAME], 'string', 'max' => 128],
         ];
     }
 
@@ -62,36 +54,15 @@ class BaseRegion extends \yii\db\ActiveRecord
             BaseRegionPeer::REGION_ID => 'Region ID',
             BaseRegionPeer::NAME => 'Name',
             BaseRegionPeer::DESCRIPTION => 'Description',
-            BaseRegionPeer::DIFFICULTY => 'Difficulty',
-            BaseRegionPeer::X => 'X',
-            BaseRegionPeer::Y => 'Y',
             BaseRegionPeer::WIDTH => 'Width',
             BaseRegionPeer::HEIGHT => 'Height',
-            BaseRegionPeer::IMAGE_URL => 'Image Url',
-            BaseRegionPeer::CREATED_AT => 'Created At',
+            BaseRegionPeer::SEED => 'Seed',
+            BaseRegionPeer::IS_STARTER => 'Is Starter',
             BaseRegionPeer::SHIP_ATTACH_X => 'Ship Attach X',
             BaseRegionPeer::SHIP_ATTACH_Y => 'Ship Attach Y',
         ];
     }
     /**
-     * @return \models\DepositQuery
-     */
-    public function getDeposits() {
-        return $this->hasMany(\models\Deposit::className(), [BaseDepositPeer::REGION_ID => BaseRegionPeer::REGION_ID])->inverseOf('region');
-    }
-        /**
-     * @return \models\EntityQuery
-     */
-    public function getEntities() {
-        return $this->hasMany(\models\Entity::className(), [BaseEntityPeer::REGION_ID => BaseRegionPeer::REGION_ID])->inverseOf('region');
-    }
-        /**
-     * @return \models\MapQuery
-     */
-    public function getMaps() {
-        return $this->hasMany(\models\Map::className(), [BaseMapPeer::REGION_ID => BaseRegionPeer::REGION_ID])->inverseOf('region');
-    }
-        /**
      * @return \models\UserQuery
      */
     public function getUsers() {
@@ -136,13 +107,10 @@ class BaseRegion extends \yii\db\ActiveRecord
             'region_id' => BaseRegionPeer::REGION_ID,
             'name' => BaseRegionPeer::NAME,
             'description' => BaseRegionPeer::DESCRIPTION,
-            'difficulty' => BaseRegionPeer::DIFFICULTY,
-            'x' => BaseRegionPeer::X,
-            'y' => BaseRegionPeer::Y,
             'width' => BaseRegionPeer::WIDTH,
             'height' => BaseRegionPeer::HEIGHT,
-            'image_url' => BaseRegionPeer::IMAGE_URL,
-            'created_at' => BaseRegionPeer::CREATED_AT,
+            'seed' => BaseRegionPeer::SEED,
+            'is_starter' => BaseRegionPeer::IS_STARTER,
             'ship_attach_x' => BaseRegionPeer::SHIP_ATTACH_X,
             'ship_attach_y' => BaseRegionPeer::SHIP_ATTACH_Y,
         ];
@@ -156,9 +124,6 @@ class BaseRegion extends \yii\db\ActiveRecord
     {
         /*
         return [
-            'deposits' => 'deposits',
-            'entities' => 'entities',
-            'maps' => 'maps',
             'users' => 'users',
             'userRegionVisits' => 'userRegionVisits',
             'userRegionVisits0' => 'userRegionVisits0',

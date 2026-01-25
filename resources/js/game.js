@@ -64,7 +64,7 @@ class ZFactoryGame {
         this.initialCameraPosition = configData.cameraPosition || { x: 0, y: 0, zoom: 1 };
         this.initialDeposits = configData.deposits || [];
         this.region = configData.region || null;
-        this.buildPanelData = configData.buildPanel || [];
+        this.initialBuildPanel = configData.buildPanel || [];
 
         // Instance data from entities - now includes state as properties
         // NEW (2026-01): entitiesData can be either {entities: []} or just []
@@ -168,6 +168,9 @@ class ZFactoryGame {
         this.emitProgress(87, 'Preparing icons');
         console.log('[Game] 5.3/8 Preparing icon data URLs from atlases...');
         this.prepareIconDataUrls();
+
+        // Refresh build panel AFTER icons are prepared
+        this.buildPanel.refresh();
 
         this.emitProgress(88, 'Loading special assets');
         console.log('[Game] 5.5/8 Preparing special textures...');
@@ -329,8 +332,6 @@ class ZFactoryGame {
         // Initialize shake manager
         this.shakeManager.init();
 
-        this.buildPanel.refresh();
-
         // Create menu button
         this.createMenuButton();
 
@@ -365,6 +366,12 @@ class ZFactoryGame {
 
         this.landingTypes = data.landing;
         this.entityTypes = data.entityTypes;  // Теперь содержит costs, recipes, behavior
+        // Add 'id' field to each entityType for convenience
+        for (const typeId in this.entityTypes) {
+            if (!this.entityTypes[typeId].id) {
+                this.entityTypes[typeId].id = parseInt(typeId);
+            }
+        }
         this.depositTypes = data.depositTypes || {};
         this.resources = data.resources || {};
         this.recipes = data.recipes || {};
@@ -487,33 +494,55 @@ class ZFactoryGame {
     /**
      * Prepare icon data URLs from atlas textures
      * Creates data URLs from normal state textures for use in UI
+     * Supports both regular atlases and multi-atlas entities (conveyors)
      */
     prepareIconDataUrls() {
         this.iconDataUrls = {};
 
+        let successCount = 0;
+        let failCount = 0;
+
         for (const typeId in this.entityTypes) {
             const entityType = this.entityTypes[typeId];
+            const width = (entityType.width || 1) * this.config.tileWidth;
+            const height = (entityType.height || 1) * this.config.tileHeight;
 
-            // Skip multi-atlas entities (conveyor, underground_belt, splitter)
-            // They use icon_url from backend instead of atlas textures
+            let texture = null;
+
+            // Multi-atlas entities (conveyor, underground_belt, splitter)
+            // Extract icon from normal_atlas (variant 0, frame 0)
             const multiAtlasTypes = ['conveyor', 'underground_belt', 'splitter'];
             if (multiAtlasTypes.includes(entityType.type)) {
-                continue;
+                // Get normal atlas for this conveyor orientation
+                const orientation = entityType.orientation || 'right';
+                const atlasKey = `conveyor_normal_${orientation}`;
+                const atlasTexture = this.graphics.getTexture(atlasKey);
+
+                if (atlasTexture) {
+                    // Extract first frame (variant 0, frame 0) from conveyor atlas
+                    // Conveyor atlases are 16 variants × 8 frames (1024×512 for 64×64 sprites)
+                    const rect = this.graphics.createRectangle(0, 0, width, height);
+                    texture = this.graphics.createTextureFromAtlas(atlasTexture, rect);
+                } else {
+                    console.warn(`[Game] Atlas not found for conveyor: ${atlasKey}, entity_type_id=${typeId}`);
+                }
+            } else {
+                // Regular entities use entity_N_normal texture
+                const textureKey = `entity_${typeId}_normal`;
+                texture = this.textures[textureKey];
+
+                if (!texture) {
+                    console.warn(`[Game] Regular texture not found: ${textureKey}`);
+                }
             }
 
-            const textureKey = `entity_${typeId}_normal`;
-            const texture = this.textures[textureKey];
-
             if (!texture) {
-                console.warn(`[Game] Texture not found for icon: ${textureKey}`);
+                failCount++;
                 continue;
             }
 
             // Create canvas and render texture to it
             const canvas = document.createElement('canvas');
-            const width = (entityType.width || 1) * this.config.tileWidth;
-            const height = (entityType.height || 1) * this.config.tileHeight;
-
             canvas.width = width;
             canvas.height = height;
 
@@ -534,16 +563,18 @@ class ZFactoryGame {
 
                 // Convert to data URL and cache
                 this.iconDataUrls[typeId] = canvas.toDataURL('image/png');
+                successCount++;
 
                 // Cleanup
                 tempSprite.destroy();
             } catch (error) {
                 console.warn(`[Game] Failed to extract icon for entity ${typeId}:`, error.message);
+                failCount++;
                 continue;
             }
         }
 
-        console.log(`[Game] Prepared ${Object.keys(this.iconDataUrls).length} icon data URLs from atlases`);
+        console.log(`[Game] Icon extraction complete: ${successCount} success, ${failCount} failed, total iconDataUrls: ${Object.keys(this.iconDataUrls).length}`);
     }
 
     /**

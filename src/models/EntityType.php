@@ -185,16 +185,4 @@ class EntityType extends base\BaseEntityType
         ];
     }
 
-    /**
-     * Get URL to entity icon (for UI panels)
-     * @return string
-     */
-    public function getIconUrl(): string
-    {
-        if ($this->icon_url) {
-            return "/assets/tiles/entities/{$this->type}/{$this->icon_url}";
-        }
-
-        return "/assets/tiles/entities/{$this->type}/{$this->folder}/normal.{$this->extension}";
-    }
 }

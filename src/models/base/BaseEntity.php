@@ -16,7 +16,6 @@ namespace models\base;
  * @property integer $y
  * @property integer $construction_progress
  *
- * @property \models\Region $region
  * @property \models\EntityCrafting $entityCrafting
  * @property \models\EntityResource[] $entityResources
  * @property \models\BaseResource[] $resources
@@ -40,7 +39,6 @@ class BaseEntity extends \yii\db\ActiveRecord
             [[BaseEntityPeer::REGION_ID, BaseEntityPeer::ENTITY_TYPE_ID, BaseEntityPeer::DURABILITY, BaseEntityPeer::X, BaseEntityPeer::Y, BaseEntityPeer::CONSTRUCTION_PROGRESS], 'integer'],
             [[BaseEntityPeer::ENTITY_TYPE_ID, BaseEntityPeer::X, BaseEntityPeer::Y], 'required'],
             [[BaseEntityPeer::STATE], 'string'],
-            [[BaseEntityPeer::REGION_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseRegion::className(), 'targetAttribute' => [BaseEntityPeer::REGION_ID => BaseRegionPeer::REGION_ID]],
         ];
     }
 
@@ -61,12 +59,6 @@ class BaseEntity extends \yii\db\ActiveRecord
         ];
     }
     /**
-     * @return \models\RegionQuery
-     */
-    public function getRegion() {
-        return $this->hasOne(\models\Region::className(), [BaseRegionPeer::REGION_ID => BaseEntityPeer::REGION_ID]);
-    }
-        /**
      * @return \models\EntityCraftingQuery
      */
     public function getEntityCrafting() {
@@ -121,7 +113,6 @@ class BaseEntity extends \yii\db\ActiveRecord
     {
         /*
         return [
-            'region' => 'region',
             'entityCrafting' => 'entityCrafting',
             'entityResources' => 'entityResources',
             'resources' => 'resources',

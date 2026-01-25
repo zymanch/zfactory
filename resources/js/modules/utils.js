@@ -94,20 +94,24 @@ export function assetUrl(basePath, path, version = 1) {
 }
 
 /**
- * Generate entity icon URL
+ * Generate entity icon URL from atlas
  * @param {Object} entityType - Entity type object
- * @param {number} version - Asset version
- * @param {Object} game - Game instance (optional, for atlas-based data URLs)
- * @returns {string} Icon URL or data URL from atlas
+ * @param {number} version - Asset version (unused, kept for compatibility)
+ * @param {Object} game - Game instance (required for atlas-based data URLs)
+ * @returns {string} Icon data URL from atlas
  */
 export function getEntityIconUrl(entityType, version = 1, game = null) {
-    // Priority 1: Use data URL from atlas if game instance provided and icon available
-    if (game && game.iconDataUrls && game.iconDataUrls[entityType.id]) {
-        return game.iconDataUrls[entityType.id];
+    // Get entity type ID from object
+    const entityTypeId = entityType.entity_type_id || entityType.id;
+
+    // All icons are extracted from atlases
+    if (game && game.iconDataUrls && entityTypeId && game.iconDataUrls[entityTypeId]) {
+        return game.iconDataUrls[entityTypeId];
     }
 
-    // Priority 2: Fallback to icon_url from backend (for wiki, admin panel, etc.)
-    return assetUrl('', entityType.icon_url, version);
+    // Fallback: 1×1 transparent pixel (correct base64)
+    console.warn(`[Utils] Icon not found for entity ${entityTypeId || 'unknown'} (entity_type_id: ${entityType.entity_type_id}, id: ${entityType.id}), using placeholder`);
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 }
 
 /**

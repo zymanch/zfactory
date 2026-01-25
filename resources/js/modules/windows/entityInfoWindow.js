@@ -181,23 +181,20 @@ export class EntityInfoWindow {
     }
 
     /**
-     * Get entity icon URL
+     * Get entity icon URL from atlas
      */
     getEntityIconUrl(entityType) {
-        // Priority 1: Use data URL from atlas if available
-        if (this.game.iconDataUrls && this.game.iconDataUrls[entityType.id]) {
-            return this.game.iconDataUrls[entityType.id];
+        // Get entity type ID from object
+        const entityTypeId = entityType.entity_type_id || entityType.id;
+
+        // All icons are extracted from atlases
+        if (this.game.iconDataUrls && entityTypeId && this.game.iconDataUrls[entityTypeId]) {
+            return this.game.iconDataUrls[entityTypeId];
         }
 
-        const v = this.game.config.assetVersion || 1;
-
-        // Priority 2: icon_url already contains full path from API
-        if (entityType.icon_url) {
-            return `${entityType.icon_url}?v=${v}`;
-        }
-
-        // Priority 3: Fallback - construct from folder (old style, shouldn't happen)
-        return `/assets/tiles/entities/${entityType.folder}/normal.${entityType.extension || 'png'}?v=${v}`;
+        // Fallback: 1×1 transparent pixel (correct base64)
+        console.warn(`[EntityInfoWindow] Icon not found for entity ${entityTypeId || 'unknown'}`);
+        return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
     }
 
     /**

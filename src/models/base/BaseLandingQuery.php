@@ -33,8 +33,6 @@ use models\LandingQuery;
   * @method LandingQuery orderByVariationsCount($order = Criteria::ASC)
   * @method LandingQuery orderByAiSeed($order = Criteria::ASC)
   * @method LandingQuery orderByBlocksVision($order = Criteria::ASC)
-  * @method LandingQuery withEntityTypes($params = [])
-  * @method LandingQuery joinWithEntityTypes($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method LandingQuery withLandingAdjacencies($params = [])
   * @method LandingQuery joinWithLandingAdjacencies($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method LandingQuery withLandingAdjacencies0($params = [])

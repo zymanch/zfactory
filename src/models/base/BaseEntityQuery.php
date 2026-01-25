@@ -30,8 +30,6 @@ use models\EntityQuery;
   * @method EntityQuery orderByX($order = Criteria::ASC)
   * @method EntityQuery orderByY($order = Criteria::ASC)
   * @method EntityQuery orderByConstructionProgress($order = Criteria::ASC)
-  * @method EntityQuery withRegion($params = [])
-  * @method EntityQuery joinWithRegion($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method EntityQuery withEntityCrafting($params = [])
   * @method EntityQuery joinWithEntityCrafting($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
   * @method EntityQuery withEntityResources($params = [])

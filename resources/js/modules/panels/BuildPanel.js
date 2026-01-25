@@ -117,11 +117,13 @@ export class BuildPanel extends BasePanel {
 
         if (entityTypeId && this.game.entityTypes[entityTypeId]) {
             const entityType = this.game.entityTypes[entityTypeId];
-            const iconUrl = getEntityIconUrl(
-                entityType,
-                this.game.config.assetVersion || 1,
-                this.game // Use atlas data URLs
-            );
+
+            // Get icon directly from game.iconDataUrls using entityTypeId
+            const iconUrl = this.game.iconDataUrls && this.game.iconDataUrls[entityTypeId]
+                ? this.game.iconDataUrls[entityTypeId]
+                : getEntityIconUrl(entityType, this.game.config.assetVersion || 1, this.game);
+
+            console.log(`[BuildPanel] Slot ${index}: entity ${entityTypeId}, has iconDataUrl: ${!!this.game.iconDataUrls[entityTypeId]}, iconUrl length: ${iconUrl?.length || 0}`);
             iconEl.style.backgroundImage = `url('${iconUrl}')`;
             iconEl.classList.add('has-icon');
         } else {
@@ -245,12 +247,14 @@ export class BuildPanel extends BasePanel {
      */
     loadFromServer() {
         const initialPanel = this.game.initialBuildPanel;
+        console.log('[BuildPanel] Loading from server, initialBuildPanel:', initialPanel);
         if (Array.isArray(initialPanel)) {
             initialPanel.forEach((entityTypeId, index) => {
                 if (index < 10) {
                     this.slots[index] = entityTypeId;
                 }
             });
+            console.log('[BuildPanel] Loaded slots:', this.slots);
         }
     }
 
@@ -258,6 +262,7 @@ export class BuildPanel extends BasePanel {
      * Refresh all slot visuals
      */
     refresh() {
+        console.log('[BuildPanel] Refreshing slots, iconDataUrls count:', Object.keys(this.game.iconDataUrls || {}).length);
         for (let i = 0; i < 10; i++) {
             this.updateSlotVisual(i);
         }

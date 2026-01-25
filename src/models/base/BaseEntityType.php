@@ -9,6 +9,7 @@ namespace models\base;
  *
  * @property integer $entity_type_id
  * @property string $type
+ * @property string $subtype
  * @property string $name
  * @property string $folder
  * @property string $extension
@@ -16,7 +17,6 @@ namespace models\base;
  * @property integer $converts_to_landing_id
  * @property integer $width
  * @property integer $height
- * @property string $icon_url
  * @property integer $power
  * @property integer $center_position_px
  * @property integer $parent_entity_type_id
@@ -31,7 +31,6 @@ namespace models\base;
  * @property string $input_connections
  * @property string $output_connections
  *
- * @property \models\Landing $convertsToLanding
  * @property \models\EntityTypeCost[] $entityTypeCosts
  * @property \models\BaseResource[] $resources
  * @property \models\EntityTypeRecipe[] $entityTypeRecipes
@@ -60,10 +59,10 @@ class BaseEntityType extends \yii\db\ActiveRecord
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::CENTER_POSITION_PX, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS, BaseEntityTypePeer::STORAGE_RESOURCE_COUNT, BaseEntityTypePeer::STORAGE_PER_RESOURCE], 'integer'],
             [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION, BaseEntityTypePeer::STORAGE_TYPE, BaseEntityTypePeer::RESOURCE_TYPES, BaseEntityTypePeer::INPUT_CONNECTIONS, BaseEntityTypePeer::OUTPUT_CONNECTIONS], 'string'],
             [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
+            [[BaseEntityTypePeer::SUBTYPE], 'string', 'max' => 64],
             [[BaseEntityTypePeer::NAME], 'string', 'max' => 128],
-            [[BaseEntityTypePeer::FOLDER, BaseEntityTypePeer::ICON_URL], 'string', 'max' => 256],
+            [[BaseEntityTypePeer::FOLDER], 'string', 'max' => 256],
             [[BaseEntityTypePeer::EXTENSION], 'string', 'max' => 4],
-            [[BaseEntityTypePeer::CONVERTS_TO_LANDING_ID], 'exist', 'skipOnError' => true, 'targetClass' => BaseLanding::className(), 'targetAttribute' => [BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => BaseLandingPeer::LANDING_ID]],
         ];
     }
 
@@ -75,6 +74,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
         return [
             BaseEntityTypePeer::ENTITY_TYPE_ID => 'Entity Type ID',
             BaseEntityTypePeer::TYPE => 'Type',
+            BaseEntityTypePeer::SUBTYPE => 'Subtype',
             BaseEntityTypePeer::NAME => 'Name',
             BaseEntityTypePeer::FOLDER => 'Folder',
             BaseEntityTypePeer::EXTENSION => 'Extension',
@@ -82,7 +82,6 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => 'Converts To Landing ID',
             BaseEntityTypePeer::WIDTH => 'Width',
             BaseEntityTypePeer::HEIGHT => 'Height',
-            BaseEntityTypePeer::ICON_URL => 'Icon Url',
             BaseEntityTypePeer::POWER => 'Power',
             BaseEntityTypePeer::CENTER_POSITION_PX => 'Center Position Px',
             BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID => 'Parent Entity Type ID',
@@ -99,12 +98,6 @@ class BaseEntityType extends \yii\db\ActiveRecord
         ];
     }
     /**
-     * @return \models\LandingQuery
-     */
-    public function getConvertsToLanding() {
-        return $this->hasOne(\models\Landing::className(), [BaseLandingPeer::LANDING_ID => BaseEntityTypePeer::CONVERTS_TO_LANDING_ID]);
-    }
-        /**
      * @return \models\EntityTypeCostQuery
      */
     public function getEntityTypeCosts() {
@@ -166,6 +159,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
         return [
             'entity_type_id' => BaseEntityTypePeer::ENTITY_TYPE_ID,
             'type' => BaseEntityTypePeer::TYPE,
+            'subtype' => BaseEntityTypePeer::SUBTYPE,
             'name' => BaseEntityTypePeer::NAME,
             'folder' => BaseEntityTypePeer::FOLDER,
             'extension' => BaseEntityTypePeer::EXTENSION,
@@ -173,7 +167,6 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'converts_to_landing_id' => BaseEntityTypePeer::CONVERTS_TO_LANDING_ID,
             'width' => BaseEntityTypePeer::WIDTH,
             'height' => BaseEntityTypePeer::HEIGHT,
-            'icon_url' => BaseEntityTypePeer::ICON_URL,
             'power' => BaseEntityTypePeer::POWER,
             'center_position_px' => BaseEntityTypePeer::CENTER_POSITION_PX,
             'parent_entity_type_id' => BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID,
@@ -198,7 +191,6 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         /*
         return [
-            'convertsToLanding' => 'convertsToLanding',
             'entityTypeCosts' => 'entityTypeCosts',
             'resources' => 'resources',
             'entityTypeRecipes' => 'entityTypeRecipes',

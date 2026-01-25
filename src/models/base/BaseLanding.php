@@ -17,7 +17,6 @@ namespace models\base;
  * @property integer $ai_seed
  * @property string $blocks_vision
  *
- * @property \models\EntityType[] $entityTypes
  * @property \models\LandingAdjacency[] $landingAdjacencies
  * @property \models\LandingAdjacency[] $landingAdjacencies0
  * @property \models\BaseLanding[] $landingId2s
@@ -40,8 +39,8 @@ class BaseLanding extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [[BaseLandingPeer::TYPE, BaseLandingPeer::NAME, BaseLandingPeer::FOLDER], 'required'],
             [[BaseLandingPeer::TYPE, BaseLandingPeer::IS_BUILDABLE, BaseLandingPeer::FLUID_TYPE, BaseLandingPeer::BLOCKS_VISION], 'string'],
+            [[BaseLandingPeer::NAME, BaseLandingPeer::FOLDER], 'required'],
             [[BaseLandingPeer::VARIATIONS_COUNT, BaseLandingPeer::AI_SEED], 'integer'],
             [[BaseLandingPeer::NAME], 'string', 'max' => 64],
             [[BaseLandingPeer::FOLDER], 'string', 'max' => 256],
@@ -66,12 +65,6 @@ class BaseLanding extends \yii\db\ActiveRecord
         ];
     }
     /**
-     * @return \models\EntityTypeQuery
-     */
-    public function getEntityTypes() {
-        return $this->hasMany(\models\EntityType::className(), [BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => BaseLandingPeer::LANDING_ID])->inverseOf('convertsToLanding');
-    }
-        /**
      * @return \models\LandingAdjacencyQuery
      */
     public function getLandingAdjacencies() {
@@ -139,7 +132,6 @@ class BaseLanding extends \yii\db\ActiveRecord
     {
         /*
         return [
-            'entityTypes' => 'entityTypes',
             'landingAdjacencies' => 'landingAdjacencies',
             'landingAdjacencies0' => 'landingAdjacencies0',
             'landingId2s' => 'landingId2s',

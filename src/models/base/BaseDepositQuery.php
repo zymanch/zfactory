@@ -26,8 +26,6 @@ use models\DepositQuery;
   * @method DepositQuery orderByResourceAmount($order = Criteria::ASC)
   * @method DepositQuery withDepositType($params = [])
   * @method DepositQuery joinWithDepositType($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
-  * @method DepositQuery withRegion($params = [])
-  * @method DepositQuery joinWithRegion($params = null, $joinType = 'LEFT JOIN', $eagerLoading = true)
  */
 class BaseDepositQuery extends \yii\db\ActiveQuery
 {
