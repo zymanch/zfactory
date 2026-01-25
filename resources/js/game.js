@@ -430,6 +430,13 @@ class ZFactoryGame {
                 console.warn(`[Game] Entity type ${typeId} is undefined`);
                 continue;
             }
+            // Skip multi-atlas entities (conveyor, underground_belt, splitter)
+            // They use orientation-specific atlases loaded separately
+            const multiAtlasTypes = ['conveyor', 'underground_belt', 'splitter'];
+            if (multiAtlasTypes.includes(entityType.type)) {
+                continue;
+            }
+
             const width = entityType.width || 1;
             const height = entityType.height || 1;
 
@@ -485,6 +492,15 @@ class ZFactoryGame {
         this.iconDataUrls = {};
 
         for (const typeId in this.entityTypes) {
+            const entityType = this.entityTypes[typeId];
+
+            // Skip multi-atlas entities (conveyor, underground_belt, splitter)
+            // They use icon_url from backend instead of atlas textures
+            const multiAtlasTypes = ['conveyor', 'underground_belt', 'splitter'];
+            if (multiAtlasTypes.includes(entityType.type)) {
+                continue;
+            }
+
             const textureKey = `entity_${typeId}_normal`;
             const texture = this.textures[textureKey];
 
@@ -495,7 +511,6 @@ class ZFactoryGame {
 
             // Create canvas and render texture to it
             const canvas = document.createElement('canvas');
-            const entityType = this.entityTypes[typeId];
             const width = (entityType.width || 1) * this.config.tileWidth;
             const height = (entityType.height || 1) * this.config.tileHeight;
 
@@ -504,25 +519,28 @@ class ZFactoryGame {
 
             const ctx = canvas.getContext('2d');
 
-            // Get base texture source (Image or Canvas)
-            const source = texture.baseTexture.resource.source;
+            // Use PixiJS renderer to extract pixels from texture (handles sub-textures correctly)
+            try {
+                // Create temporary sprite for extraction
+                const tempSprite = this.graphics.createSprite(texture);
+                tempSprite.width = width;
+                tempSprite.height = height;
 
-            // Validate source before drawing
-            if (!source || !(source instanceof HTMLImageElement || source instanceof HTMLCanvasElement)) {
-                console.warn(`[Game] Invalid source for icon ${typeId}, skipping`);
+                // Extract canvas from sprite using PixiJS renderer
+                const extractedCanvas = this.graphics.app.renderer.extract.canvas(tempSprite);
+
+                // Draw extracted canvas to our canvas
+                ctx.drawImage(extractedCanvas, 0, 0);
+
+                // Convert to data URL and cache
+                this.iconDataUrls[typeId] = canvas.toDataURL('image/png');
+
+                // Cleanup
+                tempSprite.destroy();
+            } catch (error) {
+                console.warn(`[Game] Failed to extract icon for entity ${typeId}:`, error.message);
                 continue;
             }
-
-            // Draw the texture region to canvas
-            const frame = texture.frame;
-            ctx.drawImage(
-                source,
-                frame.x, frame.y, frame.width, frame.height,
-                0, 0, width, height
-            );
-
-            // Convert to data URL and cache
-            this.iconDataUrls[typeId] = canvas.toDataURL('image/png');
         }
 
         console.log(`[Game] Prepared ${Object.keys(this.iconDataUrls).length} icon data URLs from atlases`);

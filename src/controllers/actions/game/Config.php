@@ -346,9 +346,17 @@ class Config extends JsonAction
         }
 
         // Entity atlases (300+)
+        // Skip conveyor/underground_belt/splitter - they use orientation-specific atlases loaded separately
         $entityTypes = $this->getEntityTypes();
         foreach ($entityTypes as $id => $entityType) {
-            $assets["entity_atlas_{$id}"] = $entityType['atlas_url'] . "?v={$v}";
+            $atlases = $entityType['atlases'];
+
+            // Regular entities have 'default' atlas
+            if (isset($atlases['default'])) {
+                $assets["entity_atlas_{$id}"] = $atlases['default'] . "?v={$v}";
+            }
+            // Multi-atlas entities (conveyor, underground_belt, splitter) are skipped
+            // They use orientation-specific atlases loaded separately below
         }
 
         // Deposit sprites (22)
