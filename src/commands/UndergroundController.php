@@ -150,13 +150,105 @@ class UndergroundController extends Controller
     }
 
     /**
-     * Creates entrance sprite (left half + dark semicircle on right)
-     * @param string $srcFile Path to source conveyor sprite
+     * Generates animated underground conveyor sprites from animation.png
+     * Creates entrance and exit sprites with 8-frame animation
+     * Usage: php yii underground/generate-animation
+     */
+    public function actionGenerateAnimation()
+    {
+        $this->stdout("=== Generate Animated Underground Conveyor Sprites ===\n\n", Console::FG_CYAN);
+
+        $conveyorBasePath = $this->entityDir . '/conveyor';
+
+        $types = [
+            ['underground_belt_in', 'conveyor', 'entrance'],
+            ['underground_belt_out', 'conveyor', 'exit'],
+            ['underground_belt_dual_in', 'conveyor_dual', 'entrance'],
+            ['underground_belt_dual_out', 'conveyor_dual', 'exit'],
+            ['underground_belt_fast_in', 'conveyor_fast_dual', 'entrance'],
+            ['underground_belt_fast_out', 'conveyor_fast_dual', 'exit'],
+        ];
+
+        foreach ($types as list($folder, $conveyorFolder, $type)) {
+            $this->stdout("Generating animated {$folder}...\n");
+
+            $srcPath = $conveyorBasePath . '/' . $conveyorFolder;
+            $destPath = $conveyorBasePath . '/' . $folder;
+
+            if (!is_dir($destPath)) {
+                mkdir($destPath, 0755, true);
+                $this->stdout("  Created directory: {$destPath}\n");
+            }
+
+            // Check if animation.png exists
+            $animationFile = $srcPath . '/animation.png';
+            if (!file_exists($animationFile)) {
+                $this->stdout("  Warning: {$animationFile} not found, skipping\n", Console::FG_YELLOW);
+                continue;
+            }
+
+            // Load animation (512×64px = 8 frames)
+            $animation = imagecreatefrompng($animationFile);
+            $animWidth = imagesx($animation);
+            $animHeight = imagesy($animation);
+            $frameCount = 8;
+            $frameWidth = intval($animWidth / $frameCount); // 64px
+
+            $this->stdout("  Source animation: {$animWidth}×{$animHeight}px ({$frameCount} frames)\n");
+
+            // Create result animation
+            $resultAnimation = imagecreatetruecolor($animWidth, $animHeight);
+            imagealphablending($resultAnimation, false);
+            imagesavealpha($resultAnimation, true);
+            $transparent = imagecolorallocatealpha($resultAnimation, 0, 0, 0, 127);
+            imagefill($resultAnimation, 0, 0, $transparent);
+
+            // Process each frame
+            for ($i = 0; $i < $frameCount; $i++) {
+                // Extract frame
+                $frame = imagecreatetruecolor($frameWidth, $animHeight);
+                imagealphablending($frame, false);
+                imagesavealpha($frame, true);
+                imagefill($frame, 0, 0, $transparent);
+                imagecopy($frame, $animation, 0, 0, $i * $frameWidth, 0, $frameWidth, $animHeight);
+
+                // Apply underground transformation
+                if ($type === 'entrance') {
+                    $ugFrame = $this->createEntranceFromImage($frame);
+                } else {
+                    $ugFrame = $this->createExitFromImage($frame);
+                }
+
+                // Copy back to result
+                imagecopy($resultAnimation, $ugFrame, $i * $frameWidth, 0, 0, 0, $frameWidth, $animHeight);
+
+                imagedestroy($frame);
+                imagedestroy($ugFrame);
+            }
+
+            imagedestroy($animation);
+
+            // Save result
+            $destFile = $destPath . '/animation.png';
+            imagepng($resultAnimation, $destFile, 9);
+            imagedestroy($resultAnimation);
+
+            $this->stdout("  ✓ Generated animation.png ({$animWidth}×{$animHeight}px)\n", Console::FG_GREEN);
+        }
+
+        $this->stdout("\n✓ All animated underground conveyors generated\n", Console::FG_GREEN);
+        $this->stdout("\nNext: Regenerate atlases for entity_type_id 812-835\n");
+
+        return 0;
+    }
+
+    /**
+     * Creates entrance sprite from image resource (left half + dark semicircle on right)
+     * @param resource $conveyor GD image resource
      * @return resource Entrance image
      */
-    private function createEntrance($srcFile)
+    private function createEntranceFromImage($conveyor)
     {
-        $conveyor = imagecreatefrompng($srcFile);
         $width = imagesx($conveyor);
         $height = imagesy($conveyor);
 
@@ -192,18 +284,16 @@ class UndergroundController extends Controller
             }
         }
 
-        imagedestroy($conveyor);
         return $result;
     }
 
     /**
-     * Creates exit sprite (dark semicircle on left + right half)
-     * @param string $srcFile Path to source conveyor sprite
+     * Creates exit sprite from image resource (dark semicircle on left + right half)
+     * @param resource $conveyor GD image resource
      * @return resource Exit image
      */
-    private function createExit($srcFile)
+    private function createExitFromImage($conveyor)
     {
-        $conveyor = imagecreatefrompng($srcFile);
         $width = imagesx($conveyor);
         $height = imagesy($conveyor);
 
@@ -239,6 +329,31 @@ class UndergroundController extends Controller
             }
         }
 
+        return $result;
+    }
+
+    /**
+     * Creates entrance sprite from file (left half + dark semicircle on right)
+     * @param string $srcFile Path to source conveyor sprite
+     * @return resource Entrance image
+     */
+    private function createEntrance($srcFile)
+    {
+        $conveyor = imagecreatefrompng($srcFile);
+        $result = $this->createEntranceFromImage($conveyor);
+        imagedestroy($conveyor);
+        return $result;
+    }
+
+    /**
+     * Creates exit sprite from file (dark semicircle on left + right half)
+     * @param string $srcFile Path to source conveyor sprite
+     * @return resource Exit image
+     */
+    private function createExit($srcFile)
+    {
+        $conveyor = imagecreatefrompng($srcFile);
+        $result = $this->createExitFromImage($conveyor);
         imagedestroy($conveyor);
         return $result;
     }

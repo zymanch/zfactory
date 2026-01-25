@@ -18,22 +18,9 @@ export class ConveyorManager {
         // Cached to avoid recalculating on every animation frame
         this.variantCache = new Map();
 
-        // Atlas storage: atlases[orientation][state] = texture
-        this.atlases = {
-            'conveyor': {},
-            'conveyor_up': {},
-            'conveyor_down': {},
-            'conveyor_left': {},
-            // Underground belts (animated)
-            'underground_belt_in': {},
-            'underground_belt_in_down': {},
-            'underground_belt_in_left': {},
-            'underground_belt_in_up': {},
-            'underground_belt_out': {},
-            'underground_belt_out_down': {},
-            'underground_belt_out_left': {},
-            'underground_belt_out_up': {}
-        };
+        // Atlas storage: atlases[folder][state] = texture
+        // Will be populated automatically in loadAtlases()
+        this.atlases = {};
 
         // Conveyor sprite registry: conveyorSprites[entityId] = sprite
         this.conveyorSprites = new Map();
@@ -50,51 +37,59 @@ export class ConveyorManager {
         this.FRAME_DURATION = 100; // milliseconds
         this.FRAME_RATE = 8; // game ticks per frame update
 
-        // Map internal orientation names to manifest keys
-        this.orientationMapping = {
-            'conveyor': 'right',
-            'conveyor_up': 'up',
-            'conveyor_down': 'down',
-            'conveyor_left': 'left',
-            // Underground belts map to themselves (folder name = manifest key)
-            'underground_belt_in': 'underground_belt_in',
-            'underground_belt_in_down': 'underground_belt_in_down',
-            'underground_belt_in_left': 'underground_belt_in_left',
-            'underground_belt_in_up': 'underground_belt_in_up',
-            'underground_belt_out': 'underground_belt_out',
-            'underground_belt_out_down': 'underground_belt_out_down',
-            'underground_belt_out_left': 'underground_belt_out_left',
-            'underground_belt_out_up': 'underground_belt_out_up'
-        };
+        // Map folder names to manifest keys
+        // Will be populated automatically in loadAtlases()
+        this.orientationMapping = {};
     }
 
     /**
-     * Load all conveyor atlases (60 total: 5 states × 12 orientations)
+     * Load all conveyor atlases automatically for all entity_type with type='conveyor'
+     * Dynamically builds atlases and orientationMapping from game.entityTypes
      */
     async loadAtlases() {
-        const orientations = [
-            'conveyor', 'conveyor_up', 'conveyor_down', 'conveyor_left',
-            'underground_belt_in', 'underground_belt_in_down', 'underground_belt_in_left', 'underground_belt_in_up',
-            'underground_belt_out', 'underground_belt_out_down', 'underground_belt_out_left', 'underground_belt_out_up'
-        ];
+        // Collect all unique folders from conveyor entity types
+        const conveyorFolders = new Set();
+
+        Object.values(this.game.entityTypes).forEach(entityType => {
+            if (entityType.type === 'conveyor' && entityType.folder) {
+                conveyorFolders.add(entityType.folder);
+            }
+        });
+
+        // Build orientation mapping (folder -> manifest key)
+        // Base conveyors map to directional names, all others map to themselves
+        const baseMapping = {
+            'conveyor': 'right',
+            'conveyor_up': 'up',
+            'conveyor_down': 'down',
+            'conveyor_left': 'left'
+        };
+
+        conveyorFolders.forEach(folder => {
+            this.orientationMapping[folder] = baseMapping[folder] || folder;
+            this.atlases[folder] = {};
+        });
+
+        // Load textures for all conveyor folders
         const states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
 
-        for (const orientation of orientations) {
-            this.atlases[orientation] = {};
-
+        for (const folder of conveyorFolders) {
             for (const state of states) {
-                // Map internal orientation to manifest key
-                const manifestOrientation = this.orientationMapping[orientation];
-                const textureKey = `conveyor_${state}_${manifestOrientation}`;
+                const manifestKey = this.orientationMapping[folder];
+                const textureKey = `conveyor_${state}_${manifestKey}`;
 
                 const texture = this.game.graphics.getTexture(textureKey);
                 if (texture) {
-                    this.atlases[orientation][state] = texture;
+                    this.atlases[folder][state] = texture;
                 } else {
-                    console.warn(`Texture not found: ${textureKey}`);
+                    // Silent fail - some conveyors may not have atlases yet
+                    // This allows progressive implementation without breaking existing code
+                    console.debug(`[ConveyorManager] Texture not found (expected for non-animated conveyors): ${textureKey}`);
                 }
             }
         }
+
+        console.log(`[ConveyorManager] Loaded atlases for ${conveyorFolders.size} conveyor types`);
     }
 
     /**
@@ -175,7 +170,10 @@ export class ConveyorManager {
         if (!entityType || entityType.type !== 'conveyor') return false;
 
         const folder = entityType.folder;
-        return folder && this.atlases.hasOwnProperty(folder);
+        if (!folder || !this.atlases.hasOwnProperty(folder)) return false;
+
+        // Check if at least one texture is loaded (normal state is required)
+        return this.atlases[folder].normal !== undefined;
     }
 
     // REMOVED: isIncomingConveyor, isOutgoingToNeighbor methods

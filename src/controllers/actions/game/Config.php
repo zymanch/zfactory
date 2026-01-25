@@ -371,27 +371,39 @@ class Config extends JsonAction
             $assets["resource_{$id}"] = "{$resource['icon_url']}?v={$v}";
         }
 
-        // Conveyor atlases (20: 5 states × 4 orientations)
+        // Conveyor atlases - AUTO-LOAD from all entity_type with type='conveyor'
+        // This ensures all splitters, dual-lane, fast variants are automatically included
         $states = ['normal', 'damaged', 'blueprint', 'normal_selected', 'damaged_selected'];
-        $orientations = ['right', 'down', 'left', 'up'];
-        foreach ($states as $state) {
-            foreach ($orientations as $orient) {
-                $key = "conveyor_{$state}_{$orient}";
-                // Fix: folder is 'conveyor_left' not 'left', 'conveyor' for 'right'
-                $folder = ($orient === 'right') ? 'conveyor' : "conveyor_{$orient}";
-                $assets[$key] = "/assets/tiles/entities/conveyor/{$folder}/{$state}_atlas.png?v={$v}";
+
+        // Collect all unique folders from conveyor entity types
+        $conveyorFolders = [];
+        foreach ($entityTypes as $entityType) {
+            if ($entityType['type'] === 'conveyor' && !empty($entityType['folder'])) {
+                $conveyorFolders[] = $entityType['folder'];
             }
         }
+        $conveyorFolders = array_unique($conveyorFolders);
 
-        // Underground belt atlases (40: 5 states × 8 orientations)
-        $undergroundOrientations = [
-            'underground_belt_in', 'underground_belt_in_down', 'underground_belt_in_left', 'underground_belt_in_up',
-            'underground_belt_out', 'underground_belt_out_down', 'underground_belt_out_left', 'underground_belt_out_up'
+        // Build orientation mapping (folder -> manifest key)
+        // Base conveyors map to directional names, all others map to themselves
+        $baseMapping = [
+            'conveyor' => 'right',
+            'conveyor_up' => 'up',
+            'conveyor_down' => 'down',
+            'conveyor_left' => 'left'
         ];
-        foreach ($states as $state) {
-            foreach ($undergroundOrientations as $folder) {
-                $key = "conveyor_{$state}_{$folder}";
-                $assets[$key] = "/assets/tiles/entities/conveyor/{$folder}/{$state}_atlas.png?v={$v}";
+
+        foreach ($conveyorFolders as $folder) {
+            $manifestKey = $baseMapping[$folder] ?? $folder;
+
+            foreach ($states as $state) {
+                $key = "conveyor_{$state}_{$manifestKey}";
+                $atlasPath = "/assets/tiles/entities/conveyor/{$folder}/{$state}_atlas.png";
+
+                // Only add if atlas file exists
+                if (file_exists(Yii::getAlias('@webroot') . $atlasPath)) {
+                    $assets[$key] = "{$atlasPath}?v={$v}";
+                }
             }
         }
 

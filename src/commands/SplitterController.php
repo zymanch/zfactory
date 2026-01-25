@@ -85,6 +85,95 @@ class SplitterController extends Controller
     }
 
     /**
+     * Generates animated splitter sprites from animation.png
+     * Creates Y-shaped splitters with 8-frame animation
+     * Usage: php yii splitter/generate-animation
+     */
+    public function actionGenerateAnimation()
+    {
+        $this->stdout("=== Generate Animated Y-Shaped Splitter Sprites ===\n\n", Console::FG_CYAN);
+
+        $conveyorBasePath = $this->entityDir . '/conveyor';
+
+        $types = [
+            'splitter_normal' => 'conveyor',
+            'splitter_dual' => 'conveyor_dual',
+            'splitter_fast' => 'conveyor_fast_dual',
+        ];
+
+        foreach ($types as $splitterFolder => $conveyorFolder) {
+            $this->stdout("Generating animated {$splitterFolder}...\n");
+
+            $srcPath = $conveyorBasePath . '/' . $conveyorFolder;
+            $destPath = $conveyorBasePath . '/' . $splitterFolder;
+
+            if (!is_dir($destPath)) {
+                mkdir($destPath, 0755, true);
+                $this->stdout("  Created directory: {$destPath}\n");
+            }
+
+            // Check if animation.png exists
+            $animationFile = $srcPath . '/animation.png';
+            if (!file_exists($animationFile)) {
+                $this->stdout("  Warning: {$animationFile} not found, skipping\n", Console::FG_YELLOW);
+                continue;
+            }
+
+            // Load animation (512×64px = 8 frames)
+            $animation = imagecreatefrompng($animationFile);
+            $animWidth = imagesx($animation);
+            $animHeight = imagesy($animation);
+            $frameCount = 8;
+            $frameWidth = intval($animWidth / $frameCount); // 64px
+
+            $this->stdout("  Source animation: {$animWidth}×{$animHeight}px ({$frameCount} frames)\n");
+
+            // Create result animation
+            $resultAnimation = imagecreatetruecolor($animWidth, $animHeight);
+            imagealphablending($resultAnimation, false);
+            imagesavealpha($resultAnimation, true);
+            $transparent = imagecolorallocatealpha($resultAnimation, 0, 0, 0, 127);
+            imagefill($resultAnimation, 0, 0, $transparent);
+
+            // Process each frame
+            for ($i = 0; $i < $frameCount; $i++) {
+                // Extract frame
+                $frame = imagecreatetruecolor($frameWidth, $animHeight);
+                imagealphablending($frame, false);
+                imagesavealpha($frame, true);
+                imagefill($frame, 0, 0, $transparent);
+                imagecopy($frame, $animation, 0, 0, $i * $frameWidth, 0, $frameWidth, $animHeight);
+
+                // Apply Y-shaped transformation
+                $yFrame = $this->createYShapedFromImage($frame);
+
+                // Copy back to result
+                imagecopy($resultAnimation, $yFrame, $i * $frameWidth, 0, 0, 0, $frameWidth, $animHeight);
+
+                imagedestroy($frame);
+                imagedestroy($yFrame);
+            }
+
+            imagedestroy($animation);
+
+            // Save result
+            $destFile = $destPath . '/animation.png';
+            imagepng($resultAnimation, $destFile, 9);
+            imagedestroy($resultAnimation);
+
+            $this->stdout("  ✓ Generated animation.png ({$animWidth}×{$animHeight}px)\n", Console::FG_GREEN);
+        }
+
+        $this->stdout("\n✓ All animated splitters generated\n", Console::FG_GREEN);
+        $this->stdout("\nNext steps:\n");
+        $this->stdout("1. php yii atlas/generate --entity_type_id=800  # splitter_normal\n");
+        $this->stdout("2. php yii atlas/generate --entity_type_id=804  # splitter_dual\n");
+        $this->stdout("3. php yii atlas/generate --entity_type_id=808  # splitter_fast\n");
+
+        return 0;
+    }
+
+    /**
      * Rotates splitter sprites for all orientations
      * Usage: php yii splitter/rotate
      */
@@ -147,14 +236,13 @@ class SplitterController extends Controller
     }
 
     /**
-     * Creates splitter from conveyor sprite
+     * Creates splitter from conveyor image resource
      * Takes full conveyor (input left, output right) and adds top/bottom outputs
-     * @param string $srcFile Path to source conveyor sprite
+     * @param resource $conveyor GD image resource
      * @return resource Splitter image with 3 outputs
      */
-    private function createYShaped($srcFile)
+    private function createYShapedFromImage($conveyor)
     {
-        $conveyor = imagecreatefrompng($srcFile);
         $width = imagesx($conveyor);
         $height = imagesy($conveyor);
 
@@ -162,6 +250,8 @@ class SplitterController extends Controller
         $result = imagecreatetruecolor($width, $height);
         imagealphablending($result, false);
         imagesavealpha($result, true);
+        $transparent = imagecolorallocatealpha($result, 0, 0, 0, 127);
+        imagefill($result, 0, 0, $transparent);
         imagecopy($result, $conveyor, 0, 0, 0, 0, $width, $height);
 
         // Extract right half (output side) for additional outputs
@@ -169,10 +259,8 @@ class SplitterController extends Controller
         $rightHalf = imagecreatetruecolor($halfWidth, $height);
         imagealphablending($rightHalf, false);
         imagesavealpha($rightHalf, true);
+        imagefill($rightHalf, 0, 0, $transparent);
         imagecopy($rightHalf, $conveyor, 0, 0, $halfWidth, 0, $halfWidth, $height);
-
-        // Create transparent color for rotation
-        $transparent = imagecolorallocatealpha($rightHalf, 0, 0, 0, 127);
 
         // Rotate right half for top output (-90° = clockwise)
         $topOutput = imagerotate($rightHalf, -90, $transparent);
@@ -188,11 +276,24 @@ class SplitterController extends Controller
         $this->overlayOnTransparent($result, $topOutput, 0, 0);
         $this->overlayOnTransparent($result, $bottomOutput, 0, $height - imagesy($bottomOutput));
 
-        imagedestroy($conveyor);
         imagedestroy($rightHalf);
         imagedestroy($topOutput);
         imagedestroy($bottomOutput);
 
+        return $result;
+    }
+
+    /**
+     * Creates splitter from conveyor sprite file
+     * Takes full conveyor (input left, output right) and adds top/bottom outputs
+     * @param string $srcFile Path to source conveyor sprite
+     * @return resource Splitter image with 3 outputs
+     */
+    private function createYShaped($srcFile)
+    {
+        $conveyor = imagecreatefrompng($srcFile);
+        $result = $this->createYShapedFromImage($conveyor);
+        imagedestroy($conveyor);
         return $result;
     }
 
