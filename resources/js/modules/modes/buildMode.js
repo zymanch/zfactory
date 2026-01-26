@@ -165,8 +165,26 @@ export class BuildMode extends GameModeBase {
         const entityType = this.game.entityTypes[this.entityTypeId];
         if (!entityType) return;
 
-        const textureKey = `entity_${this.entityTypeId}_blueprint`;
-        const texture = this.game.textures[textureKey];
+        // Special handling for manipulators (use ManipulatorLayerManager)
+        let texture;
+        if (entityType.type === 'manipulator') {
+            texture = this.game.manipulatorLayerManager?.getFrameTexture(
+                this.entityTypeId,
+                entityType.center_frame_index || 0,
+                'blueprint'
+            );
+
+            // Debug: log texture retrieval
+            if (!texture) {
+                console.warn(`[BuildMode] No texture for manipulator ${this.entityTypeId} (${entityType.name}, orientation=${entityType.orientation})`);
+            } else {
+                console.log(`[BuildMode] Got texture for manipulator ${this.entityTypeId}: ${texture.width}×${texture.height}`);
+            }
+        } else {
+            const textureKey = `entity_${this.entityTypeId}_blueprint`;
+            texture = this.game.textures[textureKey];
+        }
+
         if (!texture) return;
 
         this.previewSprite = this.game.graphics.createSprite(texture, {
@@ -252,7 +270,22 @@ export class BuildMode extends GameModeBase {
         this.currentTile = tile;
 
         const { tileWidth, tileHeight } = this.game.config;
-        const pos = tileToWorld(tile.x, tile.y, tileWidth, tileHeight);
+        let pos = tileToWorld(tile.x, tile.y, tileWidth, tileHeight);
+
+        // Apply offset for manipulators with overflow (center sprite on base tile)
+        const entityType = this.game.entityTypes[this.entityTypeId];
+        if (entityType && entityType.type === 'manipulator') {
+            const orientation = entityType.orientation || 'right';
+            const widthOverflow = entityType.width_overflow || 0;
+            const heightOverflow = entityType.height_overflow || 0;
+
+            // Offset sprite so base tile is centered in the sprite
+            if (orientation === 'right' || orientation === 'left') {
+                pos.x -= (widthOverflow / 2) * tileWidth;
+            } else {  // up or down
+                pos.y -= (heightOverflow / 2) * tileHeight;
+            }
+        }
 
         this.previewSprite.x = pos.x;
         this.previewSprite.y = pos.y;
@@ -476,6 +509,18 @@ export class BuildMode extends GameModeBase {
 
                 this.game.renderEntities([data.entity]);
                 this.handleEyeEntityPlacement(data.entity);
+
+                // Register manipulator in resource transport system
+                if (this.game.resourceTransport) {
+                    const entityType = this.game.entityTypes[data.entity.entity_type_id];
+                    if (entityType && entityType.type === 'manipulator') {
+                        const key = `entity_${data.entity.entity_id}`;
+                        const entity = this.game.entityData.get(key);
+                        if (entity) {
+                            this.game.resourceTransport.onEntityAdded(entity);
+                        }
+                    }
+                }
 
                 // Update conveyor connections if conveyor was placed
                 if (this.game.conveyorManager) {

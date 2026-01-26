@@ -131,6 +131,7 @@ composer run ar         # Generate models
 | **construction-systems** | Строительство и прогресс | docs/agents/construction.md |
 | **js-test-writer** | JavaScript тестирование | Vitest setup, mocking patterns |
 | **maria** | Database optimization | Schema design, query optimization |
+| **resource-manager** | Управление ресурсами игрока | Adding, checking, clearing resources in storages |
 
 ### What Agents Contain
 
@@ -196,3 +197,4 @@ Question: Do I need documentation?
 | "Refactor API structure" | ⚠️ Read common docs | docs/common/ARCHITECTURE.md |
 | "Fix bug in fog of war" | 📖 **fog-systems agent** | docs/agents/fog-of-war.md (auto) |
 | "Optimize all database queries" | 📖 **maria** + common docs | docs/common/DATABASE.md |
+| "Add 1000 of each resource for testing" | ✅ **resource-manager only** | None (agent has all commands) |

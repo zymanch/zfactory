@@ -183,7 +183,9 @@ Defines types of entities that can be placed on the map.
 | extension            | VARCHAR(4) DEFAULT 'svg'                                                          | File extension (svg, jpg, png)        |
 | max_durability       | INT UNSIGNED                                                                      | Maximum durability (health)           |
 | width                | TINYINT UNSIGNED DEFAULT 1                                                        | Entity width in tiles                 |
+| width_overflow       | INT DEFAULT 0                                                                     | Overflow area width for manipulators (in tiles) |
 | height               | TINYINT UNSIGNED DEFAULT 1                                                        | Entity height in tiles                |
+| height_overflow      | INT DEFAULT 0                                                                     | Overflow area height for manipulators (in tiles) |
 | icon_url             | VARCHAR(256) NULL                                                                 | 64x64 icon for UI panels              |
 | power                | INT UNSIGNED DEFAULT 1                                                            | Visibility radius for eye type        |
 | parent_entity_type_id| INT UNSIGNED NULL                                                                 | Parent entity for orientation variants|
@@ -629,6 +631,20 @@ Links entity types to available recipes.
 - Simple rendering: `offsetX = position_px` (no subtraction needed)
 - Intuitive: 0 = always center
 - No redundant fields: same `position_px` for conveyors and manipulators
+
+**NEW (2026-01): Manipulator Overflow System**
+- `width_overflow` and `height_overflow` определяют overflow область для анимации манипуляторов
+- **Overflow area**: дополнительное пространство для отрисовки спрайта за пределами базового 1×1 тайла
+- **Animation frames**: количество кадров = (totalDimension × 4) + 1
+  - Short right/left (width_overflow=2): total_width=3, frames=13
+  - Long right/left (width_overflow=4): total_width=5, frames=21
+  - Short up/down (height_overflow=2): total_height=3, frames=13
+  - Long up/down (height_overflow=4): total_height=5, frames=21
+- **Holder position storage**: позиция держателя манипулятора (ticks) НЕ хранится в отдельной колонке
+  - Если ресурс существует → `entity_resource.position_px` хранит ticks (0-30)
+  - Если ресурса нет → позиция не сохраняется, при загрузке ticks = maxTicks (готов взять)
+- **Frame calculation**: frameIndex = round(position_px × 4 / 64)
+- **Holder position formula**: holderPositionPx = ±(ticks / 30) × (overflow/2 × 64)
 
 ## SQL Files
 

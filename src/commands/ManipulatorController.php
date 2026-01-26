@@ -2,6 +2,7 @@
 
 namespace commands;
 
+use models\EntityType;
 use Yii;
 use yii\console\Controller;
 use yii\helpers\Console;
@@ -182,14 +183,14 @@ class ManipulatorController extends Controller
                 $b = $rgba & 0xFF;
 
                 // Convert RGB to HSL
-                list($h, $s, $l) = $this->rgbToHsl($r, $g, $b);
+                [$h, $s, $l] = $this->rgbToHsl($r, $g, $b);
 
                 // Shift hue
                 $h = fmod($h + $hueShift, 360);
                 if ($h < 0) $h += 360;
 
                 // Convert back to RGB
-                list($r, $g, $b) = $this->hslToRgb($h, $s, $l);
+                [$r, $g, $b] = $this->hslToRgb($h, $s, $l);
 
                 $color = imagecolorallocatealpha($result, $r, $g, $b, $alpha);
                 imagesetpixel($result, $x, $y, $color);
@@ -261,5 +262,216 @@ class ManipulatorController extends Controller
         if ($t < 1/2) return $q;
         if ($t < 2/3) return $p + ($q - $p) * (2/3 - $t) * 6;
         return $p;
+    }
+
+    /**
+     * Generates animated sprites for manipulators
+     * Creates frame-by-frame animation atlas for each manipulator type
+     *
+     * Usage: php yii manipulator/generate-animated
+     */
+    public function actionGenerateAnimated()
+    {
+        $this->stdout("=== Generate Animated Manipulator Sprites ===\n\n", Console::FG_CYAN);
+
+        // Load all manipulator types from database
+        $manipulators = \models\EntityType::find()
+            ->where(['type' => 'manipulator'])
+            ->all();
+
+        if (empty($manipulators)) {
+            $this->stdout("No manipulators found in database\n", Console::FG_YELLOW);
+            return 1;
+        }
+
+        $this->stdout("Found " . count($manipulators) . " manipulator types\n\n");
+
+        foreach ($manipulators as $manipulator) {
+            $this->generateManipulatorAnimation($manipulator);
+        }
+
+        $this->stdout("\n✓ All manipulator animations generated\n", Console::FG_GREEN);
+        return 0;
+    }
+
+    /**
+     * Generate animation atlas for a single manipulator type
+     */
+    private function generateManipulatorAnimation(EntityType  $manipulator)
+    {
+        $folder = $manipulator->folder;
+        $orientation = $manipulator->orientation ?? 'right';
+        $subtype = $manipulator->subtype ?? 'short';
+
+        $this->stdout("Generating {$folder} (subtype={$subtype}, orientation={$orientation})...\n");
+
+        // Determine base color by subtype
+        $baseColor = $this->getBaseColorForSubtype($subtype);
+
+        // Determine dimensions
+        $totalWidth = $manipulator->getTotalWidth();
+        $totalHeight = $manipulator->getTotalHeight();
+        $frameCount = $manipulator->getFrameCount();
+
+        $this->stdout("  Dimensions: {$totalWidth}x{$totalHeight} tiles, {$frameCount} frames\n");
+
+        // Create atlas (all frames horizontally)
+        $tileSize = 64;
+        $atlasWidth = $frameCount * $totalWidth * $tileSize;
+        $atlasHeight = $totalHeight * $tileSize;
+
+        $atlas = imagecreatetruecolor($atlasWidth, $atlasHeight);
+        imagealphablending($atlas, false);
+        imagesavealpha($atlas, true);
+
+        // Fill with transparent background
+        $transparent = imagecolorallocatealpha($atlas, 0, 0, 0, 127);
+        imagefill($atlas, 0, 0, $transparent);
+
+        // Draw each frame
+        for ($frameIndex = 0; $frameIndex < $frameCount; $frameIndex++) {
+            $frameX = $frameIndex * $totalWidth * $tileSize;
+            $this->drawAnimationFrame($atlas, $frameX, $frameIndex, $frameCount, $baseColor, $manipulator, $totalWidth, $totalHeight, $tileSize);
+        }
+
+        // Save atlas
+        $destPath = $this->entityDir . '/manipulator/' . $folder;
+        if (!is_dir($destPath)) {
+            mkdir($destPath, 0755, true);
+        }
+
+        $atlasFile = $destPath . '/animation.png';
+        imagepng($atlas, $atlasFile, 9);
+        imagedestroy($atlas);
+
+        $this->stdout("  ✓ Saved: {$atlasFile}\n");
+    }
+
+    /**
+     * Draw a single animation frame
+     */
+    private function drawAnimationFrame($atlas, $frameX, $frameIndex, $totalFrames, $baseColor, $manipulator, $totalWidth, $totalHeight, $tileSize)
+    {
+        $orientation = $manipulator->orientation ?? 'right';
+
+        // Calculate holder position for this frame
+        // maxDistance = overflow/2 × 64px (not totalWidth!)
+        $overflow = in_array($orientation, ['right', 'left'])
+            ? ($manipulator->width_overflow ?? 0)
+            : ($manipulator->height_overflow ?? 0);
+        $maxDistance = ($overflow / 2) * $tileSize;
+
+        // Holder moves from -maxDistance (frame 0) to +maxDistance (last frame)
+        $progress = ($frameIndex / ($totalFrames - 1));  // 0 to 1
+        $holderDistance = -$maxDistance + ($progress * 2 * $maxDistance);  // -maxDistance to +maxDistance
+
+        // Center of the manipulator base (ALWAYS in the center of the frame!)
+        $centerX = $frameX + ($totalWidth * $tileSize) / 2;
+        $centerY = ($totalHeight * $tileSize) / 2;
+
+        // Holder position based on orientation
+        if ($orientation === 'right') {
+            $holderX = $centerX + $holderDistance;
+            $holderY = $centerY;
+        } elseif ($orientation === 'left') {
+            $holderX = $centerX - $holderDistance;
+            $holderY = $centerY;
+        } elseif ($orientation === 'down') {
+            $holderX = $centerX;
+            $holderY = $centerY + $holderDistance;
+        } else { // up
+            $holderX = $centerX;
+            $holderY = $centerY - $holderDistance;
+        }
+
+        // Draw base (hemisphere at center)
+        $this->drawBase($atlas, $centerX, $centerY, $baseColor);
+
+        // Draw arm (line from center to holder)
+        $this->drawArm($atlas, $centerX, $centerY, $holderX, $holderY, $baseColor);
+
+        // Draw holder (circle at holder position)
+        $this->drawHolder($atlas, $holderX, $holderY, $baseColor);
+    }
+
+    /**
+     * Draw manipulator base (hemisphere with gradient)
+     */
+    private function drawBase($img, $centerX, $centerY, $baseColor)
+    {
+        $radius = 25;
+
+        // Create radial gradient effect
+        for ($r = $radius; $r >= 0; $r--) {
+            $intensity = 1 - ($r / $radius) * 0.3; // Lighter in center
+            $color = $this->adjustBrightness($baseColor, $intensity);
+
+            $alpha = 20; // Semi-transparent
+            $gdColor = imagecolorallocatealpha($img, $color[0], $color[1], $color[2], $alpha);
+
+            imagefilledellipse($img, $centerX, $centerY, $r * 2, $r * 2, $gdColor);
+        }
+    }
+
+    /**
+     * Draw manipulator arm (thick line)
+     */
+    private function drawArm($img, $fromX, $fromY, $toX, $toY, $baseColor)
+    {
+        $thickness = 8;
+        $darkColor = $this->adjustBrightness($baseColor, 0.7);
+        $gdColor = imagecolorallocatealpha($img, $darkColor[0], $darkColor[1], $darkColor[2], 0);
+
+        imagesetthickness($img, $thickness);
+        imageline($img, $fromX, $fromY, $toX, $toY, $gdColor);
+        imagesetthickness($img, 1);
+    }
+
+    /**
+     * Draw resource holder (circle with border)
+     */
+    private function drawHolder($img, $x, $y, $baseColor)
+    {
+        $radius = 16;
+
+        // Main circle
+        $gdColor = imagecolorallocatealpha($img, $baseColor[0], $baseColor[1], $baseColor[2], 0);
+        imagefilledellipse($img, $x, $y, $radius * 2, $radius * 2, $gdColor);
+
+        // Border
+        $darkColor = $this->adjustBrightness($baseColor, 0.5);
+        $borderColor = imagecolorallocatealpha($img, $darkColor[0], $darkColor[1], $darkColor[2], 0);
+        imagesetthickness($img, 2);
+        imageellipse($img, $x, $y, $radius * 2, $radius * 2, $borderColor);
+        imagesetthickness($img, 1);
+    }
+
+    /**
+     * Get base color RGB for subtype
+     */
+    private function getBaseColorForSubtype($subtype)
+    {
+        switch ($subtype) {
+            case 'short':
+                return [255, 107, 53]; // #FF6B35 - Orange
+            case 'long':
+                return [78, 205, 196]; // #4ECDC4 - Teal
+            case 'none':
+            default:
+                // For filtered/counting, use short as base and apply hue shift later
+                return [255, 107, 53];
+        }
+    }
+
+    /**
+     * Adjust color brightness
+     */
+    private function adjustBrightness($rgb, $factor)
+    {
+        return [
+            (int)min(255, $rgb[0] * $factor),
+            (int)min(255, $rgb[1] * $factor),
+            (int)min(255, $rgb[2] * $factor),
+        ];
     }
 }

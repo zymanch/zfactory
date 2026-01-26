@@ -31,6 +31,7 @@ import { ElectricitySystemManager } from './modules/electricity/ElectricitySyste
 import { ElectrificationLayerManager } from './modules/electricity/ElectrificationLayerManager.js';
 import { NoPowerIndicator } from './modules/electricity/NoPowerIndicator.js';
 import { ShakeManager } from './modules/shake/ShakeManager.js';
+import { ManipulatorLayerManager } from './modules/rendering/ManipulatorLayerManager.js';
 import { PerformanceMonitor } from './core/PerformanceMonitor.js';
 import { SPRITE_STATES, SPRITE_STATES_ORIGINAL, CONSTRUCTION_FRAMES, VIEWPORT_RELOAD_INTERVAL } from './modules/constants.js';
 import { getCSRFToken } from './modules/utils.js';
@@ -123,6 +124,7 @@ class ZFactoryGame {
         this.electricityManager = null;
         this.electrificationLayer = null;
         this.noPowerIndicator = null;
+        this.manipulatorLayerManager = null;
         this.constructionManager = null;
         // this.shakeManager = null;  // Disabled for now
 
@@ -234,6 +236,7 @@ class ZFactoryGame {
         this.electrificationLayer = new ElectrificationLayerManager(this);
         this.noPowerIndicator = new NoPowerIndicator(this);
         this.shakeManager = new ShakeManager(this);
+        this.manipulatorLayerManager = new ManipulatorLayerManager(this);
     }
 
     /**
@@ -331,6 +334,9 @@ class ZFactoryGame {
 
         // Initialize shake manager
         this.shakeManager.init();
+
+        // Initialize manipulator layer manager
+        await this.manipulatorLayerManager.init();
 
         // Create menu button
         this.createMenuButton();
@@ -758,6 +764,41 @@ class ZFactoryGame {
                     this.loadedEntities.set(key, sprite);
                     this.conveyorManager.registerConveyor(entity.entity_id, sprite);
                 }
+            } else if (entityType && entityType.type === 'manipulator') {
+                // Handle manipulators with animation - use appropriate state texture
+                let state, frameIndex;
+
+                if (entity.state === 'blueprint') {
+                    const progress = parseInt(entity.construction_progress) || 0;
+
+                    if (progress < 100) {
+                        // Use construction frames (progress-based)
+                        state = 'construction';
+                        const frameProgress = Math.ceil(progress / 10) * 10;
+                        const clampedProgress = Math.max(10, Math.min(90, frameProgress));
+                        frameIndex = (clampedProgress / 10) - 1; // 0-8
+                    } else {
+                        // Completed construction - use blueprint state
+                        state = 'blueprint';
+                        frameIndex = entityType.center_frame_index || 0;
+                    }
+                } else {
+                    // Normal state
+                    state = 'normal';
+                    frameIndex = entityType.center_frame_index || 0;
+                }
+
+                const texture = this.manipulatorLayerManager?.getFrameTexture(
+                    entity.entity_type_id,
+                    frameIndex,
+                    state
+                );
+
+                if (texture) {
+                    const sprite = this.createEntitySprite(entity, texture, isVisible);
+                    this.entityLayer.addChild(sprite);
+                    this.loadedEntities.set(key, sprite);
+                }
             } else {
                 // Handle other entities normally
                 const textureKey = this.getEntityTextureKey(entity, false);
@@ -792,12 +833,34 @@ class ZFactoryGame {
 
         // Convert tile coordinates to pixel coordinates
         const { tileWidth, tileHeight } = this.config;
-        const pixelX = parseInt(entity.x) * tileWidth;
-        const pixelY = parseInt(entity.y) * tileHeight;
+        let pixelX = parseInt(entity.x) * tileWidth;
+        let pixelY = parseInt(entity.y) * tileHeight;
+
+        // Handle manipulators with overflow - center the sprite on base position
+        const entityType = this.entityTypes[entity.entity_type_id];
+        if (entityType && entityType.type === 'manipulator') {
+            const orientation = entityType.orientation || 'right';
+            const widthOverflow = entityType.width_overflow || 0;
+            const heightOverflow = entityType.height_overflow || 0;
+
+            // Offset sprite so base tile is centered in the sprite
+            if (orientation === 'right' || orientation === 'left') {
+                pixelX -= (widthOverflow / 2) * tileWidth;
+            } else {  // up or down
+                pixelY -= (heightOverflow / 2) * tileHeight;
+            }
+        }
 
         sprite.x = pixelX;
         sprite.y = pixelY;
-        sprite.zIndex = pixelY;
+
+        // Manipulators need higher zIndex to render above conveyors
+        if (entityType && entityType.type === 'manipulator') {
+            sprite.zIndex = pixelY + 0.5;  // Above other entities, below resources
+        } else {
+            sprite.zIndex = pixelY;
+        }
+
         sprite.visible = isVisible;
         sprite.eventMode = isVisible ? 'static' : 'none';
         sprite.cursor = isVisible ? 'pointer' : 'default';
@@ -1100,6 +1163,11 @@ class ZFactoryGame {
                 if (this.electricityManager && entityType && entityType.type === 'electricity') {
                     this.electricityManager.invalidateNetworkCache();
                 }
+
+                // Remove debug text for manipulators
+                if (this.manipulatorLayerManager && entityType && entityType.type === 'manipulator') {
+                    this.manipulatorLayerManager.removeDebugText(entity.entity_id);
+                }
             } else {
                 console.error('Failed to delete entity:', data.error);
             }
@@ -1156,6 +1224,13 @@ class ZFactoryGame {
             this.perfMonitor.start('resourceRenderer');
             this.resourceRenderer.render();
             this.perfMonitor.end('resourceRenderer');
+
+            // Update manipulator animations
+            this.perfMonitor.start('manipulatorLayerManager');
+            if (this.manipulatorLayerManager) {
+                this.manipulatorLayerManager.render();
+            }
+            this.perfMonitor.end('manipulatorLayerManager');
 
             // Update cloud positions (every frame)
             this.perfMonitor.start('cloudManager');

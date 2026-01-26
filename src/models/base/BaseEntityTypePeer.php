@@ -13,7 +13,9 @@ class BaseEntityTypePeer  {
     const MAX_DURABILITY = "max_durability";
     const CONVERTS_TO_LANDING_ID = "converts_to_landing_id";
     const WIDTH = "width";
+    const WIDTH_OVERFLOW = "width_overflow";
     const HEIGHT = "height";
+    const HEIGHT_OVERFLOW = "height_overflow";
     const POWER = "power";
     const CENTER_POSITION_PX = "center_position_px";
     const PARENT_ENTITY_TYPE_ID = "parent_entity_type_id";
@@ -27,5 +29,7 @@ class BaseEntityTypePeer  {
     const RESOURCE_TYPES = "resource_types";
     const INPUT_CONNECTIONS = "input_connections";
     const OUTPUT_CONNECTIONS = "output_connections";
+    const FRAME_COUNT = "frame_count";
+    const CENTER_FRAME_INDEX = "center_frame_index";
 
 }

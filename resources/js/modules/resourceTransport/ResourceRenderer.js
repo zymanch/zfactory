@@ -191,40 +191,29 @@ export class ResourceRenderer {
             sprite.texture = texture;
         }
 
-        // Calculate arm position
+        // NEW: Use holder position from tick-based system
         const { tileWidth, tileHeight } = this.game.config;
+        const holderPx = state.getHolderPositionPx();
 
         // Manipulator center
         const manipX = state.x * tileWidth + tileWidth / 2;
         const manipY = state.y * tileHeight + tileHeight / 2;
 
-        // Source and target positions
-        const sourcePos = state.getSourcePosition();
-        const targetPos = state.getTargetPosition();
-
-        const sourceX = sourcePos.x * tileWidth + tileWidth / 2;
-        const sourceY = sourcePos.y * tileHeight + tileHeight / 2;
-        const targetX = targetPos.x * tileWidth + tileWidth / 2;
-        const targetY = targetPos.y * tileHeight + tileHeight / 2;
-
-        // position_px is centered: -centerPx (source) to 0 (manipulator) to +centerPx (target)
-        const centerPx = state.centerPositionPx;
-        let resourceX, resourceY;
-
-        if (state.position_px <= 0) {
-            // Moving from source (-centerPx) to center (0)
-            const t = (state.position_px + centerPx) / centerPx;  // 0 to 1
-            resourceX = sourceX + (manipX - sourceX) * t;
-            resourceY = sourceY + (manipY - sourceY) * t;
-        } else {
-            // Moving from center (0) to target (+centerPx)
-            const t = state.position_px / centerPx;  // 0 to 1
-            resourceX = manipX + (targetX - manipX) * t;
-            resourceY = manipY + (targetY - manipY) * t;
+        // Position resource at holder position based on orientation
+        if (state.orientation === 'right') {
+            sprite.x = manipX + holderPx;
+            sprite.y = manipY;
+        } else if (state.orientation === 'left') {
+            sprite.x = manipX - holderPx;
+            sprite.y = manipY;
+        } else if (state.orientation === 'down') {
+            sprite.x = manipX;
+            sprite.y = manipY + holderPx;
+        } else if (state.orientation === 'up') {
+            sprite.x = manipX;
+            sprite.y = manipY - holderPx;
         }
 
-        sprite.x = resourceX;
-        sprite.y = resourceY;
         sprite.zIndex = manipY + tileHeight * 2;  // Above manipulator
     }
 

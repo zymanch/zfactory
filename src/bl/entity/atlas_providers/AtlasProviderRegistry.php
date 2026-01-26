@@ -8,6 +8,7 @@ use bl\entity\atlas_providers\conveyor\ConveyorAtlasProvider;
 use bl\entity\atlas_providers\conveyor\UndergroundBeltAtlasProvider;
 use bl\entity\atlas_providers\conveyor\SplitterAtlasProvider;
 use bl\entity\atlas_providers\pipe\PipeAtlasProvider;
+use bl\entity\atlas_providers\manipulator\ManipulatorAtlasProvider;
 use models\EntityType;
 
 /**
@@ -60,11 +61,12 @@ class AtlasProviderRegistry
         self::register('mining', 'none', BuildingAtlasProvider::class);
         self::register('eye', 'none', BuildingAtlasProvider::class);
 
-        // Manipulator types (use building provider for now)
-        self::register('manipulator', 'short', BuildingAtlasProvider::class);
-        self::register('manipulator', 'long', BuildingAtlasProvider::class);
-        self::register('manipulator', 'filtered', BuildingAtlasProvider::class);
-        self::register('manipulator', 'counting', BuildingAtlasProvider::class);
+        // Manipulator types
+        self::register('manipulator', 'short', ManipulatorAtlasProvider::class);
+        self::register('manipulator', 'long', ManipulatorAtlasProvider::class);
+        self::register('manipulator', 'filtered1', ManipulatorAtlasProvider::class);
+        self::register('manipulator', 'filtered5', ManipulatorAtlasProvider::class);
+        self::register('manipulator', 'counting', ManipulatorAtlasProvider::class);
 
         // Electricity types (when implemented, can use custom provider)
         // For now, use building provider

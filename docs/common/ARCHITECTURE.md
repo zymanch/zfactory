@@ -251,6 +251,8 @@ Stage
     ├── electrificationLayer (powered areas, zIndex: 1.5)
     ├── depositLayer (natural resources, zIndex: 1.6)
     ├── entityLayer (buildings, zIndex: 2)
+    ├── manipulatorLayer (animated manipulators, zIndex: 2.5)
+    ├── resourceLayer (resources on conveyors/manipulators, zIndex: 3)
     └── fogLayer (fog of war overlay, zIndex: 9999)
 ```
 
@@ -259,6 +261,8 @@ Stage
 - **electrificationLayer**: Blue glowing dots showing powered areas
 - **depositLayer**: Natural resources (trees, rocks, ores) - simplified rendering
 - **entityLayer**: Player-built structures and machines
+- **manipulatorLayer**: Animated manipulator sprites with overflow areas (NEW 2026-01)
+- **resourceLayer**: Resources being transported on conveyors and held by manipulators
 - **fogLayer**: Visibility mask based on Crystal Tower positions
 
 ### Rendering Pipeline

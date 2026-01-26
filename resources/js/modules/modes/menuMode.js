@@ -269,7 +269,7 @@ export class MenuMode extends GameModeBase {
 
         const fpsSlider = document.createElement('input');
         fpsSlider.type = 'range';
-        fpsSlider.min = '30';
+        fpsSlider.min = '5';
         fpsSlider.max = '120';
         fpsSlider.value = currentFPS.toString();
         fpsSlider.style.cssText = 'width: 100%; cursor: pointer;';
@@ -299,6 +299,34 @@ export class MenuMode extends GameModeBase {
         autoSaveText.style.cssText = 'color: #888; font-size: 14px;';
         autoSaveContainer.appendChild(autoSaveText);
         this.settingsWindow.appendChild(autoSaveContainer);
+
+        // Logic Tick Indicator (Debug)
+        const indicatorContainer = document.createElement('div');
+        indicatorContainer.style.cssText = `
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+        `;
+
+        const indicatorLabel = document.createElement('label');
+        indicatorLabel.style.cssText = 'color: #ccc; font-size: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer;';
+
+        const indicatorCheckbox = document.createElement('input');
+        indicatorCheckbox.type = 'checkbox';
+        indicatorCheckbox.checked = this.game.resourceTransport?.logicTickIndicator?.style.display === 'flex';
+        indicatorCheckbox.style.cssText = 'cursor: pointer;';
+
+        indicatorLabel.appendChild(indicatorCheckbox);
+        indicatorLabel.appendChild(document.createTextNode('🔍 Show Logic Tick Indicator (Debug)'));
+
+        indicatorCheckbox.addEventListener('change', (e) => {
+            this.tempShowIndicator = e.target.checked;
+        });
+
+        this.tempShowIndicator = indicatorCheckbox.checked;
+        indicatorContainer.appendChild(indicatorLabel);
+        this.settingsWindow.appendChild(indicatorContainer);
 
         // Кнопки Apply и Cancel
         const buttonsContainer = document.createElement('div');
@@ -349,6 +377,12 @@ export class MenuMode extends GameModeBase {
         if (this.tempFPS && this.game.graphics?.getTicker()) {
             this.game.graphics.getTicker().maxFPS = this.tempFPS;
             console.log('[MenuMode] Applied FPS:', this.tempFPS);
+        }
+
+        // Применить Logic Tick Indicator
+        if (this.tempShowIndicator !== undefined && this.game.resourceTransport) {
+            this.game.resourceTransport.setLogicTickIndicatorVisible(this.tempShowIndicator);
+            console.log('[MenuMode] Logic Tick Indicator:', this.tempShowIndicator ? 'shown' : 'hidden');
         }
 
         // Закрыть окно

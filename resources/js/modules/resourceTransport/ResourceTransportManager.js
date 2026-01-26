@@ -34,6 +34,9 @@ export class ResourceTransportManager {
 
         // Initialized flag
         this.initialized = false;
+
+        // Visual debug indicator
+        this.createLogicTickIndicator();
     }
 
     /**
@@ -321,9 +324,16 @@ export class ResourceTransportManager {
 
         // Logic tick (every N frames) - state changes, transfers, crafting
         this.logicTickCounter++;
+
+        // Conveyor logic tick (every 30 frames at counter=0)
         if (this.logicTickCounter >= this.LOGIC_TICK_INTERVAL) {
             this.logicTickCounter = 0;
-            this.logicTick();
+            this.conveyorLogicTick();
+        }
+
+        // Manipulator logic tick (every 30 frames at counter=15, offset by 15 frames)
+        if (this.logicTickCounter === 15) {
+            this.manipulatorLogicTick();
         }
 
         // Auto-save check (time-based, ok to run every frame)
@@ -331,9 +341,13 @@ export class ResourceTransportManager {
     }
 
     /**
-     * Logic tick - heavy operations that run every LOGIC_TICK_INTERVAL ticks
+     * Conveyor logic tick - runs every 30 frames at counter=0
+     * Handles conveyors, splitters, and buildings
      */
-    logicTick() {
+    conveyorLogicTick() {
+        // Flash visual indicator (red)
+        this.flashLogicTickIndicator('red');
+
         // Update crafting progress and completion
         this.updateCrafting();
 
@@ -342,6 +356,15 @@ export class ResourceTransportManager {
 
         // Process transfers between conveyors
         this.processTransporterTransfers();
+    }
+
+    /**
+     * Manipulator logic tick - runs every 30 frames at counter=15 (offset by 15 frames)
+     * Handles manipulator pickup/place actions
+     */
+    manipulatorLogicTick() {
+        // Flash visual indicator (green)
+        this.flashLogicTickIndicator('green');
 
         // Process manipulator state transitions (pickup/place actions)
         this.processManipulatorActions();
@@ -724,18 +747,34 @@ export class ResourceTransportManager {
      */
     updateManipulatorAnimation() {
         for (const [entityId, state] of this.manipulators) {
-            const speed = state.getArmSpeed();  // pixels per frame
+            if (state.status === 'idle') continue;
 
-            switch (state.status) {
-                case 'picking':
-                    // Move arm towards source (-centerPx)
-                    state.position_px = Math.max(-state.centerPositionPx, state.position_px - speed);
-                    break;
+            const speed = state.getTickSpeed();  // ticks per frame
 
-                case 'carrying':
-                    // Move arm towards target (+centerPx)
-                    state.position_px = Math.min(state.centerPositionPx, state.position_px + speed);
-                    break;
+            if (state.status === 'picking') {
+                // Moving to source: 0 → 30
+                state.ticks = Math.min(state.maxTicks, state.ticks + speed);
+
+                if (state.ticks >= state.maxTicks) {
+                    state.status = 'waiting_pick';  // Ready to pick
+                }
+            } else if (state.status === 'carrying') {
+                // Moving to target: 30 → 0
+                state.ticks = Math.max(0, state.ticks - speed);
+
+                if (state.ticks <= 0) {
+                    state.status = 'waiting_place';  // Ready to place
+                }
+
+                // Save holder position to resource's position_px
+                state.saveHolderPosition();
+            } else if (state.status === 'returning') {
+                // Returning to source after placing: 0 → 30
+                state.ticks = Math.min(state.maxTicks, state.ticks + speed);
+
+                if (state.ticks >= state.maxTicks) {
+                    state.status = 'idle';  // Back at source, ready to pick again
+                }
             }
         }
     }
@@ -751,30 +790,8 @@ export class ResourceTransportManager {
                     this.tryPickupResource(state);
                     break;
 
-                case 'picking':
-                    // Check if arm reached source position (-centerPx)
-                    if (state.position_px <= -state.centerPositionPx) {
-                        const pickedResource = this.takeResourceFrom(state.sourceEntityId, 'manipulator');
-                        if (pickedResource) {
-                            const resourceInfo = this.game.resources[pickedResource.resourceId];
-                            console.log(`[Pickup] Manipulator ${state.entityId} ← Entity ${state.sourceEntityId}: ${pickedResource.amount}x ${resourceInfo?.name || pickedResource.resourceId}`);
-                            state.pickResource(pickedResource.resourceId, pickedResource.amount);
-                            this.pendingSync = true;
-                        } else {
-                            state.status = 'idle';
-                            state.position_px = 0;
-                        }
-                    }
-                    break;
-
-                case 'carrying':
-                    // Check if arm reached target position (+centerPx)
-                    if (state.position_px >= state.centerPositionPx) {
-                        state.status = 'placing';
-                    }
-                    break;
-
-                case 'placing':
+                case 'waiting_place':
+                    // Reached target - try to place resource
                     this.tryPlaceResource(state);
                     break;
             }
@@ -789,9 +806,18 @@ export class ResourceTransportManager {
         // Note: targetEntityId can be null - manipulator can pick up even without target
 
         const canGive = this.canEntityGive(state.sourceEntityId, 'manipulator');
+
         if (canGive) {
-            state.status = 'picking';
-            state.position_px = 0;  // Start from center
+            // IMPORTANT: Take resource IMMEDIATELY to prevent conveyor from transferring it away
+            const pickedResource = this.takeResourceFrom(state.sourceEntityId, 'manipulator');
+
+            if (pickedResource) {
+                state.pickResource(pickedResource.resourceId, pickedResource.amount);
+                state.resource = { resourceId: pickedResource.resourceId, amount: pickedResource.amount };
+                state.status = 'carrying';
+                state.ticks = state.maxTicks;  // Start at source position (max ticks)
+                this.pendingSync = true;
+            }
         }
     }
 
@@ -805,7 +831,14 @@ export class ResourceTransportManager {
 
         if (canAccept === 'yes') {
             this.placeResourceTo(state.targetEntityId, state.resourceId, state.resourceAmount);
-            state.clear();
+
+            // Clear resource but start returning animation
+            state.resourceId = null;
+            state.resourceAmount = 0;
+            state.resource = null;
+            state.status = 'returning';
+            // ticks stays at 0 (at target), will animate to maxTicks (source)
+
             this.pendingSync = true;
         }
         // If 'no' or 'yes_if_freed', keep waiting
@@ -1076,10 +1109,19 @@ export class ResourceTransportManager {
         const transporter = this.transporters.get(entityId);
         if (transporter) {
             if (!transporter.resourceId) return null;
-            // Manipulator can take from any position
+
+            // Manipulator can take when resource is in middle of conveyor
+            // Manipulator logic tick runs at frame offset +15, so resource should be in center
             if (requesterType === 'manipulator') {
-                return { resourceId: transporter.resourceId, amount: transporter.resourceAmount };
+                // Allow taking when resource is in center ±8 ticks window (7-23 out of 30)
+                // Wider window to account for timing variations
+                const inCenter = transporter.ticks >= 7 && transporter.ticks <= 23;
+                if (inCenter) {
+                    return { resourceId: transporter.resourceId, amount: transporter.resourceAmount };
+                }
+                return null;
             }
+
             // Transporter can only take when at end (30 ticks)
             if (transporter.ticks >= transporter.TICKS_PER_TILE) {
                 return { resourceId: transporter.resourceId, amount: transporter.resourceAmount };
@@ -1542,6 +1584,77 @@ export class ResourceTransportManager {
                this.manipulators.get(entityId) ||
                this.buildings.get(entityId) ||
                null;
+    }
+
+    /**
+     * Create visual indicator for logic tick (debug)
+     */
+    createLogicTickIndicator() {
+        const indicator = document.createElement('div');
+        indicator.id = 'logic-tick-indicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: rgba(128, 128, 128, 0.3);
+            border: 4px solid #888888;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            transition: all 0.15s;
+            pointer-events: none;
+        `;
+        indicator.textContent = 'LOGIC';
+        document.body.appendChild(indicator);
+        this.logicTickIndicator = indicator;
+    }
+
+    /**
+     * Show/hide logic tick indicator (debug feature)
+     * @param {boolean} visible - true to show, false to hide
+     */
+    setLogicTickIndicatorVisible(visible) {
+        if (!this.logicTickIndicator) return;
+        this.logicTickIndicator.style.display = visible ? 'flex' : 'none';
+    }
+
+    /**
+     * Flash logic tick indicator
+     * @param {string} color - 'red' for conveyors, 'green' for manipulators
+     */
+    flashLogicTickIndicator(color = 'red') {
+        if (!this.logicTickIndicator) return;
+
+        const colors = {
+            red: { bg: 'rgba(255, 0, 0, 0.9)', border: '#ff0000', text: 'CONV' },
+            green: { bg: 'rgba(0, 255, 0, 0.9)', border: '#00ff00', text: 'MANIP' }
+        };
+
+        const style = colors[color];
+
+        // Flash effect
+        this.logicTickIndicator.style.background = style.bg;
+        this.logicTickIndicator.style.borderColor = style.border;
+        this.logicTickIndicator.style.transform = 'scale(1.2)';
+        this.logicTickIndicator.textContent = style.text;
+
+        // Reset after 150ms
+        setTimeout(() => {
+            if (this.logicTickIndicator) {
+                this.logicTickIndicator.style.background = 'rgba(128, 128, 128, 0.3)';
+                this.logicTickIndicator.style.borderColor = '#888888';
+                this.logicTickIndicator.style.transform = 'scale(1)';
+                this.logicTickIndicator.textContent = 'LOGIC';
+            }
+        }, 150);
     }
 }
 

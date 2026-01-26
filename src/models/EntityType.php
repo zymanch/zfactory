@@ -164,6 +164,13 @@ class EntityType extends base\BaseEntityType
      */
     public function getAtlases(): array
     {
+        // Manipulators use animation atlas only
+        if ($this->type === 'manipulator') {
+            return [
+                'default' => "/assets/tiles/entities/{$this->type}/{$this->folder}/animation_atlas.png"
+            ];
+        }
+
         // Check if entity uses multiple atlases
         $multiAtlasTypes = ['conveyor', 'underground_belt', 'splitter'];
 
@@ -183,6 +190,57 @@ class EntityType extends base\BaseEntityType
         return [
             'default' => "/assets/tiles/entities/{$this->type}/{$this->folder}/atlas.png"
         ];
+    }
+
+    /**
+     * Get total width including overflow area
+     * @return int
+     */
+    public function getTotalWidth(): int
+    {
+        $orientation = $this->orientation ?? 'right';
+        return in_array($orientation, ['right', 'left'])
+            ? $this->width + ($this->width_overflow ?? 0)
+            : $this->width;
+    }
+
+    /**
+     * Get total height including overflow area
+     * @return int
+     */
+    public function getTotalHeight(): int
+    {
+        $orientation = $this->orientation ?? 'right';
+        return in_array($orientation, ['up', 'down'])
+            ? $this->height + ($this->height_overflow ?? 0)
+            : $this->height;
+    }
+
+    /**
+     * Get number of animation frames for manipulator
+     * @return int
+     */
+    public function getFrameCount(): int
+    {
+        if ($this->type !== 'manipulator') {
+            return 1;
+        }
+
+        $orientation = $this->orientation ?? 'right';
+        $dimension = in_array($orientation, ['right', 'left'])
+            ? $this->getTotalWidth()
+            : $this->getTotalHeight();
+
+        return ($dimension * 4) + 1;
+    }
+
+    /**
+     * Get center frame index for manipulator animation
+     * @return int
+     */
+    public function getCenterFrameIndex(): int
+    {
+        return (int)floor($this->getFrameCount() / 2);
     }
 
 }

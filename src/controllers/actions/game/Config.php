@@ -74,6 +74,14 @@ class Config extends JsonAction
                 ? explode(',', $data['output_connections'])
                 : [];
 
+            // Add overflow fields and computed dimensions for manipulators
+            $data['width_overflow'] = (int)($entityType->width_overflow ?? 0);
+            $data['height_overflow'] = (int)($entityType->height_overflow ?? 0);
+            $data['total_width'] = $entityType->getTotalWidth();
+            $data['total_height'] = $entityType->getTotalHeight();
+            $data['frame_count'] = $entityType->getFrameCount();
+            $data['center_frame_index'] = $entityType->getCenterFrameIndex();
+
             // Add costs, recipes, behavior
             $data['costs'] = $entityTypeCosts[$id] ?? [];
             $data['recipes'] = $entityTypeRecipes[$id] ?? [];
@@ -84,7 +92,7 @@ class Config extends JsonAction
 
         return $this->castNumericFieldsIndexed(
             $result,
-            ['entity_type_id', 'power', 'max_durability', 'width', 'height', 'storage_resource_count', 'storage_per_resource']
+            ['entity_type_id', 'power', 'max_durability', 'width', 'height', 'width_overflow', 'height_overflow', 'total_width', 'total_height', 'frame_count', 'center_frame_index', 'storage_resource_count', 'storage_per_resource']
         );
     }
 
@@ -415,6 +423,20 @@ class Config extends JsonAction
             foreach ($pipeFolders as $folder) {
                 $key = "pipe_{$folder}_{$state}";
                 $assets[$key] = "/assets/tiles/entities/pipe/{$folder}/pipe_atlas_{$state}.png?v={$v}";
+            }
+        }
+
+        // Manipulator animation atlases
+        // Load animation_atlas.png for each manipulator type
+        foreach ($entityTypes as $id => $entityType) {
+            if ($entityType['type'] === 'manipulator') {
+                $folder = $entityType['folder'];
+                $atlasPath = "/assets/tiles/entities/manipulator/{$folder}/animation_atlas.png";
+
+                // Only add if atlas file exists
+                if (file_exists(Yii::getAlias('@webroot') . $atlasPath)) {
+                    $assets["manipulator_animation_{$id}"] = "{$atlasPath}?v={$v}";
+                }
             }
         }
 

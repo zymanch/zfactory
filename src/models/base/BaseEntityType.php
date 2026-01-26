@@ -16,7 +16,9 @@ namespace models\base;
  * @property integer $max_durability
  * @property integer $converts_to_landing_id
  * @property integer $width
+ * @property integer $width_overflow
  * @property integer $height
+ * @property integer $height_overflow
  * @property integer $power
  * @property integer $center_position_px
  * @property integer $parent_entity_type_id
@@ -30,6 +32,8 @@ namespace models\base;
  * @property string $resource_types
  * @property string $input_connections
  * @property string $output_connections
+ * @property integer $frame_count
+ * @property integer $center_frame_index
  *
  * @property \models\EntityTypeCost[] $entityTypeCosts
  * @property \models\BaseResource[] $resources
@@ -56,7 +60,7 @@ class BaseEntityType extends \yii\db\ActiveRecord
     {
         return [
             [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::TYPE, BaseEntityTypePeer::NAME, BaseEntityTypePeer::FOLDER], 'required'],
-            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::POWER, BaseEntityTypePeer::CENTER_POSITION_PX, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS, BaseEntityTypePeer::STORAGE_RESOURCE_COUNT, BaseEntityTypePeer::STORAGE_PER_RESOURCE], 'integer'],
+            [[BaseEntityTypePeer::ENTITY_TYPE_ID, BaseEntityTypePeer::MAX_DURABILITY, BaseEntityTypePeer::CONVERTS_TO_LANDING_ID, BaseEntityTypePeer::WIDTH, BaseEntityTypePeer::WIDTH_OVERFLOW, BaseEntityTypePeer::HEIGHT, BaseEntityTypePeer::HEIGHT_OVERFLOW, BaseEntityTypePeer::POWER, BaseEntityTypePeer::CENTER_POSITION_PX, BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID, BaseEntityTypePeer::CONSTRUCTION_TICKS, BaseEntityTypePeer::STORAGE_RESOURCE_COUNT, BaseEntityTypePeer::STORAGE_PER_RESOURCE, BaseEntityTypePeer::FRAME_COUNT, BaseEntityTypePeer::CENTER_FRAME_INDEX], 'integer'],
             [[BaseEntityTypePeer::TYPE, BaseEntityTypePeer::ORIENTATION, BaseEntityTypePeer::DESCRIPTION, BaseEntityTypePeer::STORAGE_TYPE, BaseEntityTypePeer::RESOURCE_TYPES, BaseEntityTypePeer::INPUT_CONNECTIONS, BaseEntityTypePeer::OUTPUT_CONNECTIONS], 'string'],
             [[BaseEntityTypePeer::ANIMATION_FPS], 'number'],
             [[BaseEntityTypePeer::SUBTYPE], 'string', 'max' => 64],
@@ -81,7 +85,9 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::MAX_DURABILITY => 'Max Durability',
             BaseEntityTypePeer::CONVERTS_TO_LANDING_ID => 'Converts To Landing ID',
             BaseEntityTypePeer::WIDTH => 'Width',
+            BaseEntityTypePeer::WIDTH_OVERFLOW => 'Width Overflow',
             BaseEntityTypePeer::HEIGHT => 'Height',
+            BaseEntityTypePeer::HEIGHT_OVERFLOW => 'Height Overflow',
             BaseEntityTypePeer::POWER => 'Power',
             BaseEntityTypePeer::CENTER_POSITION_PX => 'Center Position Px',
             BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID => 'Parent Entity Type ID',
@@ -95,6 +101,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             BaseEntityTypePeer::RESOURCE_TYPES => 'Resource Types',
             BaseEntityTypePeer::INPUT_CONNECTIONS => 'Input Connections',
             BaseEntityTypePeer::OUTPUT_CONNECTIONS => 'Output Connections',
+            BaseEntityTypePeer::FRAME_COUNT => 'Frame Count',
+            BaseEntityTypePeer::CENTER_FRAME_INDEX => 'Center Frame Index',
         ];
     }
     /**
@@ -166,7 +174,9 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'max_durability' => BaseEntityTypePeer::MAX_DURABILITY,
             'converts_to_landing_id' => BaseEntityTypePeer::CONVERTS_TO_LANDING_ID,
             'width' => BaseEntityTypePeer::WIDTH,
+            'width_overflow' => BaseEntityTypePeer::WIDTH_OVERFLOW,
             'height' => BaseEntityTypePeer::HEIGHT,
+            'height_overflow' => BaseEntityTypePeer::HEIGHT_OVERFLOW,
             'power' => BaseEntityTypePeer::POWER,
             'center_position_px' => BaseEntityTypePeer::CENTER_POSITION_PX,
             'parent_entity_type_id' => BaseEntityTypePeer::PARENT_ENTITY_TYPE_ID,
@@ -180,6 +190,8 @@ class BaseEntityType extends \yii\db\ActiveRecord
             'resource_types' => BaseEntityTypePeer::RESOURCE_TYPES,
             'input_connections' => BaseEntityTypePeer::INPUT_CONNECTIONS,
             'output_connections' => BaseEntityTypePeer::OUTPUT_CONNECTIONS,
+            'frame_count' => BaseEntityTypePeer::FRAME_COUNT,
+            'center_frame_index' => BaseEntityTypePeer::CENTER_FRAME_INDEX,
         ];
     }
     

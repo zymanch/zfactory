@@ -14,8 +14,27 @@ use yii\helpers\Console;
 class AtlasController extends Controller
 {
     /**
+     * Entity type filter for generate-all
+     * @var string|null
+     */
+    public $type;
+
+    /**
+     * Declare command options
+     */
+    public function options($actionID)
+    {
+        $options = parent::options($actionID);
+        if ($actionID === 'generate-all') {
+            $options[] = 'type';
+        }
+        return $options;
+    }
+
+    /**
      * Generate atlases for all entity types
      * Usage: php yii atlas/generate-all
+     * Usage: php yii atlas/generate-all --type=manipulator (only manipulators)
      */
     public function actionGenerateAll()
     {
@@ -25,7 +44,15 @@ class AtlasController extends Controller
         AtlasProviderRegistry::init();
 
         $basePath = Yii::getAlias('@app/..');
-        $entityTypes = EntityType::find()->all();
+        $query = EntityType::find();
+
+        // Filter by type if specified
+        if ($this->type !== null) {
+            $query->where(['type' => $this->type]);
+            $this->stdout("Filtering by type: {$this->type}\n\n", Console::FG_YELLOW);
+        }
+
+        $entityTypes = $query->all();
 
         $totalAtlases = 0;
         $successCount = 0;
